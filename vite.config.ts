@@ -4,6 +4,7 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(({command}) => {
+  base: '/quanlylophoc/',
   const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
   return {
     base: command === 'build' ? './' : '/',
