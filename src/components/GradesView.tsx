@@ -8,9 +8,6 @@ import {
   Search,
   FileSpreadsheet,
   Edit3,
-  Sparkles,
-  Award,
-  CheckCircle2,
   Table,
   FileJson,
 } from 'lucide-react';
@@ -27,14 +24,15 @@ export const GradesView: React.FC = () => {
     setIsJsonModalOpen,
   } = useApp();
 
+  // Đưa toàn bộ useState lên trên cùng trước câu lệnh if return
+  const [showComprehensiveModal, setShowComprehensiveModal] = useState(false);
+  const [filterGroup, setFilterGroup] = useState<number | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Guard: If teacher role but not authenticated
   if (role === 'teacher' && !isTeacherAuthenticated) {
     return <AccessGuard requiredRole="teacher" pageTitle="Bảng điểm Cả Lớp 12A7" />;
   }
-
-  const [showComprehensiveModal, setShowComprehensiveModal] = useState(false);
-  const [filterGroup, setFilterGroup] = useState<number | 'all'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
 
   // 10 high-school subjects of class 12A7
   const subjectList: { key: keyof Student['scores']; name: string; teacher: string }[] = [
@@ -397,11 +395,13 @@ export const GradesView: React.FC = () => {
         </>
       )}
 
-      {/* Comprehensive Grade Import & Matrix Editing Modal for All 10 Subjects */}
-      <ComprehensiveGradeImportModal
-        isOpen={showComprehensiveModal}
-        onClose={() => setShowComprehensiveModal(false)}
-      />
+      {/* Chỉ khởi tạo Modal khi showComprehensiveModal === true để tránh lỗi React Hook #310 */}
+      {showComprehensiveModal && (
+        <ComprehensiveGradeImportModal
+          isOpen={showComprehensiveModal}
+          onClose={() => setShowComprehensiveModal(false)}
+        />
+      )}
     </div>
   );
 };
