@@ -1,0 +1,286 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'xuanhoa2710@gmail.com';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // 3. Validation Blueprints
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+        data.role is string && data.role.size() <= 32 && (data.role == 'gvcn' || data.role == 'admin') &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidClassroom(data) {
+      return data.keys().hasAll([
+          'classId',
+          'className',
+          'schoolName',
+          'teacherName',
+          'ownerId',
+          'visibility',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'classId',
+          'className',
+          'schoolName',
+          'teacherName',
+          'ownerId',
+          'visibility',
+          'status',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.classId) && data.classId.size() <= 64 &&
+        data.className is string && data.className.size() >= 1 && data.className.size() <= 100 &&
+        data.schoolName is string && data.schoolName.size() >= 1 && data.schoolName.size() <= 200 &&
+        data.teacherName is string && data.teacherName.size() >= 1 && data.teacherName.size() <= 150 &&
+        isValidId(data.ownerId) &&
+        data.visibility is string && data.visibility.size() <= 32 &&
+        (data.visibility == 'shared' || data.visibility == 'restricted') &&
+        data.status is string && data.status.size() <= 32 &&
+        (data.status == 'active' || data.status == 'archived') &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidClassroomSection(data) {
+      return data.keys().hasAll([
+          'sectionId',
+          'classId',
+          'sectionType',
+          'payload',
+          'updatedByUid',
+          'updatedByRole',
+          'status',
+          'version',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'sectionId',
+          'classId',
+          'sectionType',
+          'payload',
+          'updatedByUid',
+          'updatedByRole',
+          'status',
+          'version',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        isValidId(data.sectionId) && data.sectionId.size() <= 64 &&
+        isValidId(data.classId) && data.classId.size() <= 64 &&
+        data.sectionType is string && data.sectionType.size() <= 32 &&
+        (
+          data.sectionType == 'config' ||
+          data.sectionType == 'students_g1' ||
+          data.sectionType == 'students_g2' ||
+          data.sectionType == 'students_g3' ||
+          data.sectionType == 'students_g4' ||
+          data.sectionType == 'attendance' ||
+          data.sectionType == 'emulation' ||
+          data.sectionType == 'activities' ||
+          data.sectionType == 'schedule'
+        ) &&
+        data.payload is map && data.payload.keys().size() <= 100 &&
+        isValidId(data.updatedByUid) &&
+        data.updatedByUid == request.auth.uid &&
+        data.updatedByRole is string && data.updatedByRole.size() <= 32 &&
+        (
+          data.updatedByRole == 'teacher' ||
+          data.updatedByRole == 'student' ||
+          data.updatedByRole == 'parent'
+        ) &&
+        data.status is string && data.status.size() <= 32 &&
+        (data.status == 'active' || data.status == 'locked') &&
+        data.version is int && data.version >= 1 && data.version <= 1000000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isParentClassroomActive(classId) {
+      return exists(/databases/$(database)/documents/classrooms/$(classId)) &&
+        get(/databases/$(database)/documents/classrooms/$(classId)).data.status == 'active' &&
+        (
+          get(/databases/$(database)/documents/classrooms/$(classId)).data.visibility == 'shared' ||
+          get(/databases/$(database)/documents/classrooms/$(classId)).data.ownerId == request.auth.uid
+        );
+    }
+
+    // 4. Collection Rules: /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if false;
+      allow create: if isVerifiedUser() &&
+        isValidId(adminId) &&
+        isValidAdminUser(incoming()) &&
+        incoming().uid == adminId &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+      allow update: if isVerifiedUser() &&
+        isValidId(adminId) &&
+        isValidAdminUser(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['role', 'email']) &&
+        isAdmin();
+      allow delete: if isVerifiedUser() && isValidId(adminId) && isAdmin();
+    }
+
+    // 5. Collection Rules: /classrooms/{classId}
+    match /classrooms/{classId} {
+      allow get: if isSignedIn() &&
+        isValidId(classId) &&
+        (
+          resource == null ||
+          existing().visibility == 'shared' ||
+          existing().ownerId == request.auth.uid ||
+          isAdmin()
+        );
+      allow list: if false;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(classId) &&
+        isValidClassroom(incoming()) &&
+        incoming().classId == classId &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().status == 'active' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isValidId(classId) &&
+        isValidClassroom(incoming()) &&
+        incoming().classId == existing().classId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (existing().status != 'archived' || isAdmin()) &&
+        (
+          isAdmin() ||
+          // Action 1: Owner updates classroom metadata
+          (
+            existing().ownerId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'className',
+              'schoolName',
+              'teacherName',
+              'visibility',
+              'status',
+              'updatedAt'
+            ])
+          ) ||
+          // Action 2: Shared classroom member refreshes metadata
+          (
+            existing().visibility == 'shared' &&
+            incoming().status == existing().status &&
+            incoming().visibility == existing().visibility &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'className',
+              'schoolName',
+              'teacherName',
+              'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isVerifiedUser() && isValidId(classId) && isAdmin();
+
+      // 6. Subcollection Rules: /classrooms/{classId}/sections/{sectionId}
+      match /sections/{sectionId} {
+        allow get: if isSignedIn() &&
+          isValidId(classId) &&
+          isValidId(sectionId) &&
+          (resource == null || isParentClassroomActive(classId) || isAdmin());
+
+        allow list: if false;
+
+        allow create: if isVerifiedUser() &&
+          isValidId(classId) &&
+          isValidId(sectionId) &&
+          isValidClassroomSection(incoming()) &&
+          incoming().classId == classId &&
+          incoming().sectionId == sectionId &&
+          incoming().status == 'active' &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (isParentClassroomActive(classId) || isAdmin());
+
+        allow update: if isVerifiedUser() &&
+          isValidId(classId) &&
+          isValidId(sectionId) &&
+          isValidClassroomSection(incoming()) &&
+          incoming().classId == existing().classId &&
+          incoming().sectionId == existing().sectionId &&
+          incoming().sectionType == existing().sectionType &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (existing().status != 'locked' || isAdmin()) &&
+          (
+            isAdmin() ||
+            // Action 1: Member updates active classroom section payload
+            (
+              incoming().status == existing().status &&
+              incoming().version >= existing().version &&
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'payload',
+                'updatedByUid',
+                'updatedByRole',
+                'version',
+                'updatedAt'
+              ]) &&
+              isParentClassroomActive(classId)
+            )
+          );
+
+        allow delete: if isVerifiedUser() &&
+          isValidId(classId) &&
+          isValidId(sectionId) &&
+          isAdmin();
+      }
+    }
+  }
+}

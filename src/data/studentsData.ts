@@ -1,0 +1,7988 @@
+import { Student } from "../types";
+
+// Dữ liệu gốc mặc định (Hardcoded từ file JSON chuẩn Lớp 12A7 THPT Vĩnh Lộc B)
+export const INITIAL_STUDENTS: Student[] = [
+  {
+    "id": "hs-1",
+    "stt": 1,
+    "code": "12A7-01",
+    "name": "Vũ Trịnh Bảo An",
+    "gender": "Nam",
+    "birthday": "30/05/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "B1/26k1, Ấp 2, Xã Vĩnh Lộc B, Huyện Bình Chánh, TP.HCM",
+    "phone": "0964834364",
+    "email": "baoanvutrinh@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Vũ Văn Trọng",
+    "parentFatherPhone": "0984123456",
+    "parentFatherJob": "Quản lý xây dựng",
+    "parentMotherName": "Vũ Thị Ngoan",
+    "parentMotherPhone": "0979296050",
+    "parentMotherJob": "Nội trợ / Tại nhà",
+    "primaryParentName": "Vũ Thị Ngoan",
+    "primaryParentPhone": "0979296050",
+    "familyCondition": "Bình thường, ổn định",
+    "livingWith": "Bố mẹ và em",
+    "birthOrder": "1",
+    "examSubject1": "Hóa học",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Kế toán - Kiểm toán",
+    "strengths": "Chăm chỉ, ham học hỏi, có trách nhiệm với tập thể",
+    "weaknesses": "Cần tự tin hơn khi nói trước đám đông, tập trung cao độ",
+    "hobbies": "Đọc sách, xem phim tài liệu, đá banh",
+    "wishedTeacher": "Thầy cô tạo tinh thần thoải mái, kiên nhẫn giảng dạy",
+    "wishedClassmates": "Cả lớp đoàn kết, giúp đỡ nhau cùng tiến bộ",
+    "pastRoles": [
+      "Tổ viên tích cực"
+    ],
+    "awards": [
+      "Học sinh tiến bộ kỳ 2"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 6.5,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Đạt",
+    "titlePrevYear": "Học sinh tiên tiến",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7,
+          7.5
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7.2
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.5,
+          7
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.9
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.5,
+          7
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6,
+          6.5
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.7
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.5,
+          8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          8.5,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 9,
+        "avg": 8.6
+      }
+    },
+    "currentGpa": 7.37,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 48,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 1,
+      "rate": 96
+    },
+    "activityPoints": 85,
+    "classRole": "Lớp phó kỉ luật"
+  },
+  {
+    "id": "hs-2",
+    "stt": 2,
+    "code": "12A7-02",
+    "name": "Nguyễn Ngọc Lan Anh",
+    "gender": "Nữ",
+    "birthday": "13/09/2009",
+    "birthPlace": "Thừa Thiên Huế",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Kế A6/35, Hẻm 35, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0896370483",
+    "email": "nguyenngoclananh30909@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Nguyễn Trọng Dương",
+    "parentFatherPhone": "0978123456",
+    "parentFatherJob": "Công nhân",
+    "parentMotherName": "Phạm Thị Lành",
+    "parentMotherPhone": "0975968706",
+    "parentMotherJob": "Nội trợ / May vá",
+    "primaryParentName": "Phạm Thị Lành",
+    "primaryParentPhone": "0975968706",
+    "familyCondition": "Bình thường",
+    "livingWith": "Ba, Mẹ, Em gái",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Lịch sử",
+    "dreamCareer": "Quản trị nhân sự hoặc Marketing",
+    "strengths": "Chăm chỉ, lễ phép, viết văn cảm xúc, lắng nghe",
+    "weaknesses": "Đôi lúc còn rụt rè, cần quyết đoán hơn",
+    "hobbies": "Vẽ tranh, nghe nhạc, đọc sách",
+    "wishedTeacher": "Nhiệt tình, động viên học sinh",
+    "wishedClassmates": "Thân thiện, chan hòa",
+    "pastRoles": [
+      "Tổ phó học tập"
+    ],
+    "awards": [
+      "Học sinh Khá năm học 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.8,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.5
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.6
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.5
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.3
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      }
+    },
+    "currentGpa": 8.3,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 90,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-3",
+    "stt": 3,
+    "code": "12A7-03",
+    "name": "Trần Ngọc Mai Anh",
+    "gender": "Nữ",
+    "birthday": "05/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "A4/76A Tổ 4, Ấp 1A, Vĩnh Lộc, Bình Chánh, TP.HCM",
+    "phone": "0966972411",
+    "email": "phamlan343991@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Trần Phạm Quang Tất",
+    "parentFatherPhone": "0918765432",
+    "parentFatherJob": "Kiến trúc sư xây dựng",
+    "parentMotherName": "Trần Thị Hồng",
+    "parentMotherPhone": "0936482312",
+    "parentMotherJob": "Kinh doanh gia đình",
+    "primaryParentName": "Trần Thị Hồng",
+    "primaryParentPhone": "0936482312",
+    "familyCondition": "Khá giả, quan tâm con cái",
+    "livingWith": "Bố mẹ và em",
+    "birthOrder": "1",
+    "examSubject1": "Hóa học",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Bác sĩ / Dược sĩ Y Dược TP.HCM",
+    "strengths": "Tư duy logic tốt, điểm Hóa và Anh cao, chăm chỉ",
+    "weaknesses": "Thỉnh thoảng quá cầu toàn, tự gây áp lực",
+    "hobbies": "Vẽ sketch, nghiên cứu sinh học, nghe podcast",
+    "wishedTeacher": "Tâm lý, truyền lửa ôn thi đại học",
+    "wishedClassmates": "Cùng phấn đấu đỗ nguyện vọng 1",
+    "pastRoles": [
+      "Cán sự bộ môn Hóa"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm học 2025-2026",
+      "Giải Nhì phong trào trường"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.4,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.5,
+          8.5
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9.2,
+        "avg": 9
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          9,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.3
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 9,
+        "avg": 8.7
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.92,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 98,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-4",
+    "stt": 4,
+    "code": "12A7-04",
+    "name": "Lê Trần Nhật Anh",
+    "gender": "Nữ",
+    "birthday": "06/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "322 Ấp Chiến Lược, P. Bình Hưng Hòa, Q. Bình Tân, TP.HCM",
+    "phone": "0349148673",
+    "email": "tt403445@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Lê Phước Tiến",
+    "parentFatherPhone": "0971234890",
+    "parentFatherJob": "Lao động tự do",
+    "parentMotherName": "Đoàn Thị Mỹ Dung",
+    "parentMotherPhone": "0899999468",
+    "parentMotherJob": "Kinh doanh buôn bán",
+    "primaryParentName": "Đoàn Thị Mỹ Dung",
+    "primaryParentPhone": "0899999468",
+    "familyCondition": "Bình thường",
+    "livingWith": "Ba mẹ và 2 em",
+    "birthOrder": "1",
+    "examSubject1": "Hóa học",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Kinh doanh quốc tế / Ngoại thương",
+    "strengths": "Chăm chỉ, tiếp thu bài nhanh, hòa đồng",
+    "weaknesses": "Cần phân bổ thời gian học đều các môn",
+    "hobbies": "Xem phim ca nhạc, nấu ăn",
+    "wishedTeacher": "Chỉ dạy tận tình, không gây áp lực điểm",
+    "wishedClassmates": "Đoàn kết, giúp đỡ nhau học",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.1
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.5,
+        "final": 8.6,
+        "avg": 8.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.5,
+        "final": 9.6,
+        "avg": 9.5
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      }
+    },
+    "currentGpa": 8.3,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-5",
+    "stt": 5,
+    "code": "12A7-05",
+    "name": "Huỳnh Gia Bảo",
+    "gender": "Nam",
+    "birthday": "19/08/2009",
+    "birthPlace": "Huế",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "A5/18 Ấp 1, Xã Vĩnh Lộc A, Huyện Bình Chánh, TP.HCM",
+    "phone": "0942279888",
+    "email": "baoh55598@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Huỳnh Văn Phúc",
+    "parentFatherPhone": "0903112233",
+    "parentFatherJob": "Thợ may",
+    "parentMotherName": "Bành Thị Cẩm Hằng",
+    "parentMotherPhone": "0907521376",
+    "parentMotherJob": "Công nhân",
+    "primaryParentName": "Bành Thị Cẩm Hằng",
+    "primaryParentPhone": "0907521376",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ và em",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Cơ điện tử / Tự động hóa",
+    "strengths": "Thông minh, tư duy Toán Lý rất tốt, nhanh nhẹn",
+    "weaknesses": "Đôi lúc còn nghịch ngợm, cần kiên trì môn Văn Sử",
+    "hobbies": "Đá banh, điện tử, lắp ráp lego robotic",
+    "wishedTeacher": "Vui tính, hiểu học sinh",
+    "wishedClassmates": "Hòa đồng, cùng học nhóm",
+    "pastRoles": [
+      "Tổ trưởng Tổ 1"
+    ],
+    "awards": [
+      "Học sinh Khá năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9.2,
+        "avg": 9
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 9,
+        "avg": 8.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.3
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.47,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 92,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-6",
+    "stt": 6,
+    "code": "12A7-06",
+    "name": "Lê Gia Bảo",
+    "gender": "Nam",
+    "birthday": "12/07/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "B4/28 Ấp 2, Xã Vĩnh Lộc B, Huyện Bình Chánh, TP.HCM",
+    "phone": "0984668016",
+    "email": "legiabao12a7@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Lê Viết Thủy",
+    "parentFatherPhone": "0978999888",
+    "parentFatherJob": "Thợ mộc",
+    "parentMotherName": "Đặng Ngọc Hương",
+    "parentMotherPhone": "0916389879",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Đặng Ngọc Hương",
+    "primaryParentPhone": "0916389879",
+    "familyCondition": "Đủ ăn đủ mặc",
+    "livingWith": "Bố mẹ và em",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Xây dựng / Giao thông",
+    "strengths": "Chăm chỉ, thật thà, yêu thích môn thực nghiệm",
+    "weaknesses": "Cần nâng cao ý thức giữ vệ sinh lớp và đúng giờ",
+    "hobbies": "Thể thao, bóng bàn, cơ khí chế tạo",
+    "wishedTeacher": "Dễ tính, hỗ trợ học tập",
+    "wishedClassmates": "Đoàn kết cùng đậu tốt nghiệp",
+    "pastRoles": [
+      "Lớp phó Lao động"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 7.8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.34,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 49,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 1,
+      "rate": 96
+    },
+    "activityPoints": 86,
+    "classRole": "Lớp trưởng"
+  },
+  {
+    "id": "hs-7",
+    "stt": 7,
+    "code": "12A7-07",
+    "name": "Văn Như Cẩm",
+    "gender": "Nữ",
+    "birthday": "19/08/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "F8/17D Vĩnh Lộc A, Huyện Bình Chánh, TP.HCM",
+    "phone": "0938360460",
+    "email": "vannhucam1908@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Văn Công Giáp",
+    "parentFatherPhone": "0903445566",
+    "parentFatherJob": "Thợ giày",
+    "parentMotherName": "Trần Thị Mộng Tuyền",
+    "parentMotherPhone": "0903627135",
+    "parentMotherJob": "Tự do",
+    "primaryParentName": "Trần Thị Mộng Tuyền",
+    "primaryParentPhone": "0903627135",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ và em",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Quản trị Khách sạn - Du lịch",
+    "strengths": "Văn học tốt, nhạy bén, khéo léo, chăm chỉ",
+    "weaknesses": "Đôi lúc thiếu kiên nhẫn",
+    "hobbies": "Nấu ăn, cắm hoa, nghe nhạc acoustic",
+    "wishedTeacher": "Nhiệt tình, luôn lắng nghe",
+    "wishedClassmates": "Đoàn kết thương yêu",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.55,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 92,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-8",
+    "stt": 8,
+    "code": "12A7-08",
+    "name": "Nguyễn Quốc Cường",
+    "gender": "Nam",
+    "birthday": "14/02/2009",
+    "birthPlace": "Hà Nam",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "440 Liên Ấp 2-6, Vĩnh Lộc A, Bình Chánh, TP.HCM",
+    "phone": "0344074124",
+    "email": "cuongnguyen12a7@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Nguyễn Thiện Khâm",
+    "parentFatherPhone": "0977889900",
+    "parentFatherJob": "Xây dựng",
+    "parentMotherName": "Nguyễn Thị Tú Uyên",
+    "parentMotherPhone": "0983210684",
+    "parentMotherJob": "Buôn bán tại nhà",
+    "primaryParentName": "Nguyễn Thị Tú Uyên",
+    "primaryParentPhone": "0983210684",
+    "familyCondition": "Đủ sống qua ngày",
+    "livingWith": "Bố mẹ và chị",
+    "birthOrder": "2",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Sửa chữa bảo dưỡng ô tô công nghệ",
+    "strengths": "Nhanh nhẹn, nhiệt tình với bạn bè, thích kỹ thuật thực tế",
+    "weaknesses": "Năm ngoái nghỉ phép nhiều (19 buổi), cần tập trung học hơn",
+    "hobbies": "Đá banh, xe cộ, game chiến thuật",
+    "wishedTeacher": "Nghiêm khắc nhưng gần gũi, giúp đỡ để tiến bộ",
+    "wishedClassmates": "Đoàn kết, không chia rẽ",
+    "pastRoles": [],
+    "awards": [],
+    "disciplines": [
+      "Cần lưu ý chuyên cần"
+    ],
+    "gpaPrevYear": 6.8,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Đạt",
+    "titlePrevYear": "Học sinh Trung bình khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          6.5,
+          7
+        ],
+        "midterm": 6.5,
+        "final": 6.8,
+        "avg": 6.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.8,
+          7.2
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7.1
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6,
+          6.5
+        ],
+        "midterm": 6.5,
+        "final": 6.8,
+        "avg": 6.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 6.8,
+        "final": 7.2,
+        "avg": 7
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 9,
+        "avg": 8.7
+      }
+    },
+    "currentGpa": 7.64,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 47,
+      "excused": 3,
+      "unexcused": 0,
+      "late": 2,
+      "rate": 92
+    },
+    "activityPoints": 78,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-9",
+    "stt": 9,
+    "code": "12A7-09",
+    "name": "Nguyễn Duy",
+    "gender": "Nam",
+    "birthday": "03/02/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "109 Phan Văn Hớn, Q. 12, TP.HCM",
+    "phone": "0343234535",
+    "email": "nd.nguyenduy0302@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Nguyễn Công Lý",
+    "parentFatherPhone": "0985556677",
+    "parentFatherJob": "Buôn bán",
+    "parentMotherName": "Phan Thị Thùy Linh",
+    "parentMotherPhone": "098507705",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Phan Thị Thùy Linh",
+    "primaryParentPhone": "098507705",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ thuật Điện máy / Tự động",
+    "strengths": "Chất phác, khéo tay, yêu thích sửa chữa kỹ thuật",
+    "weaknesses": "Tiếng Anh và Toán cơ bản còn hổng, cần bồi dưỡng thêm",
+    "hobbies": "Đá banh, nghe nhạc EDM",
+    "wishedTeacher": "Hỗ trợ giảng bài từ tốn, không quá áp lực",
+    "wishedClassmates": "Bạn bè giúp đỡ nhau giải bài tập",
+    "pastRoles": [],
+    "awards": [],
+    "disciplines": [],
+    "gpaPrevYear": 7.1,
+    "conductPrevYear": "Khá",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Tiên tiến",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.4
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.5,
+        "final": 6.8,
+        "avg": 6.7
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6,
+          6.2
+        ],
+        "midterm": 6,
+        "final": 6.5,
+        "avg": 6.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      }
+    },
+    "currentGpa": 7.39,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 48,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 1,
+      "rate": 94
+    },
+    "activityPoints": 80,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-10",
+    "stt": 10,
+    "code": "12A7-10",
+    "name": "Phạm Anh Duy",
+    "gender": "Nam",
+    "birthday": "01/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Đường Bộ Đội An Điền, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0901519933",
+    "email": "pduy43461@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Phạm Ngọc Thạch",
+    "parentFatherPhone": "0912334455",
+    "parentFatherJob": "Cán bộ công nhân viên",
+    "parentMotherName": "Nguyễn Thị Lệ",
+    "parentMotherPhone": "0987946292",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Nguyễn Thị Lệ",
+    "primaryParentPhone": "0987946292",
+    "familyCondition": "Gia đình bình thường",
+    "livingWith": "Ba, Mẹ, Em trai",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Quản trị Kinh doanh / Logistics",
+    "strengths": "Tiếng Anh tốt, giao tiếp lưu loát, hoạt bát",
+    "weaknesses": "Cần cẩn thận hơn trong các bài kiểm tra trắc nghiệm Toán",
+    "hobbies": "Đá banh, cầu lông, chụp ảnh",
+    "wishedTeacher": "Hỗ trợ định hướng ngành trường đại học phù hợp",
+    "wishedClassmates": "Lớp đoàn kết, cùng nhau đạt kết quả cao",
+    "pastRoles": [
+      "Cán sự thể dục"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.5,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.3
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.01,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 90,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-11",
+    "stt": 11,
+    "code": "12A7-11",
+    "name": "Nguyễn Thành Đạt",
+    "gender": "Nam",
+    "birthday": "07/02/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "None",
+    "address": "1768/10/4F Đường Tỉnh Lộ 10, Q. Bình Tân, TP.HCM",
+    "phone": "0961608809",
+    "email": "ngtdatdata729@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Nguyễn Văn Quang",
+    "parentFatherPhone": "0908204244",
+    "parentFatherJob": "Điện lạnh",
+    "parentMotherName": "Lê Thị Huyền Trang",
+    "parentMotherPhone": "0908204244",
+    "parentMotherJob": "Kinh doanh",
+    "primaryParentName": "Lê Thị Huyền Trang",
+    "primaryParentPhone": "0908204244",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Phần mềm / Trí tuệ nhân tạo",
+    "strengths": "Toán, Tin và Ngoại ngữ rất tốt, tư duy logic, sáng tạo",
+    "weaknesses": "Đôi lúc thức khuya chơi game, cần ngủ đủ giấc",
+    "hobbies": "Lập trình, đá banh, đọc sách khoa học",
+    "wishedTeacher": "Tận tình chỉ bảo các dạng đề nâng cao",
+    "wishedClassmates": "Lớp 12A7 đậu tốt nghiệp và đại học 100%",
+    "pastRoles": [
+      "Lớp phó Học tập",
+      "Cán sự bộ môn Toán"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026",
+      "Giải Ba Tin học trẻ"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.5,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.8,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.96,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 96,
+    "classRole": "Tổ trưởng"
+  },
+  {
+    "id": "hs-12",
+    "stt": 12,
+    "code": "12A7-12",
+    "name": "Ngô Thị Thanh Hà",
+    "gender": "Nữ",
+    "birthday": "14/06/2009",
+    "birthPlace": "Huế",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "A5/18 Ấp 1, Xã Vĩnh Lộc A, Huyện Bình Chánh, TP.HCM",
+    "phone": "0898914855",
+    "email": "nthithanhha9@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Ngô Quang Đức",
+    "parentFatherPhone": "0936482312",
+    "parentFatherJob": "Điện tử",
+    "parentMotherName": "Trần Thị Hồng",
+    "parentMotherPhone": "0932140856",
+    "parentMotherJob": "Nhân viên công ty",
+    "primaryParentName": "Trần Thị Hồng",
+    "primaryParentPhone": "0932140856",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Sư phạm Tiểu học / Tiếng Anh",
+    "strengths": "Chăm chỉ, kiên nhẫn, chữ viết đẹp, cẩn thận",
+    "weaknesses": "Đôi lúc e ngại phát biểu trước lớp",
+    "hobbies": "Đọc tiểu thuyết, làm đồ handmade",
+    "wishedTeacher": "Ân cần, hướng dẫn kỹ phương pháp làm bài",
+    "wishedClassmates": "Vui vẻ giúp đỡ nhau",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.06,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-13",
+    "stt": 13,
+    "code": "12A7-13",
+    "name": "Ngô Hồng Gia Hân",
+    "gender": "Nữ",
+    "birthday": "24/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "209 Đường Số 6, P. Bình Hưng Hòa B, Bình Tân, TP.HCM",
+    "phone": "0967137232",
+    "email": "ngohonggiahan2411@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=200&q=80",
+    "group": 1,
+    "parentFatherName": "Nguyễn Văn Hoài",
+    "parentFatherPhone": "0909275400",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Nguyễn Thúy An",
+    "parentMotherPhone": "0909275400",
+    "parentMotherJob": "Kinh doanh tự do",
+    "primaryParentName": "Nguyễn Thúy An",
+    "primaryParentPhone": "0909275400",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Hóa học",
+    "examSubject2": "Lịch sử",
+    "dreamCareer": "Luật kinh tế / Quan hệ quốc tế",
+    "strengths": "Ghi nhớ nhanh, khả năng ngôn ngữ tốt, chăm học",
+    "weaknesses": "Môn Toán cần rèn thêm giải bài tập trắc nghiệm",
+    "hobbies": "Vẽ, nghe nhạc lofi, xem phim hoạt hình Ghibli",
+    "wishedTeacher": "Nhiệt tình, tâm lý và gắn kết lớp",
+    "wishedClassmates": "Đoàn kết, không cãi vã",
+    "pastRoles": [
+      "Tổ trưởng Tổ 1"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9.2,
+        "avg": 9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.4,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 92,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-14",
+    "stt": 14,
+    "code": "12A7-14",
+    "name": "Trịnh Thu Hiền",
+    "gender": "Nữ",
+    "birthday": "07/10/2008",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "B11/6C Ấp 2A, Vĩnh Lộc B, Huyện Bình Chánh, TP.HCM",
+    "phone": "0775127211",
+    "email": "tthuhien1007@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Trịnh Ngọc Đính",
+    "parentFatherPhone": "0984123888",
+    "parentFatherJob": "Buôn bán tự do",
+    "parentMotherName": "Nguyễn Thị Thùy Diễm",
+    "parentMotherPhone": "0775767262",
+    "parentMotherJob": "Buôn bán tại nhà",
+    "primaryParentName": "Nguyễn Thị Thùy Diễm",
+    "primaryParentPhone": "0775767262",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Dược sĩ / Chăm sóc sức khỏe",
+    "strengths": "Kiên trì, cẩn thận, biết lắng nghe",
+    "weaknesses": "Còn e ngại trước đám đông",
+    "hobbies": "Nghe nhạc, nấu ăn",
+    "wishedTeacher": "Nhiệt tình, hỗ trợ phương pháp ôn thi",
+    "wishedClassmates": "Cùng học tập tiến bộ",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.6
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      }
+    },
+    "currentGpa": 7.91,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 85,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-15",
+    "stt": 15,
+    "code": "12A7-15",
+    "name": "Chu Gia Hòa",
+    "gender": "Nam",
+    "birthday": "28/03/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "558 Trần Văn Giàu, Q. Bình Tân, TP.HCM",
+    "phone": "0967528767",
+    "email": "hoatotruong321@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Chu Văn Hải",
+    "parentFatherPhone": "0938095979",
+    "parentFatherJob": "Kinh doanh",
+    "parentMotherName": "Phạm Thị Dung",
+    "parentMotherPhone": "0938095979",
+    "parentMotherJob": "Kinh doanh gia đình (Chu Hải Steel)",
+    "primaryParentName": "Phạm Thị Dung",
+    "primaryParentPhone": "0938095979",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Xây dựng / Quản trị Doanh nghiệp",
+    "strengths": "Học tốt các môn Tự nhiên Toán Lý Hóa, năng động",
+    "weaknesses": "Cần chú ý không nói chuyện riêng trong giờ học",
+    "hobbies": "Đá banh, bida, xe thể thao",
+    "wishedTeacher": "Nhiệt tình, dạy bài bản",
+    "wishedClassmates": "Đoàn kết cùng tiến",
+    "pastRoles": [
+      "Cán sự bộ môn Toán"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.4,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.5
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.6
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.71,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 92,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-16",
+    "stt": 16,
+    "code": "12A7-16",
+    "name": "Ngô Bích Hợp",
+    "gender": "Nữ",
+    "birthday": "15/09/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "338/160/28 Chiến Lược, P. Bình Trị Đông A, Bình Tân, TP.HCM",
+    "phone": "0988236088",
+    "email": "ngobichhop12a7@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Nguyễn Văn Lượng",
+    "parentFatherPhone": "0908236088",
+    "parentFatherJob": "Logistics",
+    "parentMotherName": "Trần Thị Xuân",
+    "parentMotherPhone": "0908236088",
+    "parentMotherJob": "Công ty CP & Đầu tư Liên An",
+    "primaryParentName": "Trần Thị Xuân",
+    "primaryParentPhone": "0908236088",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Quản trị Khách sạn Quốc tế",
+    "strengths": "Chăm chỉ, nền tảng Hóa và Văn rất vững, tự giác",
+    "weaknesses": "Đôi lúc thiếu tự tin khi thuyết trình",
+    "hobbies": "Vẽ tranh, xem phim, nghe nhạc",
+    "wishedTeacher": "Nhiệt tình chỉ dạy",
+    "wishedClassmates": "Vui vẻ hòa đồng",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.3,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.5,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 94,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-17",
+    "stt": 17,
+    "code": "12A7-17",
+    "name": "Đặng Nguyễn Kha",
+    "gender": "Nam",
+    "birthday": "22/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "Xã Tân Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0903959634",
+    "email": "cyrussosad0981@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Đặng Văn Thủy",
+    "parentFatherPhone": "0915935951",
+    "parentFatherJob": "Phân phối VLXD",
+    "parentMotherName": "Nguyễn Thị Nương",
+    "parentMotherPhone": "0915935951",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Nguyễn Thị Nương",
+    "primaryParentPhone": "0915935951",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Hóa dược / Công nghệ sinh học",
+    "strengths": "Rất đam mê và giỏi môn Hóa học, chịu khó tìm tòi",
+    "weaknesses": "Đôi lúc trầm tính, ít chia sẻ với bạn bè",
+    "hobbies": "Vẽ minh họa, thí nghiệm hóa học, nghe rap",
+    "wishedTeacher": "Giảng dạy truyền cảm hứng môn Hóa",
+    "wishedClassmates": "Không chia rẽ, cùng nhau đậu tốt nghiệp",
+    "pastRoles": [
+      "Cán sự bộ môn Hóa"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.2,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.1
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.6
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.63,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 94,
+    "classRole": "Lớp phó lao động"
+  },
+  {
+    "id": "hs-18",
+    "stt": 18,
+    "code": "12A7-18",
+    "name": "Lại Hoàng Vĩnh Khang",
+    "gender": "Nam",
+    "birthday": "09/06/2009",
+    "birthPlace": "Đồng Nai",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "B11/6C Ấp 2A, Vĩnh Lộc B, Huyện Bình Chánh, TP.HCM",
+    "phone": "0902322548",
+    "email": "laikhang108@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Lại Công Tài",
+    "parentFatherPhone": "0964410299",
+    "parentFatherJob": "Buôn bán",
+    "parentMotherName": "Nguyễn Thị Ánh",
+    "parentMotherPhone": "0964410299",
+    "parentMotherJob": "Kinh doanh gia đình",
+    "primaryParentName": "Nguyễn Thị Ánh",
+    "primaryParentPhone": "0964410299",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Quản trị Kinh doanh / Thiết kế Đồ họa",
+    "strengths": "Chăm chỉ, hòa đồng, tinh thần thể thao tốt",
+    "weaknesses": "Đôi lúc còn học lệch, cần chú ý môn Văn",
+    "hobbies": "Thể thao, bóng đá, bida",
+    "wishedTeacher": "Hỗ trợ lớp nhiệt tình",
+    "wishedClassmates": "Vui vẻ đoàn kết",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.08,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-19",
+    "stt": 19,
+    "code": "12A7-19",
+    "name": "Quản Duy Khánh",
+    "gender": "Nam",
+    "birthday": "01/02/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "Đường Bộ Đội An Điền, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0375176373",
+    "email": "quanduykhanh09@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Quản Văn Huấn",
+    "parentFatherPhone": "0979737150",
+    "parentFatherJob": "Bán hàng",
+    "parentMotherName": "Trương Thị Bình",
+    "parentMotherPhone": "0393343789",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Trương Thị Bình",
+    "primaryParentPhone": "0393343789",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Trí tuệ Nhân tạo / Khoa học Dữ liệu",
+    "strengths": "Toán và Hóa xuất sắc (9.1 và 9.5), tư duy logic nhạy bén",
+    "weaknesses": "Đôi lúc nói chuyện riêng, cần rèn thêm tính kiên nhẫn",
+    "hobbies": "Đá banh, công nghệ, chơi cờ vua",
+    "wishedTeacher": "Nhiệt tình, dạy nhiều bài toán hay",
+    "wishedClassmates": "Đoàn kết yêu thương, cùng đỗ đại học",
+    "pastRoles": [
+      "Cán sự bộ môn Hóa"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.6,
+        "avg": 9.4
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9.2,
+        "avg": 9
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 9.03,
+    "currentConduct": "Tốt",
+    "currentClassification": "Xuất sắc",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 98,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-20",
+    "stt": 20,
+    "code": "12A7-20",
+    "name": "Phạm Đình Bảo Khánh",
+    "gender": "Nam",
+    "birthday": "10/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Ấp 37, Xã Tân Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0969193150",
+    "email": "khanhgalaxy38@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Phạm Mạnh Tùng",
+    "parentFatherPhone": "0976234511",
+    "parentFatherJob": "Kinh doanh",
+    "parentMotherName": "Đoàn Thị Mỹ Dung",
+    "parentMotherPhone": "0976234511",
+    "parentMotherJob": "Kinh doanh",
+    "primaryParentName": "Đoàn Thị Mỹ Dung",
+    "primaryParentPhone": "0976234511",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Thiết kế Đồ họa / Kỹ thuật",
+    "strengths": "Nhiệt tình, có tinh thần xây dựng tập thể",
+    "weaknesses": "Cần chú ý củng cố kiến thức môn Toán",
+    "hobbies": "Đá banh, chơi game chiến thuật",
+    "wishedTeacher": "Nhiệt tình hỗ trợ ôn thi",
+    "wishedClassmates": "Đoàn kết không xích mích",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.4,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 7.91,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 49,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 1,
+      "rate": 96
+    },
+    "activityPoints": 85,
+    "classRole": "Tổ trưởng"
+  },
+  {
+    "id": "hs-21",
+    "stt": 21,
+    "code": "12A7-21",
+    "name": "Trần Anh Khoa",
+    "gender": "Nam",
+    "birthday": "10/09/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "Đường Bộ Đội An Điền, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0395529709",
+    "email": "trananhkhoa2197@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Trần Văn Quân",
+    "parentFatherPhone": "0965013845",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Nguyễn Thị Hiền",
+    "parentMotherPhone": "0982225920",
+    "parentMotherJob": "Ở nhà",
+    "primaryParentName": "Nguyễn Thị Hiền",
+    "primaryParentPhone": "0982225920",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Cơ khí Ô tô",
+    "strengths": "Chất phác, thích mày mò kỹ thuật",
+    "weaknesses": "Năm ngoái học lực Đạt (Toán 5.5, Lý 5.1), dễ mất tập trung, cần theo sát",
+    "hobbies": "Đá banh, game điện thoại",
+    "wishedTeacher": "Nhẹ nhàng chỉ bảo, kiên nhẫn",
+    "wishedClassmates": "Hòa đồng, đừng cô lập nhau",
+    "pastRoles": [],
+    "awards": [],
+    "disciplines": [
+      "Cần chú ý trật tự và học tập"
+    ],
+    "gpaPrevYear": 6.8,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Đạt",
+    "titlePrevYear": "Học sinh Trung bình khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.5,
+        "final": 6.8,
+        "avg": 6.7
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6,
+          6.2
+        ],
+        "midterm": 6.2,
+        "final": 6.5,
+        "avg": 6.3
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      }
+    },
+    "currentGpa": 7.36,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 48,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 2,
+      "rate": 94
+    },
+    "activityPoints": 76,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-22",
+    "stt": 22,
+    "code": "12A7-22",
+    "name": "Huỳnh Quốc Khởi",
+    "gender": "Nam",
+    "birthday": "28/11/2009",
+    "birthPlace": "Kiên Giang",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "36/30/11, P. Đông Hưng Thuận, Q. 12, TP.HCM",
+    "phone": "0342983880",
+    "email": "huynhquockhoi20091@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Huỳnh Văn Tiền",
+    "parentFatherPhone": "0979891277",
+    "parentFatherJob": "Công nhân (thợ đánh bóng)",
+    "parentMotherName": "Phạm Thị Lệ",
+    "parentMotherPhone": "0979891277",
+    "parentMotherJob": "Cắt tóc",
+    "primaryParentName": "Phạm Thị Lệ",
+    "primaryParentPhone": "0979891277",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Tự động hóa / Kỹ thuật",
+    "strengths": "Toán tốt (8.1), có quyết tâm vượt khó",
+    "weaknesses": "Ngoại ngữ còn yếu, cần rèn luyện thêm từ vựng",
+    "hobbies": "Đá banh, bida, tập võ",
+    "wishedTeacher": "Nhiệt tình động viên",
+    "wishedClassmates": "Cùng nhau học tập",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.8,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.14,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-23",
+    "stt": 23,
+    "code": "12A7-23",
+    "name": "Phan Tuấn Kiệt",
+    "gender": "Nam",
+    "birthday": "14/05/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "D16/25C Ấp 4B, Xã Tân Vĩnh Lộc, TP.HCM",
+    "phone": "0989454164",
+    "email": "kietpt052009@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Phan Trọng Kiên",
+    "parentFatherPhone": "0933232300",
+    "parentFatherJob": "Xây dựng",
+    "parentMotherName": "Đoàn Thị Thúy Kiều",
+    "parentMotherPhone": "0933232300",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Đoàn Thị Thúy Kiều",
+    "primaryParentPhone": "0933232300",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Xây dựng / Kiến trúc",
+    "strengths": "Chăm chỉ, thực tế, điểm Hóa tốt",
+    "weaknesses": "Tiếng Anh cần tập trung nâng cao thêm",
+    "hobbies": "Đá banh, nghe nhạc",
+    "wishedTeacher": "Nhiệt tình, vui vẻ",
+    "wishedClassmates": "Đoàn kết yêu thương",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 86,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-24",
+    "stt": 24,
+    "code": "12A7-24",
+    "name": "Nguyễn Cao Kỳ",
+    "gender": "Nam",
+    "birthday": "15/04/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Tân Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0364483834",
+    "email": "nguyencaoky12a7@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Nguyễn Văn Quang",
+    "parentFatherPhone": "0901238899",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Trần Thị Hiền",
+    "parentMotherPhone": "0983737738",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Trần Thị Hiền",
+    "primaryParentPhone": "0983737738",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ thuật Cơ khí / Lái xe",
+    "strengths": "Vui tính, nhanh mồm nhanh miệng, thích hoạt động ngoài trời",
+    "weaknesses": "Năm ngoái học lực Đạt (Toán 5.2, Lý 5.2), hay đùa giỡn trong giờ",
+    "hobbies": "Đá banh, chơi game mobile",
+    "wishedTeacher": "Mong thầy thông cảm và hướng dẫn từ từ",
+    "wishedClassmates": "Vui vẻ không chấp nhặt",
+    "pastRoles": [],
+    "awards": [],
+    "disciplines": [
+      "Cần lưu ý tác phong trong lớp"
+    ],
+    "gpaPrevYear": 6.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Đạt",
+    "titlePrevYear": "Học sinh Đạt",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.2,
+          6.5
+        ],
+        "midterm": 6.5,
+        "final": 6.8,
+        "avg": 6.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6,
+          6.2
+        ],
+        "midterm": 6.2,
+        "final": 6.5,
+        "avg": 6.3
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      }
+    },
+    "currentGpa": 7.28,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 48,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 2,
+      "rate": 94
+    },
+    "activityPoints": 78,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-25",
+    "stt": 25,
+    "code": "12A7-25",
+    "name": "Đỗ Thanh Liêm",
+    "gender": "Nam",
+    "birthday": "10/01/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "40 Nguyễn Thị Tú, Q. Bình Tân, TP.HCM",
+    "phone": "0769704381",
+    "email": "liemdeepzai1234@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Đỗ Thanh Tùng",
+    "parentFatherPhone": "0909275400",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Trương Kim Tròn",
+    "parentMotherPhone": "0936873096",
+    "parentMotherJob": "Công ty",
+    "primaryParentName": "Trương Kim Tròn",
+    "primaryParentPhone": "0936873096",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kinh doanh / Công nghệ ô tô",
+    "strengths": "Hoạt bát, vui vẻ, thích giao tiếp",
+    "weaknesses": "Năm ngoái nghỉ phép 11 buổi, cần cải thiện chuyên cần",
+    "hobbies": "Đá banh, bida, đi du lịch",
+    "wishedTeacher": "Thầy thoải mái, hỗ trợ học tập",
+    "wishedClassmates": "Lớp vui vẻ đoàn kết",
+    "pastRoles": [
+      "Tổ phó"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.13,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 49,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 1,
+      "rate": 96
+    },
+    "activityPoints": 86,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-26",
+    "stt": 26,
+    "code": "12A7-26",
+    "name": "Nguyễn Thế Long",
+    "gender": "Nam",
+    "birthday": "23/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Dạ không có",
+    "address": "539/59 Hương Lộ 3, Bình Hưng Hòa, Q. Bình Tân, TP.HCM",
+    "phone": "0908209460",
+    "email": "longlacloi121@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "Nguyễn Xuân Hiếu",
+    "parentFatherPhone": "0938323356",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Võ Thị Mười",
+    "parentMotherPhone": "0938323356",
+    "parentMotherJob": "Bán bánh mì chả cá",
+    "primaryParentName": "Nguyễn Xuân Hiếu",
+    "primaryParentPhone": "0938323356",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "2",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Xây dựng / Giao thông",
+    "strengths": "Chăm chỉ, kiên nhẫn, học đều các môn Tự nhiên",
+    "weaknesses": "Ít nói, ít tham gia phong trào văn nghệ",
+    "hobbies": "Đọc truyện, đá banh, đi dạo",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Đoàn kết thân thiện",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.1,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.1
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.47,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 90,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-27",
+    "stt": 27,
+    "code": "12A7-27",
+    "name": "Huỳnh Thị Ái Ly",
+    "gender": "Nữ",
+    "birthday": "03/02/2009",
+    "birthPlace": "Thừa Thiên Huế",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Kế A6/35, Hẻm 35, Xã Vĩnh Lộc, TPHCM",
+    "phone": "0896588063",
+    "email": "huynhly030209@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Huỳnh Văn Phúc",
+    "parentFatherPhone": "0975968706",
+    "parentFatherJob": "Thợ may",
+    "parentMotherName": "Phạm Thị Lành",
+    "parentMotherPhone": "0975968706",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Phạm Thị Lành",
+    "primaryParentPhone": "0975968706",
+    "familyCondition": "Bình thường",
+    "livingWith": "Ba, Mẹ, Em gái",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kế toán - Kiểm toán UEH / UEL",
+    "strengths": "Văn chương xuất sắc (9.2), tư duy tốt, có trách nhiệm cao",
+    "weaknesses": "Đôi lúc lo âu và tự tạo áp lực trước các kỳ thi lớn",
+    "hobbies": "Đọc sách, xem phim, viết nhật ký",
+    "wishedTeacher": "Tạo tinh thần thoải mái nhưng giao đủ bài tập rèn luyện",
+    "wishedClassmates": "Chăm chỉ, siêng năng và đoàn kết",
+    "pastRoles": [
+      "Lớp phó Học tập",
+      "Bí thư Chi đoàn"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026",
+      "Cán bộ Đoàn xuất sắc"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.5,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.3
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.9,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 98,
+    "classRole": "Học sinh",
+    "pinCode": "1234"
+  },
+  {
+    "id": "hs-28",
+    "stt": 28,
+    "code": "12A7-28",
+    "name": "Nguyễn Tam Minh",
+    "gender": "Nam",
+    "birthday": "19/09/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "B3/16G1, Vĩnh Lộc B, Huyện Bình Chánh, TP.HCM",
+    "phone": "0379503276",
+    "email": "nguyentamminh5555@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Nguyễn Tam Lộc",
+    "parentFatherPhone": "0903171322",
+    "parentFatherJob": "Cơ khí",
+    "parentMotherName": "Nguyễn Thanh Ngọc Diễm",
+    "parentMotherPhone": "0903171322",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Nguyễn Thanh Ngọc Diễm",
+    "primaryParentPhone": "0903171322",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "2",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Tự động hóa Bách Khoa TP.HCM",
+    "strengths": "Toán Lý Hóa đỉnh cao (Toán 9.2, Lý 9.0, Hóa 9.3), tư duy cực sắc bén",
+    "weaknesses": "Đôi lúc hơi trầm tính trong các hoạt động phong trào",
+    "hobbies": "Đọc sách toán học, chơi cờ vua, lập trình robot",
+    "wishedTeacher": "Đồng hành ôn luyện các đề thi khó",
+    "wishedClassmates": "Cùng nhau học tập đạt điểm cao nhất",
+    "pastRoles": [
+      "Cán sự bộ môn Toán"
+    ],
+    "awards": [
+      "Học sinh Xuất sắc năm 2025-2026",
+      "Giải Nhì Toán cấp Trường"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 9.1,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Xuất sắc",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.6,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.6
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.3
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 9.29,
+    "currentConduct": "Tốt",
+    "currentClassification": "Xuất sắc",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 95,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-29",
+    "stt": 29,
+    "code": "12A7-29",
+    "name": "Đinh Ngọc Trà My",
+    "gender": "Nữ",
+    "birthday": "11/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "46 Lô Tư, Khu phố 2, P. Bình Hưng Hòa A, Q. Bình Tân, TP.HCM",
+    "phone": "0378312184",
+    "email": "tmycutivai@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Đinh Ngọc Hà",
+    "parentFatherPhone": "0914176579",
+    "parentFatherJob": "Buôn bán",
+    "parentMotherName": "Lê Thị Trung",
+    "parentMotherPhone": "0914176579",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Lê Thị Trung",
+    "primaryParentPhone": "0914176579",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Digital Marketing / Truyền thông",
+    "strengths": "Chăm chỉ, nhanh nhẹn, hòa đồng, viết văn hay",
+    "weaknesses": "Năm ngoái nghỉ phép 12 buổi, cần giữ gìn sức khỏe",
+    "hobbies": "Vẽ minh họa, makeup, nghe nhạc Kpop",
+    "wishedTeacher": "Vui vẻ, dạy dễ hiểu",
+    "wishedClassmates": "Gắn bó, đoàn kết",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.18,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 49,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 96
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-30",
+    "stt": 30,
+    "code": "12A7-30",
+    "name": "Nguyễn Lê Bảo Ngọc",
+    "gender": "Nữ",
+    "birthday": "27/08/2009",
+    "birthPlace": "Huế",
+    "ethnicity": "Kinh",
+    "religion": "Phật giáo",
+    "address": "67/5 Nguyễn Thị Tú, KP 12, P. Bình Tân, TP.HCM",
+    "phone": "0707130909",
+    "email": "bngoc.27082009@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Ngô Bách",
+    "parentFatherPhone": "0978801771",
+    "parentFatherJob": "Công nhân",
+    "parentMotherName": "Hồng Thị Mỹ Duyên",
+    "parentMotherPhone": "0978801771",
+    "parentMotherJob": "KCN Vĩnh Lộc",
+    "primaryParentName": "Hồng Thị Mỹ Duyên",
+    "primaryParentPhone": "0978801771",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Thiết kế Đồ họa / Truyền thông",
+    "strengths": "Chăm học, tự giác, có tinh thần trách nhiệm",
+    "weaknesses": "Năm ngoái nghỉ phép 18 buổi do ốm, cần bồi dưỡng thể lực",
+    "hobbies": "Vẽ, ca hát, nghe podcast",
+    "wishedTeacher": "Nhiệt tình thấu hiểu",
+    "wishedClassmates": "Yêu thương đoàn kết",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.3,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.67,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 92,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-31",
+    "stt": 31,
+    "code": "12A7-31",
+    "name": "Lê Yến Nhi",
+    "gender": "Nữ",
+    "birthday": "09/09/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "A1/41a Tổ 1, Ấp 1, Xã Vĩnh Lộc, TPHCM",
+    "phone": "0765448856",
+    "email": "nhiyenlee0909@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Lê Anh Tuấn",
+    "parentFatherPhone": "0902951400",
+    "parentFatherJob": "Tài xế công nghệ",
+    "parentMotherName": "Dương Thị Ánh",
+    "parentMotherPhone": "0907149100",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Lê Anh Tuấn",
+    "primaryParentPhone": "0902951400",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Hóa học",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Sư phạm Ngoại ngữ / Kinh tế",
+    "strengths": "Chăm chỉ, nền tảng Văn và Hóa khá tốt",
+    "weaknesses": "Cần tự tin hơn trong các kỳ thi chung",
+    "hobbies": "Đọc sách, nghe nhạc",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Vui vẻ hòa đồng",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.34,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-32",
+    "stt": 32,
+    "code": "12A7-32",
+    "name": "Nguyễn Yến Nhi",
+    "gender": "Nữ",
+    "birthday": "16/03/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Liên Ấp 123 Tân Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0964354849",
+    "email": "2009nguyenyennhi@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Nguyễn Văn Thơ",
+    "parentFatherPhone": "0902836697",
+    "parentFatherJob": "Bảo vệ",
+    "parentMotherName": "Nguyễn Thị Huệ",
+    "parentMotherPhone": "0902836697",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Nguyễn Văn Thơ",
+    "primaryParentPhone": "0902836697",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Thiết kế Thời trang / Mỹ thuật Công nghiệp",
+    "strengths": "Chăm chỉ, có hoa tay, tiếp thu bài nhanh",
+    "weaknesses": "Ngoại ngữ cần bổ sung vốn từ vựng chuyên ngành",
+    "hobbies": "Vẽ tranh, xem thời trang, nấu ăn",
+    "wishedTeacher": "Nhiệt tình hỗ trợ",
+    "wishedClassmates": "Đoàn kết yêu thương",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.05,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 88,
+    "classRole": "Tổ trưởng"
+  },
+  {
+    "id": "hs-33",
+    "stt": 33,
+    "code": "12A7-33",
+    "name": "Nguyễn Ngọc Bảo Như",
+    "gender": "Nữ",
+    "birthday": "29/12/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Hoa",
+    "religion": "Không có",
+    "address": "3b58/5, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0767496135",
+    "email": "sally29nguyen@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Huỳnh Thanh Tòng",
+    "parentFatherPhone": "0903396093",
+    "parentFatherJob": "Công nhân",
+    "parentMotherName": "Phạm Thị Kiều Oanh",
+    "parentMotherPhone": "0903396093",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Phạm Thị Kiều Oanh",
+    "primaryParentPhone": "0903396093",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Truyền thông Đa phương tiện / Ngoại ngữ",
+    "strengths": "Tiếng Anh xuất sắc (8.9), Văn (8.7), hoạt bát, tự tin",
+    "weaknesses": "Cần duy trì đều đặn các môn Toán Lý",
+    "hobbies": "Vẽ tranh, nghe nhạc, đi bơi, học võ",
+    "wishedTeacher": "Nhiệt tình, vui vẻ, tạo nhiều kỷ niệm đẹp cho lớp",
+    "wishedClassmates": "Nghiêm túc trong việc học và đậu 100%",
+    "pastRoles": [
+      "Cán sự bộ môn Anh"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.5,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.6,
+        "avg": 9.4
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.91,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 95,
+    "classRole": "Lớp phó học tập"
+  },
+  {
+    "id": "hs-34",
+    "stt": 34,
+    "code": "12A7-34",
+    "name": "Nguyễn Tấn Phát",
+    "gender": "Nam",
+    "birthday": "14/09/2009",
+    "birthPlace": "Thành phố Huế",
+    "ethnicity": "Kinh",
+    "religion": "Phật giáo",
+    "address": "67/5 Nguyễn Thị Tú, Khu phố 12, P. Bình Tân, TP.HCM",
+    "phone": "0938290341",
+    "email": "Phat200999@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Nguyễn Văn Thân",
+    "parentFatherPhone": "0787154086",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Dương Thị Ánh",
+    "parentMotherPhone": "0787154086",
+    "parentMotherJob": "Tự do",
+    "primaryParentName": "Nguyễn Văn Thân",
+    "primaryParentPhone": "0787154086",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "2",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Cơ khí / Điện tử",
+    "strengths": "Hóa học khá tốt (8.4), thật thà, chăm chỉ",
+    "weaknesses": "Cần rèn luyện thêm tính kiên nhẫn",
+    "hobbies": "Đá banh, câu cá",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Đoàn kết yêu thương",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.06,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 49,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 96
+    },
+    "activityPoints": 85,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-35",
+    "stt": 35,
+    "code": "12A7-35",
+    "name": "Lương Hoàng Phi",
+    "gender": "Nam",
+    "birthday": "16/04/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "Đường Công Nghệ Mới, Ấp 9, Xã Tân Vĩnh Lộc, TP.HCM",
+    "phone": "0981730057",
+    "email": "luonghoangphi16@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Lương Văn Nhỏ",
+    "parentFatherPhone": "0386434744",
+    "parentFatherJob": "Nội trợ",
+    "parentMotherName": "Phan Thị Mỹ Linh",
+    "parentMotherPhone": "0386434744",
+    "parentMotherJob": "Ở nhà",
+    "primaryParentName": "Phan Thị Mỹ Linh",
+    "primaryParentPhone": "0386434744",
+    "familyCondition": "Bình dân",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "2",
+    "examSubject1": "Hóa học",
+    "examSubject2": "Lịch sử",
+    "dreamCareer": "Sĩ quan Quân đội / An ninh Nhân dân",
+    "strengths": "Chăm chỉ, rèn luyện thể lực tốt, môn Văn điểm cao (8.5)",
+    "weaknesses": "Ngoại ngữ cần bổ sung ngữ pháp",
+    "hobbies": "Tập thể hình, đọc sách lịch sử, chạy bộ",
+    "wishedTeacher": "Nghiêm khắc nhưng tình cảm",
+    "wishedClassmates": "Đoàn kết, cùng giúp nhau tiến bộ",
+    "pastRoles": [
+      "Cán sự thể dục"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      }
+    },
+    "currentGpa": 8.49,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 92,
+    "classRole": "Bí thư"
+  },
+  {
+    "id": "hs-36",
+    "stt": 36,
+    "code": "12A7-36",
+    "name": "Lương Kỳ Phong",
+    "gender": "Nam",
+    "birthday": "23/12/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Hoa",
+    "religion": "Phật giáo",
+    "address": "Liên Ấp 123 Tân Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0902249322",
+    "email": "kiphong246@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Lương Trí Nhiên",
+    "parentFatherPhone": "0932730393",
+    "parentFatherJob": "Cơ khí",
+    "parentMotherName": "Lâm Trân",
+    "parentMotherPhone": "0903938803",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Lâm Trân",
+    "primaryParentPhone": "0903938803",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Thiết kế Đồ họa / Kỹ thuật",
+    "strengths": "Toán Lý Hóa đều tốt (Toán 8.2, Lý 8.1, Hóa 8.6), tư duy nhanh nhẹn",
+    "weaknesses": "Đôi lúc hơi nóng tính, cần bình tĩnh hơn",
+    "hobbies": "Đá banh, bida, vẽ tranh kỹ thuật",
+    "wishedTeacher": "Nhiệt tình truyền đạt",
+    "wishedClassmates": "Đoàn kết không chia rẽ",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.2,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 8.8,
+        "final": 9,
+        "avg": 8.9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.72,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 92,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-37",
+    "stt": 37,
+    "code": "12A7-37",
+    "name": "Nguyễn Quang Quân",
+    "gender": "Nam",
+    "birthday": "19/05/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "A9/24F Nguyễn Văn Trà, Xã Tân Vĩnh Lộc, TP.HCM",
+    "phone": "0964490382",
+    "email": "qn9923462@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Nguyễn Văn Hậu",
+    "parentFatherPhone": "0377317843",
+    "parentFatherJob": "Kinh doanh",
+    "parentMotherName": "Nguyễn Thị Kim Sa",
+    "parentMotherPhone": "0377317843",
+    "parentMotherJob": "Công ty",
+    "primaryParentName": "Nguyễn Thị Kim Sa",
+    "primaryParentPhone": "0377317843",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Lịch sử",
+    "dreamCareer": "Quản trị Kinh doanh / Thương mại",
+    "strengths": "Năng động, chơi thể thao tốt, hòa đồng",
+    "weaknesses": "Đôi lúc mất trật tự, cần tập trung hơn trong giờ ôn thi",
+    "hobbies": "Đá banh, bóng chuyền, đi du lịch",
+    "wishedTeacher": "Vui vẻ, thấu hiểu học sinh",
+    "wishedClassmates": "Đoàn kết cùng tiến bộ",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.01,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 86,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-38",
+    "stt": 38,
+    "code": "12A7-38",
+    "name": "Trần Vương Quốc",
+    "gender": "Nam",
+    "birthday": "03/12/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "Đường Bộ Đội An Điền, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0906650348",
+    "email": "vuongquoctran69@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Trần Xuân Hoàn",
+    "parentFatherPhone": "0938158075",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Phạm Thị Thanh Tâm",
+    "parentMotherPhone": "0938158075",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Phạm Thị Thanh Tâm",
+    "primaryParentPhone": "0938158075",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Cơ khí Chế tạo Máy",
+    "strengths": "Chất phác, thực tế, môn Hóa học đạt khá (8.5)",
+    "weaknesses": "Ngoại ngữ còn hạn chế, cần rèn thêm ngữ pháp",
+    "hobbies": "Đá banh, đi câu cá",
+    "wishedTeacher": "Nhiệt tình hỗ trợ",
+    "wishedClassmates": "Vui vẻ không phân biệt",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 7.97,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 85,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-39",
+    "stt": 39,
+    "code": "12A7-39",
+    "name": "Nguyễn Mạnh Thắng",
+    "gender": "Nam",
+    "birthday": "29/04/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "TP.HCM",
+    "phone": "0333693378",
+    "email": "manhthangnguyen042@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80",
+    "group": 3,
+    "parentFatherName": "Nguyễn Xuân Đức",
+    "parentFatherPhone": "0584469755",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Nguyễn Thị Hồng",
+    "parentMotherPhone": "0584469755",
+    "parentMotherJob": "Tự do",
+    "primaryParentName": "Nguyễn Xuân Đức",
+    "primaryParentPhone": "0584469755",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ thuật Máy tính / Đồ họa",
+    "strengths": "Thật thà, thích công nghệ thông tin",
+    "weaknesses": "Năm ngoái nghỉ 13 buổi, học lực Toán Lý Văn còn yếu (Toán 5.7, Lý 5.9)",
+    "hobbies": "Chơi game, nghe nhạc",
+    "wishedTeacher": "Nhiệt tình hỗ trợ học sinh yếu",
+    "wishedClassmates": "Bạn bè không khinh bỉ nhau",
+    "pastRoles": [],
+    "awards": [],
+    "disciplines": [
+      "Cần bồi dưỡng học tập cấp tốc"
+    ],
+    "gpaPrevYear": 7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Tiên tiến",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6,
+          6.2
+        ],
+        "midterm": 6.2,
+        "final": 6.5,
+        "avg": 6.3
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.4
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 7.56,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 48,
+      "excused": 2,
+      "unexcused": 0,
+      "late": 1,
+      "rate": 94
+    },
+    "activityPoints": 78,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-40",
+    "stt": 40,
+    "code": "12A7-40",
+    "name": "Lê Ngọc Minh Thư",
+    "gender": "Nữ",
+    "birthday": "29/12/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "E2/14, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0966144976",
+    "email": "lengocminhthu29122009@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Lê Xuân Dũng",
+    "parentFatherPhone": "0941665239",
+    "parentFatherJob": "Doanh nhân",
+    "parentMotherName": "Nguyễn Thị Ngọc Hoa",
+    "parentMotherPhone": "0909796943",
+    "parentMotherJob": "Tự do",
+    "primaryParentName": "Nguyễn Thị Ngọc Hoa",
+    "primaryParentPhone": "0909796943",
+    "familyCondition": "Khá giả",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "2",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kinh doanh Quốc tế / Thương mại điện tử",
+    "strengths": "Học đều tất cả các môn, Hóa và Sử đạt 9.0, gương mẫu",
+    "weaknesses": "Đôi lúc hay lo lắng trước các kỳ thi lớn",
+    "hobbies": "Đọc sách, nghe nhạc, đi du lịch",
+    "wishedTeacher": "Nhiệt tình chỉ bảo, động viên",
+    "wishedClassmates": "Đoàn kết yêu thương",
+    "pastRoles": [
+      "Tổ trưởng Tổ 4"
+    ],
+    "awards": [
+      "Học sinh Giỏi năm 2025-2026"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 8.4,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Giỏi",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.8,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 95,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-41",
+    "stt": 41,
+    "code": "12A7-41",
+    "name": "Nguyễn Trần Anh Thư",
+    "gender": "Nữ",
+    "birthday": "27/07/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "D11/23U, Ấp 39, Xã Vĩnh Lộc, TP.HCM",
+    "phone": "0378318209",
+    "email": "anhthu2024a@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Nguyễn Văn Quang",
+    "parentFatherPhone": "0934034578",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Đặng Thị Trâm Anh",
+    "parentMotherPhone": "0934034578",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Đặng Thị Trâm Anh",
+    "primaryParentPhone": "0934034578",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Luật sư / Quan hệ Quốc tế",
+    "strengths": "Chăm chỉ, viết văn truyền cảm, có ý thức kỷ luật",
+    "weaknesses": "Toán cần rèn luyện thêm bài tập tư duy",
+    "hobbies": "Đọc sách văn học, nghe podcast tiếng Anh",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Đoàn kết thân thiện",
+    "pastRoles": [
+      "Cán sự bộ môn Văn"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.1
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.31,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 90,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-42",
+    "stt": 42,
+    "code": "12A7-42",
+    "name": "Nguyễn Ân Trí",
+    "gender": "Nam",
+    "birthday": "28/06/2009",
+    "birthPlace": "Lâm Đồng",
+    "ethnicity": "Kinh",
+    "religion": "Phật giáo",
+    "address": "3B47 Ấp 73, Xã Tân Vĩnh Lộc, TP.HCM",
+    "phone": "0941801446",
+    "email": "nguyenantri126@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Nguyễn Minh Quang",
+    "parentFatherPhone": "0912183139",
+    "parentFatherJob": "Cơ khí",
+    "parentMotherName": "Mai Thị Phương Thảo",
+    "parentMotherPhone": "0912183139",
+    "parentMotherJob": "Lâm Đồng",
+    "primaryParentName": "Mai Thị Phương Thảo",
+    "primaryParentPhone": "0912183139",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Cơ điện tử / Chế tạo",
+    "strengths": "Chăm chỉ, thật thà, yêu thích môn thực nghiệm",
+    "weaknesses": "Ngoại ngữ cần bổ sung",
+    "hobbies": "Đá banh, đi phượt",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Vui vẻ giúp đỡ nhau",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 7.96,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 85,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-43",
+    "stt": 43,
+    "code": "12A7-43",
+    "name": "Lê Phú Trình",
+    "gender": "Nam",
+    "birthday": "01/01/2009",
+    "birthPlace": "Lâm Đồng",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "344 Phạm Văn Sáng, Ấp 45, Xã Vĩnh Lộc, TP.HCM",
+    "phone": "0976388488",
+    "email": "trinhleeeee0101@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Lê Viết Thủy",
+    "parentFatherPhone": "0973889093",
+    "parentFatherJob": "Thợ mộc",
+    "parentMotherName": "Trần Thị Xuân",
+    "parentMotherPhone": "0973889093",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Trần Thị Xuân",
+    "primaryParentPhone": "0973889093",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Bác sĩ Đa khoa / Y Dược TP.HCM",
+    "strengths": "Thành tích học tập đứng đầu lớp (Toán 9.5, Anh 9.3, Lý 9.5, Hóa 9.5), cực kỳ thông minh",
+    "weaknesses": "Năm ngoái nghỉ 17 buổi (do ốm và thi học sinh giỏi), cần giữ gìn sức khỏe",
+    "hobbies": "Đọc tài liệu y học, nghe nhạc cổ điển, đá banh",
+    "wishedTeacher": "Tạo điều kiện để em bứt phá nguyện vọng Y Dược",
+    "wishedClassmates": "Cùng nhau học tập, 12A7 đỗ 100%",
+    "pastRoles": [
+      "Lớp phó Học tập",
+      "Bí thư Chi đoàn"
+    ],
+    "awards": [
+      "Học sinh Xuất sắc toàn diện",
+      "Giải Nhất Olympic trường"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 9.3,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Tốt",
+    "titlePrevYear": "Học sinh Xuất sắc",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.8,
+        "final": 9.8,
+        "avg": 9.8
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          9.5,
+          9.8
+        ],
+        "midterm": 9.5,
+        "final": 9.8,
+        "avg": 9.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.5,
+        "avg": 9.2
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.8,
+          10
+        ],
+        "midterm": 9.8,
+        "final": 10,
+        "avg": 9.9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      }
+    },
+    "currentGpa": 9.59,
+    "currentConduct": "Tốt",
+    "currentClassification": "Xuất sắc",
+    "attendanceStats": {
+      "present": 51,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 98,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-44",
+    "stt": 44,
+    "code": "12A7-44",
+    "name": "Đoàn Đắc Trung",
+    "gender": "Nam",
+    "birthday": "11/07/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "21/1 Ấp 5, Xã Bà Điểm, Hóc Môn, TP.HCM",
+    "phone": "0386569983",
+    "email": "dacwtrugn@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Đoàn Đắc Việt",
+    "parentFatherPhone": "0357197050",
+    "parentFatherJob": "Xây dựng",
+    "parentMotherName": "Nguyễn Thị Nam",
+    "parentMotherPhone": "0357197050",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Nguyễn Thị Nam",
+    "primaryParentPhone": "0357197050",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Lịch sử",
+    "dreamCareer": "Kỹ sư Xây dựng / Giao thông",
+    "strengths": "Chất phác, thật thà, môn Văn và Sử tốt (Văn 8.1, Sử 8.8)",
+    "weaknesses": "Toán và Lý cần chú ý giải đề trắc nghiệm nhanh hơn",
+    "hobbies": "Đá banh, bida",
+    "wishedTeacher": "Nhiệt tình giúp đỡ",
+    "wishedClassmates": "Vui vẻ đoàn kết",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.9,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.4
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.18,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 86,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-45",
+    "stt": 45,
+    "code": "12A7-45",
+    "name": "Phan Đặng Anh Tuấn",
+    "gender": "Nam",
+    "birthday": "23/08/2009",
+    "birthPlace": "Quảng Ngãi",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0373629215",
+    "email": "dangthitramanh6@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Phan Đình Đường",
+    "parentFatherPhone": "0787377088",
+    "parentFatherJob": "Công nhân",
+    "parentMotherName": "Đặng Thị Trâm Anh",
+    "parentMotherPhone": "0787377088",
+    "parentMotherJob": "Lao động tự do",
+    "primaryParentName": "Đặng Thị Trâm Anh",
+    "primaryParentPhone": "0787377088",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Cơ khí / Tự động hóa",
+    "strengths": "Chăm chỉ, thật thà, yêu thích môn Hóa và Toán",
+    "weaknesses": "Ngoại ngữ cần bổ sung",
+    "hobbies": "Đá banh, chạy bộ",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Đoàn kết thân thiện",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.5,
+        "final": 8,
+        "avg": 7.7
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.2
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      }
+    },
+    "currentGpa": 8.12,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-47",
+    "stt": 47,
+    "code": "12A7-47",
+    "name": "Nguyễn Văn Thành Vinh",
+    "gender": "Nam",
+    "birthday": "06/11/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "B4/28 Ấp 2, Xã Vĩnh Lộc B, Huyện Bình Chánh, TP.HCM",
+    "phone": "0832496439",
+    "email": "nguyenthidieuthuy9933@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Nguyễn Văn Long",
+    "parentFatherPhone": "0977259679",
+    "parentFatherJob": "Làm mộc",
+    "parentMotherName": "Vũ Thị Ngoan",
+    "parentMotherPhone": "0977259679",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Nguyễn Văn Long",
+    "primaryParentPhone": "0977259679",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Kỹ sư Xây dựng / Giao thông",
+    "strengths": "Chăm chỉ, thật thà, có cố gắng",
+    "weaknesses": "Toán Lý Anh còn trung bình khá, cần rèn luyện giải đề",
+    "hobbies": "Đá banh, xem phim hành động",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Vui vẻ giúp đỡ nhau",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.5,
+          6.8
+        ],
+        "midterm": 6.8,
+        "final": 7,
+        "avg": 6.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 7.66,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 85,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-48",
+    "stt": 48,
+    "code": "12A7-48",
+    "name": "Bùi Phạm Tường Vy",
+    "gender": "Nữ",
+    "birthday": "08/04/2009",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Đạo Phật",
+    "address": "B1/26k1, Ấp 2, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0979296050",
+    "email": "buituongvy778899@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Bùi Xuân Vượng",
+    "parentFatherPhone": "0822036274",
+    "parentFatherJob": "Tự do",
+    "parentMotherName": "Vũ Thị Ngoan",
+    "parentMotherPhone": "0979296050",
+    "parentMotherJob": "Nội trợ",
+    "primaryParentName": "Vũ Thị Ngoan",
+    "primaryParentPhone": "0979296050",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Lịch sử",
+    "dreamCareer": "Quản trị Kinh doanh / Sư phạm",
+    "strengths": "Chăm chỉ, dễ mến, biết lắng nghe",
+    "weaknesses": "Ngoại ngữ còn hạn chế, cần rèn luyện thêm",
+    "hobbies": "Đọc truyện, nghe nhạc, làm bánh",
+    "wishedTeacher": "Nhiệt tình vui vẻ",
+    "wishedClassmates": "Đoàn kết thân thiện",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.4,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          6.8,
+          7
+        ],
+        "midterm": 7,
+        "final": 7.2,
+        "avg": 7
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7,
+          7.2
+        ],
+        "midterm": 7.2,
+        "final": 7.5,
+        "avg": 7.3
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.2,
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 7.88,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 85,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-49",
+    "stt": 49,
+    "code": "12A7-49",
+    "name": "Nguyễn Thị Thảo Vy",
+    "gender": "Nữ",
+    "birthday": "30/06/2009",
+    "birthPlace": "Hải Dương",
+    "ethnicity": "Kinh",
+    "religion": "Không có",
+    "address": "B1/26H, Ấp 2, Xã Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0977259679",
+    "email": "thaovyn632@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Nguyễn Văn Long",
+    "parentFatherPhone": "0977259679",
+    "parentFatherJob": "Làm mộc",
+    "parentMotherName": "Vũ Thị Ngoan",
+    "parentMotherPhone": "0977259679",
+    "parentMotherJob": "Tại nhà",
+    "primaryParentName": "Vũ Thị Ngoan",
+    "primaryParentPhone": "0977259679",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Dược sĩ / Điều dưỡng",
+    "strengths": "Chăm chỉ, cẩn thận, biết giúp đỡ bạn bè",
+    "weaknesses": "Đôi lúc còn e ngại phát biểu trước lớp",
+    "hobbies": "Nấu ăn, nghe nhạc, đọc sách",
+    "wishedTeacher": "Nhiệt tình chỉ bảo",
+    "wishedClassmates": "Vui vẻ hòa đồng",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.6,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.8,
+          8
+        ],
+        "midterm": 8,
+        "final": 8.2,
+        "avg": 8
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.2
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9,
+          9.2
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9.1
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 7.99,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 86,
+    "classRole": "Học sinh"
+  },
+  {
+    "id": "hs-50",
+    "stt": 50,
+    "code": "12A7-50",
+    "name": "Nông Thị Yến Vy",
+    "gender": "Nữ",
+    "birthday": "12/04/2009",
+    "birthPlace": "Bình Phước",
+    "ethnicity": "Tày",
+    "religion": "Không có",
+    "address": "Xã Tân Vĩnh Lộc, Huyện Bình Chánh, TP.HCM",
+    "phone": "0977480175",
+    "email": "nongthiyenvy2009@gmail.com",
+    "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80",
+    "group": 4,
+    "parentFatherName": "Nông Văn Ngôn",
+    "parentFatherPhone": "0977480175",
+    "parentFatherJob": "Công nhân",
+    "parentMotherName": "Nguyễn Thị Tuyết",
+    "parentMotherPhone": "0862568227",
+    "parentMotherJob": "Công nhân",
+    "primaryParentName": "Nguyễn Thị Tuyết",
+    "primaryParentPhone": "0862568227",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Tiếng Anh",
+    "dreamCareer": "Quản trị Khách sạn / Du lịch",
+    "strengths": "Chăm chỉ, chịu khó vươn lên trong học tập",
+    "weaknesses": "Toán cần rèn luyện thêm bài tập tư duy",
+    "hobbies": "Nghe nhạc dân gian, thêu thùa, nấu ăn",
+    "wishedTeacher": "Nhiệt tình chỉ bảo, động viên",
+    "wishedClassmates": "Vui vẻ hòa đồng",
+    "pastRoles": [
+      "Tổ viên"
+    ],
+    "awards": [
+      "Học sinh Khá"
+    ],
+    "disciplines": [],
+    "gpaPrevYear": 7.7,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5,
+          7.8
+        ],
+        "midterm": 7.8,
+        "final": 8,
+        "avg": 7.8
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.2,
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.8,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          8.5,
+          8.8
+        ],
+        "midterm": 8.5,
+        "final": 8.8,
+        "avg": 8.7
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          8,
+          8.2
+        ],
+        "midterm": 8.2,
+        "final": 8.5,
+        "avg": 8.3
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9.2,
+          9.5
+        ],
+        "midterm": 9.2,
+        "final": 9.5,
+        "avg": 9.4
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.8,
+          9
+        ],
+        "midterm": 9,
+        "final": 9.2,
+        "avg": 9
+      }
+    },
+    "currentGpa": 8.18,
+    "currentConduct": "Tốt",
+    "currentClassification": "Giỏi",
+    "attendanceStats": {
+      "present": 50,
+      "excused": 1,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 98
+    },
+    "activityPoints": 88,
+    "classRole": "Học sinh"
+  },
+  {
+    "code": "12A7-50",
+    "name": "Đào Xuân Vy",
+    "gender": "Nữ",
+    "birthday": "2009-09-14",
+    "birthPlace": "TP.HCM",
+    "ethnicity": "Kinh",
+    "religion": "Không",
+    "address": "21/1 ấp 5 xã Bà Điểm",
+    "phone": "0349148673",
+    "email": "",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "group": 2,
+    "parentFatherName": "",
+    "parentFatherPhone": "",
+    "parentFatherJob": "",
+    "parentMotherName": "",
+    "parentMotherPhone": "",
+    "parentMotherJob": "",
+    "primaryParentName": "Bành Thị Cẩm Hằng",
+    "primaryParentPhone": "0773107409",
+    "familyCondition": "Bình thường",
+    "livingWith": "Bố mẹ",
+    "birthOrder": "1",
+    "examSubject1": "Vật lý",
+    "examSubject2": "Hóa học",
+    "dreamCareer": "Giáo viên tiểu học",
+    "strengths": "",
+    "weaknesses": "",
+    "hobbies": "",
+    "wishedTeacher": "",
+    "wishedClassmates": "",
+    "pastRoles": [],
+    "awards": [],
+    "disciplines": [],
+    "gpaPrevYear": 8,
+    "conductPrevYear": "Tốt",
+    "academicRankPrevYear": "Khá",
+    "titlePrevYear": "Học sinh Khá",
+    "currentGpa": 8,
+    "currentConduct": "Tốt",
+    "currentClassification": "Khá",
+    "scores": {
+      "van": {
+        "subjectName": "Ngữ văn",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "toan": {
+        "subjectName": "Toán học",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "anh": {
+        "subjectName": "Tiếng Anh",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "ly": {
+        "subjectName": "Vật lý",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "hoa": {
+        "subjectName": "Hóa học",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "su": {
+        "subjectName": "Lịch sử",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "gdktpl": {
+        "subjectName": "GDKT-PL",
+        "regular": [
+          7.5
+        ],
+        "midterm": 7.5,
+        "final": 7.5,
+        "avg": 7.5
+      },
+      "tin": {
+        "subjectName": "Tin học",
+        "regular": [
+          9
+        ],
+        "midterm": 9,
+        "final": 9,
+        "avg": 9
+      },
+      "gddp": {
+        "subjectName": "GD địa phương",
+        "regular": [
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.5,
+        "avg": 8.5
+      },
+      "gdqp": {
+        "subjectName": "GDQP-AN",
+        "regular": [
+          8.5
+        ],
+        "midterm": 8.5,
+        "final": 8.5,
+        "avg": 8.5
+      }
+    },
+    "attendanceStats": {
+      "present": 50,
+      "excused": 0,
+      "unexcused": 0,
+      "late": 0,
+      "rate": 100
+    },
+    "activityPoints": 85,
+    "classRole": "Tổ trưởng",
+    "id": "hs-1792030357853",
+    "stt": 50
+  }
+];

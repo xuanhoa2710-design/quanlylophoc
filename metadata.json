@@ -1,0 +1,8 @@
+{
+  "name": "A7 - Lớp Học Hạnh Phúc",
+  "description": "Hệ sinh thái quản lý lớp học thông minh và gắn kết dành cho giáo viên chủ nhiệm, học sinh và phụ huynh lớp 12A7 Trường THPT Vĩnh Lộc B.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

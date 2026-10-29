@@ -1,0 +1,215 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Represents an administrator or homeroom teacher (GVCN) with full privileges.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified email address of the administrator.",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "role": {
+          "type": "string",
+          "description": "Role designation for the admin.",
+          "enum": ["gvcn", "admin"],
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the admin record was created."
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Classroom": {
+      "title": "Classroom",
+      "description": "Master classroom document representing Class 12A7 THPT Vinh Loc B.",
+      "type": "object",
+      "properties": {
+        "classId": {
+          "type": "string",
+          "description": "Unique identifier for the classroom (e.g., 12A7).",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "className": {
+          "type": "string",
+          "description": "Display name of the class.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "schoolName": {
+          "type": "string",
+          "description": "Name of the high school.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "teacherName": {
+          "type": "string",
+          "description": "Name of the homeroom teacher (GVCN).",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the creator/owner of the classroom document.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "visibility": {
+          "type": "string",
+          "description": "Access mode for classroom members.",
+          "enum": ["shared", "restricted"],
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of the classroom.",
+          "enum": ["active", "archived"],
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp."
+        }
+      },
+      "required": [
+        "classId",
+        "className",
+        "schoolName",
+        "teacherName",
+        "ownerId",
+        "visibility",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ClassroomSection": {
+      "title": "ClassroomSection",
+      "description": "Modular data section belonging to a Classroom (config, students by group, attendance, emulation, activities, schedule).",
+      "type": "object",
+      "properties": {
+        "sectionId": {
+          "type": "string",
+          "description": "Identifier of the section document.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "classId": {
+          "type": "string",
+          "description": "Parent classroom identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sectionType": {
+          "type": "string",
+          "description": "Category of classroom data stored in this section.",
+          "enum": [
+            "config",
+            "students_g1",
+            "students_g2",
+            "students_g3",
+            "students_g4",
+            "attendance",
+            "emulation",
+            "activities",
+            "schedule"
+          ],
+          "maxLength": 32
+        },
+        "payload": {
+          "type": "object",
+          "description": "Structured map containing the section state."
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user who last updated this section.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedByRole": {
+          "type": "string",
+          "description": "Role of the user who performed the update.",
+          "enum": ["teacher", "student", "parent"],
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of the section.",
+          "enum": ["active", "locked"],
+          "maxLength": 32
+        },
+        "version": {
+          "type": "integer",
+          "description": "Monotonically increasing revision number."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification server timestamp."
+        }
+      },
+      "required": [
+        "sectionId",
+        "classId",
+        "sectionType",
+        "payload",
+        "updatedByUid",
+        "updatedByRole",
+        "status",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/AdminUser"
+      },
+      "description": "Stores verified administrator and homeroom teacher UIDs."
+    },
+    "/classrooms/{classId}": {
+      "schema": {
+        "$ref": "#/entities/Classroom"
+      },
+      "description": "Stores master classroom metadata and access state."
+    },
+    "/classrooms/{classId}/sections/{sectionId}": {
+      "schema": {
+        "$ref": "#/entities/ClassroomSection"
+      },
+      "description": "Stores modular synchronized classroom data sections under a parent classroom."
+    }
+  }
+}
