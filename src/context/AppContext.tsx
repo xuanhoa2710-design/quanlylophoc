@@ -1500,4 +1500,164 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (sectionId === 'config') {
         const nextAppConfig = rawPayload.appConfig && typeof rawPayload.appConfig === 'object' ? { ...INITIAL_APP_CONFIG, ...rawPayload.appConfig } : INITIAL_APP_CONFIG;
         const nextWeek = typeof rawPayload.currentWeek === 'number' && rawPayload.currentWeek > 0 ? rawPayload.currentWeek : INITIAL_CURRENT_WEEK;
-        lastSyncedJsonRef.current[sectionId] = JSON
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(sanitizePayloadForFirestore({ appConfig: nextAppConfig, currentWeek: nextWeek }));
+        setAppConfig(nextAppConfig);
+        setCurrentWeekState(nextWeek);
+        safeSetLocal(STORAGE_KEYS.CURRENT_WEEK, String(nextWeek));
+      } else if (sectionId === 'students_g1' || sectionId === 'students_g2' || sectionId === 'students_g3' || sectionId === 'students_g4') {
+        if (Array.isArray(rawPayload.list)) {
+          const targetGroup = sectionId === 'students_g1' ? 1 : sectionId === 'students_g2' ? 2 : sectionId === 'students_g3' ? 3 : 4;
+          const normalizedGroupList = rawPayload.list.map((s: any, idx: number) => normalizeStudentRecord(s, typeof s?.stt === 'number' ? s.stt - 1 : idx, DEFAULT_CADRE_ROLES)).sort((a: Student, b: Student) => a.stt - b.stt);
+          lastSyncedJsonRef.current[sectionId] = JSON.stringify(sanitizePayloadForFirestore({ list: normalizedGroupList }));
+          setStudents((prev) => {
+            const others = prev.filter((st) => (targetGroup === 4 ? st.group === 1 || st.group === 2 || st.group === 3 : st.group !== targetGroup));
+            return [...others, ...normalizedGroupList].sort((a, b) => a.stt - b.stt);
+          });
+        }
+      } else if (sectionId === 'attendance') {
+        const nextAttendanceDays = rawPayload.allAttendanceDays && typeof rawPayload.allAttendanceDays === 'object' ? rawPayload.allAttendanceDays : {};
+        const nextSupp = Array.isArray(rawPayload.supplementaryAttendanceList) ? rawPayload.supplementaryAttendanceList : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(sanitizePayloadForFirestore({ allAttendanceDays: nextAttendanceDays, supplementaryAttendanceList: nextSupp }));
+        setAllAttendanceDays(nextAttendanceDays);
+        setSupplementaryAttendanceList(nextSupp);
+      } else if (sectionId === 'emulation') {
+        const nextDisc = Array.isArray(rawPayload.disciplineEntries) ? rawPayload.disciplineEntries : [];
+        const nextBonus = Array.isArray(rawPayload.bonusEntries) ? rawPayload.bonusEntries : [];
+        const nextAdj = Array.isArray(rawPayload.emulationScoreAdjustments) ? rawPayload.emulationScoreAdjustments : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(sanitizePayloadForFirestore({ disciplineEntries: nextDisc, bonusEntries: nextBonus, emulationScoreAdjustments: nextAdj }));
+        setDisciplineEntries(nextDisc);
+        setBonusEntries(nextBonus);
+        setEmulationScoreAdjustments(nextAdj);
+      } else if (sectionId === 'activities') {
+        const nextEvals = Array.isArray(rawPayload.evaluations) ? rawPayload.evaluations : [];
+        const nextAnn = Array.isArray(rawPayload.announcements) ? rawPayload.announcements : [];
+        const nextHappy = Array.isArray(rawPayload.happyPosts) ? rawPayload.happyPosts : [];
+        const nextAss = Array.isArray(rawPayload.assignments) ? rawPayload.assignments : [];
+        const nextMsgs = rawPayload.messages && typeof rawPayload.messages === 'object' ? rawPayload.messages : {};
+        const nextAppts = Array.isArray(rawPayload.appointments) ? rawPayload.appointments : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(sanitizePayloadForFirestore({ evaluations: nextEvals, announcements: nextAnn, happyPosts: nextHappy, assignments: nextAss, messages: nextMsgs, appointments: nextAppts }));
+        setEvaluations(nextEvals);
+        setAnnouncements(nextAnn);
+        setHappyPosts(nextHappy);
+        setAssignments(nextAss);
+        setMessages(nextMsgs);
+        setAppointments(nextAppts);
+      } else if (sectionId === 'schedule') {
+        const rawTimetable = Array.isArray(rawPayload.timetable) ? rawPayload.timetable : [];
+        const nextTimetable = normalizeTimetablePeriodTimes(rawTimetable);
+        const nextDuty = Array.isArray(rawPayload.dutySchedule) ? rawPayload.dutySchedule : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(sanitizePayloadForFirestore({ timetable: nextTimetable, dutySchedule: nextDuty }));
+        setTimetable(nextTimetable);
+        setDutySchedule(nextDuty);
+      }
+
+      setLastSyncedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+      setCloudSyncStatus('synced');
+    },
+    [normalizeTimetablePeriodTimes]
+  );
+
+  const syncAllToCloudNow = useCallback(async () => {
+    setCloudSyncStatus('syncing');
+    try {
+      for (const secId of ALL_SECTION_IDS) {
+        const payload = buildSectionPayload(secId);
+        const cleanJson = JSON.stringify(sanitizePayloadForFirestore(payload));
+        lastSyncedJsonRef.current[secId] = cleanJson;
+        const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
+        if (serverTs > lastServerTimestampRef.current) lastServerTimestampRef.current = serverTs;
+      }
+      setLastSyncedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+      setCloudSyncStatus('synced');
+    } catch (err) {
+      console.warn('Manual cloud sync error:', err);
+      setCloudSyncStatus('error');
+    }
+  }, [buildSectionPayload, role, appConfig]);
+
+  useEffect(() => {
+    ensureMasterClassroomDoc({ className: appConfig.className, schoolName: appConfig.schoolName, teacherName: appConfig.teacherName }).catch((err) => console.warn(err));
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setFirebaseUserEmail(user.email || null);
+        setFirebaseUserName(user.displayName || user.email || 'Người dùng');
+      } else {
+        setFirebaseUserEmail(null);
+        setFirebaseUserName(null);
+      }
+      setIsFirebaseAuthReady(true);
+    });
+    return () => unsubAuth();
+  }, [appConfig.className, appConfig.schoolName, appConfig.teacherName]);
+
+  useEffect(() => {
+    const unsubFirestore = subscribeToClassroomSections(
+      (sectionId, payload) => {
+        applyRemoteSection(sectionId, payload);
+        isInitialRemoteLoadedRef.current = true;
+      },
+      (status) => { setCloudSyncStatus(status); }
+    );
+    const initTimer = window.setTimeout(() => { isInitialRemoteLoadedRef.current = true; }, 1500);
+    return () => {
+      unsubFirestore();
+      window.clearTimeout(initTimer);
+    };
+  }, [applyRemoteSection]);
+
+  useEffect(() => {
+    if (!isInitialRemoteLoadedRef.current) return;
+    const pushChangedSections = async () => {
+      for (const secId of ALL_SECTION_IDS) {
+        const payload = buildSectionPayload(secId);
+        const currentJson = JSON.stringify(sanitizePayloadForFirestore(payload));
+        if (lastSyncedJsonRef.current[secId] !== currentJson) {
+          lastSyncedJsonRef.current[secId] = currentJson;
+          setCloudSyncStatus('syncing');
+          try {
+            const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
+            if (serverTs > lastServerTimestampRef.current) lastServerTimestampRef.current = serverTs;
+            setLastSyncedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+            setCloudSyncStatus('synced');
+          } catch (err) {
+            console.warn(`Error syncing section ${secId}:`, err);
+            setCloudSyncStatus('error');
+          }
+        }
+      }
+    };
+    const timer = window.setTimeout(pushChangedSections, 180);
+    return () => window.clearTimeout(timer);
+  }, [buildSectionPayload, role, appConfig]);
+
+  const loginWithGoogleCloud = async () => {
+    try {
+      setCloudSyncStatus('syncing');
+      await signInWithGooglePopup();
+      await syncAllToCloudNow();
+    } catch (err) {
+      console.warn('Google sign-in cancelled or failed:', err);
+      setCloudSyncStatus('synced');
+    }
+  };
+
+  const logoutGoogleCloud = async () => {
+    try { await signOutFirebaseUser(); } catch (err) { console.warn('Google sign-out error:', err); }
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        role, setRole, isTeacherAuthenticated, authenticateTeacher, logoutTeacher, isPasswordModalOpen, setIsPasswordModalOpen, requestTeacherAccess, activeStudentId, setActiveStudentId, currentStudent, students, addStudent, updateStudent, deleteStudent, getStudentById, assignStudentCadreRole, currentDateAttendance, selectedAttendanceDate, setSelectedAttendanceDate, updateAttendanceStatus, markAllPresent, saveAttendanceNote, allAttendanceDays, saveDateAttendance, scanQRAttendance, supplementaryAttendanceList, addSupplementaryAttendance, deleteSupplementaryAttendance, assignments, addAssignment, submitAssignment, gradeSubmission, updateSubjectScore, updateConduct, importExcelScores, evaluations, addEvaluation, updateEvaluation, announcements, addAnnouncement, updateAnnouncement, deleteAnnouncement, messages, sendMessage, appointments, addAppointment, updateAppointmentStatus, happyPosts, addHappyPost, updateHappyPost, deleteHappyPost, deletePostComment, toggleLikePost, addPostComment, timetable, updateTimetable, updatePeriod, addPeriod, deletePeriod, resetTimetable, dutySchedule, updateDutySchedule, updateDutyItem, addDutyItem, deleteDutyItem, resetDutySchedule, appConfig, updateAppConfig, resetAppConfig, isAppConfigModalOpen, setIsAppConfigModalOpen, currentWeek, setCurrentWeek, disciplineEntries, bonusEntries, emulationScoreAdjustments, addDisciplineEntry, updateDisciplineEntry, deleteDisciplineEntry, addBonusPointEntry, updateBonusPointEntry, deleteBonusPointEntry, setEmulationScoreAdjustment, removeEmulationScoreAdjustment, getStudentWeeklyScore, getWeeklyEmulationSummary, triggerAutoWeeklySummary, recentAlerts, clearAlerts, isStudentUnlocked, unlockStudent, lockStudent, setStudentPin, removeStudentPin, resetStudentPinByTeacher, resetAllStudentPinsByTeacher, isJsonModalOpen, setIsJsonModalOpen, getExportJsonPayload, downloadDataAsJson, importDataFromJson, resetToHardcodedDefaultData, cloudSyncStatus, lastSyncedAt, firebaseUserEmail, firebaseUserName, loginWithGoogleCloud, logoutGoogleCloud, syncAllToCloudNow,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (!context) throw new Error('useApp must be used within an AppProvider');
+  return context;
+};
