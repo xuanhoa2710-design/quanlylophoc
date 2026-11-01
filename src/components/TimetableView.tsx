@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { TimetableEntry, TimetablePeriod, DutyScheduleItem } from '../types';
+import { compressImageFileToDataUrl } from '../utils/imageUtils';
 import {
   Calendar,
   Clock,
@@ -27,6 +28,9 @@ import {
   Star,
   UserCheck,
   Check,
+  Camera,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 
 export interface TeacherSubjectMapping {
@@ -292,9 +296,72 @@ export const TimetableView: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showConfirmReset, setShowConfirmReset] = useState(false);
 
+  // AI Timetable OCR from Image state
+  const [isAiOcrModalOpen, setIsAiOcrModalOpen] = useState(false);
+  const [ocrImageBase64, setOcrImageBase64] = useState<string>('');
+  const [isAnalyzingOcr, setIsAnalyzingOcr] = useState(false);
+  const [ocrPreviewTimetable, setOcrPreviewTimetable] = useState<TimetableEntry[] | null>(null);
+  const [ocrNote, setOcrNote] = useState<string>('');
+  const [ocrActivePreviewDay, setOcrActivePreviewDay] = useState<string>('Thứ Hai');
+  const ocrFileInputRef = useRef<HTMLInputElement>(null);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleOcrFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFileToDataUrl(file, 1100, 0.8);
+      setOcrImageBase64(compressed);
+      setOcrPreviewTimetable(null);
+      setOcrNote('');
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể đọc file hình ảnh thời khóa biểu.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleAnalyzeTimetableImage = async () => {
+    if (!ocrImageBase64) return;
+    setIsAnalyzingOcr(true);
+    try {
+      const res = await fetch('/api/ai/timetable-ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: ocrImageBase64,
+          mimeType: 'image/jpeg',
+        }),
+      });
+      const json = await res.json();
+      if (json?.success && json?.data && Array.isArray(json.data.timetable)) {
+        setOcrPreviewTimetable(json.data.timetable);
+        setOcrNote(
+          json.data.note ||
+            'AI đã trích xuất thời khóa biểu từ hình ảnh (Sáng 4 tiết, Chiều 3 tiết). GVCN có thể chỉnh sửa trực tiếp các ô trước khi áp dụng.'
+        );
+        setOcrActivePreviewDay(json.data.timetable[0]?.day || 'Thứ Hai');
+      } else {
+        showToast('Không thể phân tích cấu trúc thời khóa biểu từ ảnh.');
+      }
+    } catch {
+      showToast('Đã xảy ra lỗi kết nối khi phân tích ảnh thời khóa biểu.');
+    } finally {
+      setIsAnalyzingOcr(false);
+    }
+  };
+
+  const handleApplyOcrTimetable = () => {
+    if (!ocrPreviewTimetable || ocrPreviewTimetable.length === 0) return;
+    updateTimetable(ocrPreviewTimetable);
+    setIsAiOcrModalOpen(false);
+    setOcrImageBase64('');
+    setOcrPreviewTimetable(null);
+    showToast('Đã cập nhật Thời khóa biểu mới từ hình ảnh AI và đồng bộ cho toàn lớp!');
   };
 
   // Open Full Day Edit Modal
@@ -662,6 +729,14 @@ export const TimetableView: React.FC = () => {
           {isTeacher && (
             <>
               <button
+                onClick={() => setIsAiOcrModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Thêm mới hoặc cập nhật Thời khóa biểu bằng hình ảnh thông qua AI"
+              >
+                <Camera className="w-4 h-4 text-yellow-300" />
+                <span>Thêm TKB Bằng Ảnh AI</span>
+              </button>
+              <button
                 onClick={() => handleOpenAddPeriod(selectedDay, 'morning')}
                 className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5"
                 title="Thêm tiết mới vào thời khóa biểu"
@@ -671,6 +746,7 @@ export const TimetableView: React.FC = () => {
               <button
                 onClick={() => handleOpenEditDay(selectedDay)}
                 className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5"
+                title="Chỉnh sửa thời khóa biểu ngày này"
               >
                 <Edit2 className="w-4 h-4" /> Sửa {selectedDay}
               </button>
@@ -2686,6 +2762,273 @@ export const TimetableView: React.FC = () => {
               >
                 Đóng
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / IMPORT NEW TIMETABLE FROM IMAGE VIA AI (Thêm mới TKB bằng hình ảnh qua AI) */}
+      {isAiOcrModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/65 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 my-auto max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-5 h-5 text-yellow-300" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900">
+                    Thêm Mới Thời Khóa Biểu Bằng Hình Ảnh Thông Qua AI
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Tải ảnh chụp Thời khóa biểu từ điện thoại hoặc máy tính • AI tự động nhận diện môn học, khung giờ chuẩn và giáo viên giảng dạy 12A7
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAiOcrModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 pr-1 text-xs flex-1">
+              {/* Step 1: Select Image */}
+              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="font-black text-indigo-950 text-xs sm:text-sm flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-indigo-600" />
+                      Bước 1: Chọn ảnh chụp Thời khóa biểu (JPG, PNG, WEBP)
+                    </div>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      Hệ thống tự động căn chỉnh theo khung giờ chuẩn trường THPT Vĩnh Lộc B (Sáng 4 tiết: 07h25 - 11h10 • Chiều 3 tiết: 13h15 - 16h00).
+                    </p>
+                  </div>
+
+                  <input
+                    ref={ocrFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleOcrFileChange}
+                    className="hidden"
+                  />
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => ocrFileInputRef.current?.click()}
+                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-300 font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {ocrImageBase64 ? 'Đổi ảnh TKB khác' : 'Chọn ảnh TKB từ Máy tính / ĐT'}
+                    </button>
+
+                    {ocrImageBase64 && (
+                      <button
+                        type="button"
+                        onClick={handleAnalyzeTimetableImage}
+                        disabled={isAnalyzingOcr}
+                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-60"
+                      >
+                        {isAnalyzingOcr ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>AI đang đọc ảnh TKB...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-yellow-300" />
+                            <span>Phân tích TKB bằng AI</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {ocrImageBase64 && (
+                  <div className="relative rounded-2xl overflow-hidden border border-indigo-200 bg-white max-h-56 flex items-center justify-center">
+                    <img
+                      src={ocrImageBase64}
+                      alt="Ảnh Thời khóa biểu tải lên"
+                      className="max-h-52 object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOcrImageBase64('');
+                        setOcrPreviewTimetable(null);
+                      }}
+                      className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" /> Xóa ảnh
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Preview & Edit Extracted Timetable */}
+              {ocrPreviewTimetable && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{ocrNote}</span>
+                    </div>
+                  </div>
+
+                  {/* Day Tabs in Preview */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    {ocrPreviewTimetable.map((d) => (
+                      <button
+                        key={d.day}
+                        type="button"
+                        onClick={() => setOcrActivePreviewDay(d.day)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                          ocrActivePreviewDay === d.day
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        {d.day} ({d.periods?.length || 0} tiết)
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Editable Periods Table for Selected Preview Day */}
+                  {ocrPreviewTimetable
+                    .filter((d) => d.day === ocrActivePreviewDay)
+                    .map((dayObj) => (
+                      <div
+                        key={dayObj.day}
+                        className="border border-slate-200 rounded-2xl overflow-hidden bg-white"
+                      >
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse text-xs">
+                            <thead>
+                              <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                <th className="p-2.5 w-24">Buổi</th>
+                                <th className="p-2.5 w-16">Tiết</th>
+                                <th className="p-2.5 w-32">Khung giờ</th>
+                                <th className="p-2.5">Môn học</th>
+                                <th className="p-2.5">Giáo viên bộ môn</th>
+                                <th className="p-2.5 w-28">Phòng</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {(dayObj.periods || []).map((p, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50">
+                                  <td className="p-2 font-bold">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                        (p.session || 'morning') === 'morning'
+                                          ? 'bg-amber-100 text-amber-800'
+                                          : 'bg-blue-100 text-blue-800'
+                                      }`}
+                                    >
+                                      {(p.session || 'morning') === 'morning' ? 'Sáng' : 'Chiều'}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 font-black text-slate-800">Tiết {p.period}</td>
+                                  <td className="p-2 text-slate-600 font-semibold">{p.time}</td>
+                                  <td className="p-2">
+                                    <input
+                                      type="text"
+                                      value={p.subject}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setOcrPreviewTimetable((prev) =>
+                                          (prev || []).map((item) =>
+                                            item.day !== dayObj.day
+                                              ? item
+                                              : {
+                                                  ...item,
+                                                  periods: item.periods.map((per, pIdx) =>
+                                                    pIdx === idx ? { ...per, subject: val } : per
+                                                  ),
+                                                }
+                                          )
+                                        );
+                                      }}
+                                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 font-bold text-slate-900"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <input
+                                      type="text"
+                                      value={p.teacher}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setOcrPreviewTimetable((prev) =>
+                                          (prev || []).map((item) =>
+                                            item.day !== dayObj.day
+                                              ? item
+                                              : {
+                                                  ...item,
+                                                  periods: item.periods.map((per, pIdx) =>
+                                                    pIdx === idx ? { ...per, teacher: val } : per
+                                                  ),
+                                                }
+                                          )
+                                        );
+                                      }}
+                                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700"
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <input
+                                      type="text"
+                                      value={p.room}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setOcrPreviewTimetable((prev) =>
+                                          (prev || []).map((item) =>
+                                            item.day !== dayObj.day
+                                              ? item
+                                              : {
+                                                  ...item,
+                                                  periods: item.periods.map((per, pIdx) =>
+                                                    pIdx === idx ? { ...per, room: val } : per
+                                                  ),
+                                                }
+                                          )
+                                        );
+                                      }}
+                                      className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-slate-700"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAiOcrModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs"
+              >
+                Đóng
+              </button>
+
+              {ocrPreviewTimetable && (
+                <button
+                  type="button"
+                  onClick={handleApplyOcrTimetable}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  Áp dụng Thời Khóa Biểu Mới Cho Lớp 12A7
+                </button>
+              )}
             </div>
           </div>
         </div>

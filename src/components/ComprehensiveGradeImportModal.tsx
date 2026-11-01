@@ -20,12 +20,15 @@ import {
   HelpCircle,
   Eye,
   Award,
+  Trash2,
 } from 'lucide-react';
+import { compressImageFileToDataUrl } from '../utils/imageUtils';
 
 interface ComprehensiveGradeImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialTab?: 'excel' | 'image' | 'analysis' | 'grid';
 }
 
 const ALL_SUBJECTS = [
@@ -53,10 +56,20 @@ interface RowData {
   conduct: 'Tốt' | 'Khá' | 'Đạt' | 'Chưa đạt';
 }
 
+const normalizeVN = (str: string) =>
+  String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+
 export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  initialTab = 'grid',
 }) => {
   const { students, importExcelScores } = useApp();
 
@@ -76,6 +89,7 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isOcrLoading, setIsOcrLoading] = useState(false);
   const [ocrAnalysis, setOcrAnalysis] = useState<string | null>(null);
+  const [ocrTargetSubject, setOcrTargetSubject] = useState<'all' | SubjectKey>('all');
 
   // Paste dialog state
   const [showPasteModal, setShowPasteModal] = useState(false);
@@ -84,18 +98,26 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
   // Initialize gridData from current students
   useEffect(() => {
     if (isOpen && Array.isArray(students) && students.length > 0) {
+      if (initialTab === 'image') {
+        setActiveTab('ocr');
+      } else if (initialTab === 'excel') {
+        setActiveTab('excel');
+      } else {
+        setActiveTab('grid');
+      }
+
       const initialRows: RowData[] = students.map((s) => {
         const scoresMap: Record<SubjectKey, number | ''> = {
-          toan: s?.scores?.toan?.avg || '',
-          van: s?.scores?.van?.avg || '',
-          anh: s?.scores?.anh?.avg || '',
-          ly: s?.scores?.ly?.avg || '',
-          hoa: s?.scores?.hoa?.avg || '',
-          su: s?.scores?.su?.avg || '',
-          gdktpl: s?.scores?.gdktpl?.avg || '',
-          tin: s?.scores?.tin?.avg || '',
-          gddp: s?.scores?.gddp?.avg || '',
-          gdqp: s?.scores?.gdqp?.avg || '',
+          toan: s?.scores?.toan?.avg ?? '',
+          van: s?.scores?.van?.avg ?? '',
+          anh: s?.scores?.anh?.avg ?? '',
+          ly: s?.scores?.ly?.avg ?? '',
+          hoa: s?.scores?.hoa?.avg ?? '',
+          su: s?.scores?.su?.avg ?? '',
+          gdktpl: s?.scores?.gdktpl?.avg ?? '',
+          tin: s?.scores?.tin?.avg ?? '',
+          gddp: s?.scores?.gddp?.avg ?? '',
+          gdqp: s?.scores?.gdqp?.avg ?? '',
         };
 
         return {
@@ -116,7 +138,7 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
       setImagePreview(null);
       setOcrAnalysis(null);
     }
-  }, [isOpen, students]);
+  }, [isOpen, students, initialTab]);
 
   if (!isOpen) return null;
 
@@ -371,86 +393,135 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
     reader.readAsBinaryString(file);
   };
 
-  // Handle OCR from Image
+  // Clear all scores in the current matrix
+  const handleClearMatrixScores = () => {
+    setGridData((prev) =>
+      prev.map((row) => ({
+        ...row,
+        scores: {
+          toan: '',
+          van: '',
+          anh: '',
+          ly: '',
+          hoa: '',
+          su: '',
+          gdktpl: '',
+          tin: '',
+          gddp: '',
+          gdqp: '',
+        },
+      }))
+    );
+    setSuccessToast('Đã xóa trắng các ô điểm trên bảng tính nháp. Nhấn "Lưu bảng điểm" nếu muốn áp dụng.');
+    setTimeout(() => setSuccessToast(null), 3500);
+  };
+
+  // Run AI OCR on a base64 image
+  const runOcrWithBase64 = async (base64Data: string, mimeType = 'image/jpeg') => {
+    setIsOcrLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/ai/grade-ocr-comprehensive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: base64Data,
+          mimeType,
+          targetSubject: ocrTargetSubject,
+          studentNames: students.map((s) => s.name),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.data) {
+        const extractedRows: any[] = data.data.extractedRows || [];
+        let matchCount = 0;
+
+        setGridData((prev) =>
+          prev.map((row) => {
+            const rowNormName = normalizeVN(row.name);
+            const rowLastTwoWords = rowNormName.split(/\s+/).slice(-2).join(' ');
+
+            const match = extractedRows.find((item) => {
+              if (item.code && (item.code === row.code || String(item.code).includes(row.code))) {
+                return true;
+              }
+              if (item.name) {
+                const itemNorm = normalizeVN(item.name);
+                if (
+                  itemNorm === rowNormName ||
+                  (itemNorm.length >= 4 && rowNormName.includes(itemNorm)) ||
+                  (rowLastTwoWords.length >= 4 && itemNorm.endsWith(rowLastTwoWords))
+                ) {
+                  return true;
+                }
+              }
+              if (item.stt && Number(item.stt) === row.stt) {
+                return true;
+              }
+              return false;
+            });
+
+            if (!match) return row;
+            matchCount++;
+
+            const newScores = { ...row.scores };
+            if (match.scores && typeof match.scores === 'object') {
+              Object.entries(match.scores).forEach(([k, v]) => {
+                const num = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+                if (!isNaN(num) && num >= 0 && num <= 10 && k in newScores) {
+                  if (ocrTargetSubject === 'all' || ocrTargetSubject === k) {
+                    newScores[k as SubjectKey] = Number(num.toFixed(1));
+                  }
+                }
+              });
+            }
+
+            return {
+              ...row,
+              scores: newScores,
+              conduct: match.conduct || row.conduct,
+            };
+          })
+        );
+
+        setOcrAnalysis(
+          data.data.overallAnalysis ||
+            `AI đã nhận diện và điền điểm cho ${matchCount} học sinh từ ảnh bảng điểm.`
+        );
+        setSuccessToast(`AI Gemini đã quét và cập nhật điểm cho ${matchCount} học sinh từ hình ảnh!`);
+        setTimeout(() => setSuccessToast(null), 4000);
+      } else {
+        setErrorMessage('Không thể trích xuất điểm từ ảnh. Vui lòng kiểm tra độ nét của ảnh.');
+      }
+    } catch (err: any) {
+      setErrorMessage(`Lỗi phân tích ảnh AI: ${err?.message || 'Mất kết nối máy chủ'}`);
+    } finally {
+      setIsOcrLoading(false);
+    }
+  };
+
+  // Handle OCR from Image (PC or Phone)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const base64Data = evt.target?.result as string;
-      setImagePreview(base64Data);
-      setIsOcrLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const res = await fetch('/api/ai/grade-ocr-comprehensive', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: base64Data,
-            mimeType: file.type || 'image/jpeg',
-          }),
-        });
-
-        const data = await res.json();
-        if (data.success && data.data) {
-          const extractedRows: any[] = data.data.extractedRows || [];
-          let matchCount = 0;
-
-          setGridData((prev) =>
-            prev.map((row) => {
-              const match = extractedRows.find((item) => {
-                if (item.code && (item.code === row.code || String(item.code).includes(row.code))) {
-                  return true;
-                }
-                if (item.name && item.name.toLowerCase() === row.name.toLowerCase()) {
-                  return true;
-                }
-                if (item.stt && Number(item.stt) === row.stt) {
-                  return true;
-                }
-                return false;
-              });
-
-              if (!match) return row;
-              matchCount++;
-
-              const newScores = { ...row.scores };
-              if (match.scores && typeof match.scores === 'object') {
-                Object.entries(match.scores).forEach(([k, v]) => {
-                  const num = typeof v === 'number' ? v : parseFloat(String(v));
-                  if (!isNaN(num) && num >= 0 && num <= 10 && k in newScores) {
-                    newScores[k as SubjectKey] = Number(num.toFixed(1));
-                  }
-                });
-              }
-
-              return {
-                ...row,
-                scores: newScores,
-                conduct: match.conduct || row.conduct,
-              };
-            })
-          );
-
-          setOcrAnalysis(
-            data.data.overallAnalysis ||
-              `AI đã nhận diện và điền điểm cho ${matchCount} học sinh từ bảng điểm giấy.`
-          );
-          setActiveTab('grid');
-          setSuccessToast(`AI Gemini đã quét và cập nhật ${matchCount} học sinh từ hình ảnh!`);
-          setTimeout(() => setSuccessToast(null), 4000);
-        } else {
-          setErrorMessage('Không thể trích xuất điểm từ ảnh. Vui lòng kiểm tra độ nét của ảnh.');
-        }
-      } catch (err: any) {
-        setErrorMessage(`Lỗi phân tích ảnh AI: ${err?.message || 'Mất kết nối máy chủ'}`);
-      } finally {
-        setIsOcrLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressImageFileToDataUrl(file, 1400, 0.85);
+      setImagePreview(compressedDataUrl);
+      await runOcrWithBase64(compressedDataUrl, 'image/jpeg');
+    } catch {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const base64Data = evt.target?.result as string;
+        setImagePreview(base64Data);
+        await runOcrWithBase64(base64Data, file.type || 'image/jpeg');
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      e.target.value = '';
+    }
   };
 
   // Handle Paste from Clipboard (Tab-separated values from Excel/Google Sheets)
@@ -636,17 +707,14 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Tải file Excel (.xlsx)
             </button>
             <button
-              onClick={() => {
-                setActiveTab('ocr');
-                imageInputRef.current?.click();
-              }}
+              onClick={() => setActiveTab('ocr')}
               className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
                 activeTab === 'ocr'
-                  ? 'bg-white text-blue-700 shadow-xs'
+                  ? 'bg-white text-purple-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Camera className="w-4 h-4 text-purple-600" /> Quét ảnh bảng điểm AI
+              <Camera className="w-4 h-4 text-purple-600" /> Nhập bảng điểm bằng ảnh AI
             </button>
           </div>
 
@@ -673,7 +741,15 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
               className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold border border-amber-200 flex items-center gap-1.5 transition-colors"
               title="Tự động điền điểm mẫu thử nghiệm nhanh"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Điền điểm mẫu ngẫu nhiên
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Điền điểm mẫu
+            </button>
+
+            <button
+              onClick={handleClearMatrixScores}
+              className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold border border-red-200 flex items-center gap-1.5 transition-colors"
+              title="Xóa trắng toàn bộ các ô điểm trên bảng nháp hiện tại"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-600" /> Xóa trắng bảng nháp
             </button>
           </div>
         </div>
@@ -690,10 +766,84 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
           ref={imageInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleImageUpload}
           className="hidden"
         />
+
+        {/* AI Image OCR Interactive Panel */}
+        {activeTab === 'ocr' && (
+          <div className="mx-5 mt-3 p-4 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 shrink-0 space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs sm:text-sm font-black text-purple-950 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  Nhập Bảng Điểm Bằng Hình Ảnh Thông Qua AI (Gemini Vision OCR)
+                </h3>
+                <p className="text-[11px] text-purple-800 mt-0.5">
+                  Tải ảnh chụp sổ điểm giấy, ảnh chụp màn hình hoặc bảng điểm 1 môn / 10 môn từ điện thoại hoặc máy tính. AI tự động nhận diện tên học sinh và điền điểm vào bảng dưới.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={ocrTargetSubject}
+                  onChange={(e) => setOcrTargetSubject(e.target.value as any)}
+                  className="px-3 py-2 rounded-xl border border-purple-300 bg-white text-xs font-bold text-purple-900 shadow-2xs"
+                >
+                  <option value="all">Quét Bảng điểm Tổng hợp (Cả 10 môn)</option>
+                  {ALL_SUBJECTS.map((sub) => (
+                    <option key={sub.key} value={sub.key}>
+                      Chỉ quét điểm môn: {sub.name} ({sub.teacher})
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isOcrLoading}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs shadow-sm flex items-center gap-1.5 transition-all"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {imagePreview ? 'Chọn ảnh bảng điểm khác' : 'Tải ảnh bảng điểm từ Máy / ĐT'}
+                </button>
+
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => runOcrWithBase64(imagePreview, 'image/jpeg')}
+                    disabled={isOcrLoading}
+                    className="px-3 py-2 rounded-xl bg-white hover:bg-purple-100 text-purple-700 border border-purple-300 font-bold text-xs flex items-center gap-1"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isOcrLoading ? 'animate-spin' : ''}`} />
+                    Quét lại ảnh này
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {imagePreview && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-2 border-t border-purple-200/60">
+                <img
+                  src={imagePreview}
+                  alt="Preview bảng điểm"
+                  className="w-28 h-20 object-cover rounded-xl border border-purple-300 shadow-xs bg-white shrink-0"
+                />
+                <div className="text-xs text-purple-900 space-y-1 flex-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Ảnh bảng điểm đã tải lên thành công!</span>
+                  </div>
+                  {ocrAnalysis && (
+                    <p className="text-[11px] text-slate-700 bg-white/80 p-2 rounded-xl border border-purple-200">
+                      <strong>Kết quả AI:</strong> {ocrAnalysis}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Alerts & OCR Progress */}
         {successToast && (
@@ -714,8 +864,10 @@ export const ComprehensiveGradeImportModal: React.FC<ComprehensiveGradeImportMod
           <div className="mx-5 mt-3 p-4 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 text-xs flex items-center gap-3 shrink-0 animate-pulse">
             <Bot className="w-5 h-5 text-purple-600 shrink-0 animate-spin" />
             <div>
-              <div className="font-bold">Đang quét ảnh bảng điểm tổng hợp bằng AI Gemini 3.8 Flash...</div>
-              <div className="text-[11px] text-purple-700">Tự động nhận diện điểm 10 môn của từng học sinh</div>
+              <div className="font-bold">Đang quét ảnh bảng điểm bằng AI Gemini 3.8 Flash...</div>
+              <div className="text-[11px] text-purple-700">
+                Tự động nhận diện họ tên học sinh và điền điểm chính xác vào bảng
+              </div>
             </div>
           </div>
         )}

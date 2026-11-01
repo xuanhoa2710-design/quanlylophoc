@@ -32,16 +32,6 @@ export const EvaluationsView: React.FC = () => {
     addEvaluation,
   } = useApp();
 
-  // Guard: Student cannot access teacher evaluation management
-  if (role === 'student') {
-    return <AccessGuard requiredRole="parent" pageTitle="Nhận xét từ GVCN & Sổ Liên Lạc" />;
-  }
-
-  // Guard: Teacher must be authenticated with password
-  if (role === 'teacher' && !isTeacherAuthenticated) {
-    return <AccessGuard requiredRole="teacher" pageTitle="Quản lý Nhận xét Học sinh" />;
-  }
-
   const [selectedPeriod, setSelectedPeriod] = useState<'Tuần' | 'Tháng' | 'Học kỳ I'>('Tháng');
   const [selectedStudentId, setSelectedStudentId] = useState<string>(activeStudentId);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -58,6 +48,16 @@ export const EvaluationsView: React.FC = () => {
   const [strengthsText, setStrengthsText] = useState('');
   const [improvementsText, setImprovementsText] = useState('');
   const [teacherNoteText, setTeacherNoteText] = useState('');
+
+  // Guard: Student cannot access teacher evaluation management
+  if (role === 'student') {
+    return <AccessGuard requiredRole="parent" pageTitle="Nhận xét từ GVCN & Sổ Liên Lạc" />;
+  }
+
+  // Guard: Teacher must be authenticated with password
+  if (role === 'teacher' && !isTeacherAuthenticated) {
+    return <AccessGuard requiredRole="teacher" pageTitle="Quản lý Nhận xét Học sinh" />;
+  }
 
   // AI Assist Comment generation
   const handleGenerateAiComment = async () => {

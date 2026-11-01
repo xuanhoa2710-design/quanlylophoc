@@ -86,7 +86,13 @@ export const DisciplineView: React.FC = () => {
     selectedAttendanceDate || currentWeekRange.mondayIso
   );
   const [violationNote, setViolationNote] = useState<string>('');
-  const [recordedByTitle, setRecordedByTitle] = useState<string>('Thầy Trương Xuân Hòa (GVCN)');
+  const [recordedByTitle, setRecordedByTitle] = useState<string>(() =>
+    role === 'teacher'
+      ? 'Thầy Trương Xuân Hòa (GVCN)'
+      : currentStudent?.name
+      ? `${currentStudent.name} (${currentStudent.classRole || 'Ban cán sự'})`
+      : 'Ban cán sự 12A7'
+  );
 
   // Form states for Add Bonus
   const [bonusTargetType, setBonusTargetType] = useState<'student' | 'group'>('student');
@@ -263,6 +269,12 @@ export const DisciplineView: React.FC = () => {
 
   const handleSaveBonus = (e: React.FormEvent) => {
     e.preventDefault();
+    const bonusRecorder =
+      role === 'teacher'
+        ? 'Thầy Trương Xuân Hòa (GVCN)'
+        : currentStudent?.name
+        ? `${currentStudent.name} (${currentStudent.classRole || 'Ban cán sự'})`
+        : 'Ban cán sự 12A7';
     if (bonusTargetType === 'student') {
       const student = students.find((s) => s.id === bonusStudentId);
       if (!student) return;
@@ -274,7 +286,7 @@ export const DisciplineView: React.FC = () => {
         date: bonusDate,
         reason: bonusReason,
         pointsAdded: bonusPoints,
-        recordedBy: 'Thầy Trương Xuân Hòa (GVCN)',
+        recordedBy: bonusRecorder,
       });
     } else {
       addBonusPointEntry({
@@ -283,7 +295,7 @@ export const DisciplineView: React.FC = () => {
         date: bonusDate,
         reason: `Cộng điểm cả Tổ ${bonusGroupNumber}: ${bonusReason}`,
         pointsAdded: bonusPoints,
-        recordedBy: 'Thầy Trương Xuân Hòa (GVCN)',
+        recordedBy: bonusRecorder,
       });
     }
 

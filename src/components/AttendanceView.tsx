@@ -70,10 +70,6 @@ export const AttendanceView: React.FC = () => {
     triggerAutoWeeklySummary,
   } = useApp();
 
-  if (role === 'teacher' && !isTeacherAuthenticated) {
-    return <AccessGuard requiredRole="teacher" pageTitle="Điểm danh & Chuyên cần 12A7" />;
-  }
-
   // Active view tab: 'daily' | 'supplementary'
   const [activeTab, setActiveTab] = useState<'daily' | 'supplementary'>('daily');
 
@@ -105,7 +101,13 @@ export const AttendanceView: React.FC = () => {
   const [suppNewStatus, setSuppNewStatus] = useState<AttendanceStatus>('excused');
   const [suppReason, setSuppReason] = useState<string>('');
   const [suppNote, setSuppNote] = useState<string>('');
-  const [suppRecordedBy, setSuppRecordedBy] = useState<string>('Thầy Trương Xuân Hòa (GVCN)');
+  const [suppRecordedBy, setSuppRecordedBy] = useState<string>(() =>
+    role === 'teacher'
+      ? 'Thầy Trương Xuân Hòa (GVCN)'
+      : currentStudent?.name
+      ? `${currentStudent.name} (${currentStudent.classRole || 'Ban cán sự'})`
+      : 'Ban cán sự 12A7'
+  );
   const [suppSuccessMsg, setSuppSuccessMsg] = useState<string | null>(null);
 
   // Note for selected date
@@ -216,6 +218,10 @@ export const AttendanceView: React.FC = () => {
     (i) => i.newStatus === 'present'
   ).length;
   const suppLateCount = supplementaryAttendanceList.filter((i) => i.newStatus === 'late').length;
+
+  if (role === 'teacher' && !isTeacherAuthenticated) {
+    return <AccessGuard requiredRole="teacher" pageTitle="Điểm danh & Chuyên cần 12A7" />;
+  }
 
   // Open Linked Violation Modal
   const handleOpenViolationLinkModal = (stuId: string) => {

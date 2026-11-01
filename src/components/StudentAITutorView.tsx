@@ -25,17 +25,36 @@ import {
   KeyRound,
   ShieldCheck,
   Trash2,
+  Camera,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react';
 import { StudentPrivacyGuard } from './StudentPrivacyGuard';
 import { StudentPasswordModal } from './StudentPasswordModal';
 import { generateAITextWithFallback } from '../utils/aiClient';
+import { compressImageFileToDataUrl } from '../utils/imageUtils';
+import { buildComprehensiveTutorAnswer } from '../utils/tutorKnowledgeBase';
 
 interface ChatMessage {
   id: string;
   sender: 'user' | 'ai';
   text: string;
   timestamp: string;
+  imageUrl?: string;
+  subjectTag?: string;
 }
+
+const SUBJECT_MODES = [
+  { id: 'Tất cả môn', label: 'Tất cả môn' },
+  { id: 'Hóa học (Thầy Hòa)', label: '🧪 Hóa học (Thầy Hòa)' },
+  { id: 'Toán học (Thầy Thanh)', label: '📐 Toán học' },
+  { id: 'Vật lý (Thầy Tèo)', label: '⚡ Vật lý' },
+  { id: 'Tiếng Anh (Cô Thảo)', label: '🇬🇧 Tiếng Anh' },
+  { id: 'Ngữ văn (Cô Đào)', label: '📖 Ngữ văn' },
+  { id: 'Lịch sử (Thầy Thiện)', label: '🏛️ Lịch sử' },
+  { id: 'GDKT-PL (Cô Vân Anh)', label: '⚖️ GDKT-PL' },
+  { id: 'Tư vấn Đại học 2027', label: '🎓 Tư vấn Đại học' },
+];
 
 export const StudentAITutorView: React.FC = () => {
   const {
@@ -51,9 +70,12 @@ export const StudentAITutorView: React.FC = () => {
   const studentId = student?.id || 'hs-27';
 
   const [inputMessage, setInputMessage] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('Tất cả môn');
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const homeworkImageInputRef = useRef<HTMLInputElement>(null);
 
   // Default welcome message generator
   const createWelcomeMessage = (stu?: Student): ChatMessage => ({
@@ -61,14 +83,40 @@ export const StudentAITutorView: React.FC = () => {
     sender: 'ai',
     text: `Chào em **${stu?.name || 'học sinh 12A7'}**! Thầy/Gia sư AI 12A7 rất vui được đồng hành cùng em.
 Năm học 2026 - 2027 là năm học cuối cấp bản lề. Thầy ở đây để giúp em:
-- 📖 **Giải đáp kiến thức & giải bài tập** các môn (Toán, Hóa học của Thầy Hòa, Lý, Anh, Văn, Sử...).
+- 📖 **Giải chi tiết từng bước bài tập & lý thuyết** các môn (Toán, Hóa học của Thầy Hòa, Lý, Anh, Văn, Sử, GDKT-PL...).
+- 📸 **Chụp/Tải ảnh bài tập từ điện thoại hoặc máy tính** để AI đọc đề và hướng dẫn cách giải ngay lập tức.
 - 🎯 **Lập lộ trình ôn tập cá nhân hóa** để bứt phá điểm số thi Tốt nghiệp THPT Quốc gia 2027.
 - 🤝 **Gợi ý bạn học "Đôi bạn cùng tiến"** ngay trong lớp 12A7.
 - 🎓 **Tư vấn chọn ngành & trường Đại học** tại TP.HCM phù hợp với ước mơ **"${stu?.dreamCareer || 'Đại học'}"**.
 
-Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dưới hoặc gõ câu hỏi nhé!`,
+Em hãy chọn môn học bên dưới, đính kèm ảnh đề bài hoặc gõ câu hỏi để bắt đầu nhé!`,
     timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
   });
+
+  const sanitizeSavedMessages = (rawMessages: ChatMessage[], stu?: Student): ChatMessage[] => {
+    return rawMessages.map((msg, idx) => {
+      if (
+        msg.sender === 'ai' &&
+        idx > 0 &&
+        rawMessages[idx - 1]?.sender === 'user' &&
+        msg.text.includes('GỢI Ý GHÉP CẶP "ĐÔI BẠN CÙNG TIẾN"')
+      ) {
+        const prevQ = (rawMessages[idx - 1].text || '').toLowerCase();
+        const isActuallyAskingPeer =
+          prevQ.includes('đôi bạn') ||
+          prevQ.includes('ghép cặp') ||
+          prevQ.includes('bạn học chung') ||
+          prevQ.includes('bạn cùng tiến');
+        if (!isActuallyAskingPeer) {
+          return {
+            ...msg,
+            text: buildComprehensiveTutorAnswer(rawMessages[idx - 1].text, stu, selectedSubject),
+          };
+        }
+      }
+      return msg;
+    });
+  };
 
   // Load chat conversation per student from localStorage
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -76,7 +124,7 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
       const saved = typeof window !== 'undefined' ? window.localStorage?.getItem('a7_student_ai_chat_' + studentId) : null;
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return sanitizeSavedMessages(parsed, student);
       }
     } catch {
       // fallback
@@ -91,7 +139,7 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+          setMessages(sanitizeSavedMessages(parsed, student));
           return;
         }
       }
@@ -130,29 +178,71 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  const handleUploadHomeworkImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFileToDataUrl(file, 1200, 0.84);
+      setAttachedImage(compressed);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (typeof ev.target?.result === 'string') {
+          setAttachedImage(ev.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   // Suggested quick prompts tailored to current student
   const quickPrompts = [
-    `Ôn tập kiến thức Este - Lipit môn Hóa học Thầy Hòa`,
-    `Phân tích điểm số hiện tại (${student?.currentGpa ?? 8.0}đ) và lập lộ trình bứt phá`,
+    `Hướng dẫn phương pháp giải bài tập Este - Lipit môn Hóa học Thầy Hòa`,
+    `Tóm tắt công thức khảo sát hàm số & Nguyên hàm Tích phân môn Toán 12`,
+    `Phân tích điểm số hiện tại (${student?.currentGpa ?? 8.0}đ) và lập lộ trình bứt phá 8.5+`,
     `Tìm bạn học "Đôi bạn cùng tiến" trong lớp 12A7 hỗ trợ em`,
     `Tư vấn ngành nghề và trường Đại học cho ước mơ: ${student?.dreamCareer || 'Đại học'}`,
-    `Mẹo giải nhanh trắc nghiệm môn ${student?.examSubject1 || 'Toán học'}`,
-    `Cách giảm áp lực học tập và duy trì năng lượng tích cực`,
+    `Bí quyết đạt 8.5+ môn Tiếng Anh (Cô Thảo) và Ngữ văn (Cô Đào)`,
   ];
 
+  const buildDetailedLocalTutorFallback = (question: string, subjectMode: string) => {
+    return buildComprehensiveTutorAnswer(
+      question,
+      {
+        name: student?.name,
+        group: student?.group,
+        currentGpa: student?.currentGpa,
+        examSubject1: student?.examSubject1,
+        examSubject2: student?.examSubject2,
+        dreamCareer: student?.dreamCareer,
+        scores: student?.scores,
+      },
+      subjectMode
+    );
+  };
+
   const handleSendMessage = async (customText?: string) => {
-    const textToSend = customText || inputMessage;
-    if (!textToSend.trim() || isLoading) return;
+    const textToSend = (customText ?? inputMessage).trim();
+    if ((!textToSend && !attachedImage) || isLoading) return;
+
+    const currentImage = attachedImage;
+    const effectiveQuestion =
+      textToSend || `Thầy ơi, giải chi tiết giúp em bài tập trong hình ảnh đính kèm (Môn: ${selectedSubject}) với ạ!`;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: textToSend.trim(),
+      text: effectiveQuestion,
       timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      imageUrl: currentImage || undefined,
+      subjectTag: selectedSubject !== 'Tất cả môn' ? selectedSubject : undefined,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     if (!customText) setInputMessage('');
+    setAttachedImage(null);
     setIsLoading(true);
 
     try {
@@ -161,32 +251,31 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
         text: m.text,
       }));
 
-      const fallbackReply = `Chào em **${student?.name || 'học sinh 12A7'}**! Thầy/Gia sư AI 12A7 đã nhận được câu hỏi của em: *"${textToSend.trim()}"*.
-
-💡 **Gợi ý học tập & định hướng từ Gia Sư AI 12A7:**
-1. **Nắm vững lý thuyết trọng tâm SGK lớp 12:** Tóm tắt công thức và từ khóa quan trọng theo sơ đồ tư duy.
-2. **Luyện đề theo mức độ (Nhận biết ➔ Thông hiểu ➔ Vận dụng):** Tập trung cao độ cho 2 môn tự chọn thi Tốt nghiệp THPT (${student?.examSubject1 || 'Hóa học'} và ${student?.examSubject2 || 'Tiếng Anh'}) cùng Toán - Văn.
-3. **Trao đổi cùng Tổ ${student?.group || 1} & Thầy Trương Xuân Hòa:** Đừng ngần ngại thảo luận với các bạn trong nhóm "Đôi bạn cùng tiến" để đạt mục tiêu **${student?.dreamCareer || 'Đỗ Đại học nguyện vọng 1'}**!
-
-*"Dream Big And Dare To Fail - Quyết tâm đậu TN & ĐH 100%!"* 💪`;
+      const fallbackReply = buildDetailedLocalTutorFallback(effectiveQuestion, selectedSubject);
 
       const aiText = await generateAITextWithFallback({
         endpoint: '/api/ai/student-tutor',
         payload: {
-          message: textToSend.trim(),
+          message: effectiveQuestion,
+          selectedSubject,
+          imageBase64: currentImage || undefined,
+          mimeType: 'image/jpeg',
           studentInfo: {
             name: student?.name,
+            group: student?.group,
             currentGpa: student?.currentGpa,
             dreamCareer: student?.dreamCareer,
             examSubject1: student?.examSubject1,
             examSubject2: student?.examSubject2,
             strengths: student?.strengths,
             weaknesses: student?.weaknesses,
+            scores: student?.scores,
           },
           conversationHistory: historyPayload,
         },
-        clientPrompt: `Bạn là Gia Sư & Cố Vấn Học Tập AI của lớp 12A7 trường THPT Vĩnh Lộc B (GVCN: Thầy Trương Xuân Hòa). Học sinh đang hỏi là ${student?.name || 'học sinh'} (ĐTB: ${student?.currentGpa || 8.0}, Môn thi: ${student?.examSubject1 || 'Hóa'} & ${student?.examSubject2 || 'Anh'}, Ước mơ: ${student?.dreamCareer || 'Đỗ ĐH'}). Hãy trả lời câu hỏi sau một cách tận tâm, dễ hiểu:\n${textToSend.trim()}`,
         fallbackText: fallbackReply,
+        imageBase64: currentImage || undefined,
+        mimeType: 'image/jpeg',
       });
 
       const aiMsg: ChatMessage = {
@@ -202,7 +291,7 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
       const fallbackMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: `Chào em ${student?.name || ''}! Thầy đã nhận được câu hỏi. Đối với nội dung này, em hãy ôn lại phần lý thuyết trọng tâm trong SGK và trao đổi thêm cùng bạn cùng tiến trong Tổ nhé. "Dream Big And Dare To Fail - Quyết tâm đậu TN & ĐH 100%!"`,
+        text: buildDetailedLocalTutorFallback(effectiveQuestion, selectedSubject),
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -346,7 +435,7 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
       </div>
 
       {/* Main Chat Interface */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col h-[650px] overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col h-[680px] overflow-hidden">
         {/* Chat Header */}
         <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -359,7 +448,7 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </h3>
               <p className="text-[11px] text-slate-500">
-                Sẵn sàng giải đáp 24/7 • Thân thiện, tận tâm, riêng tư
+                Giải bài tập chi tiết từng bước • Hỗ trợ chụp/tải ảnh đề bài từ điện thoại hoặc máy tính
               </p>
             </div>
           </div>
@@ -411,6 +500,30 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
           </div>
         </div>
 
+        {/* Subject Mode Selector Bar */}
+        <div className="px-4 py-2 border-b border-slate-100 bg-white flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+          <span className="text-[11px] font-bold text-slate-500 shrink-0 mr-1">
+            Chọn môn học:
+          </span>
+          {SUBJECT_MODES.map((sub) => {
+            const isSelected = selectedSubject === sub.id;
+            return (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setSelectedSubject(sub.id)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all shrink-0 ${
+                  isSelected
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                {sub.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Messages Stream */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
           {messages.map((msg) => {
@@ -440,6 +553,28 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
                       : 'bg-slate-50 text-slate-800 border border-slate-200/80 rounded-tl-none'
                   }`}
                 >
+                  {msg.subjectTag && (
+                    <div className="mb-1.5">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          isUser ? 'bg-blue-700 text-blue-100' : 'bg-purple-100 text-purple-800'
+                        }`}
+                      >
+                        {msg.subjectTag}
+                      </span>
+                    </div>
+                  )}
+
+                  {msg.imageUrl && (
+                    <div className="mb-2.5">
+                      <img
+                        src={msg.imageUrl}
+                        alt="Ảnh đề bài tập"
+                        className="max-h-56 rounded-xl border border-white/20 object-contain bg-white"
+                      />
+                    </div>
+                  )}
+
                   <div className="whitespace-pre-wrap text-[13px] leading-relaxed">
                     {msg.text}
                   </div>
@@ -481,7 +616,7 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-2 text-xs">
                 <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
-                <span>Gia sư AI 12A7 đang suy nghĩ và giải đáp cho em...</span>
+                <span>Gia sư AI 12A7 đang phân tích đề bài và trình bày lời giải từng bước...</span>
               </div>
             </div>
           )}
@@ -505,6 +640,42 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
           ))}
         </div>
 
+        {/* Attached Homework Image Preview */}
+        {attachedImage && (
+          <div className="px-4 py-2 bg-purple-50/80 border-t border-purple-200 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <img
+                src={attachedImage}
+                alt="Preview bài tập"
+                className="w-12 h-12 rounded-xl object-cover border border-purple-300 bg-white"
+              />
+              <div className="text-xs">
+                <div className="font-bold text-purple-950">Đã đính kèm ảnh bài tập ({selectedSubject})</div>
+                <div className="text-[11px] text-purple-700">
+                  Nhấn "Gửi" để Gia sư AI đọc đề trong ảnh và giải từng bước cho em
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAttachedImage(null)}
+              className="p-1.5 rounded-xl bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-purple-200"
+              title="Xóa ảnh đính kèm"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Hidden File Input for Homework Image */}
+        <input
+          ref={homeworkImageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleUploadHomeworkImage}
+          className="hidden"
+        />
+
         {/* Input Bar */}
         <form
           onSubmit={(e) => {
@@ -513,17 +684,27 @@ Em đang cần hỗ trợ phần nào hôm nay? Hãy chọn gợi ý bên dướ
           }}
           className="p-3 border-t border-slate-200 bg-white flex items-center gap-2 shrink-0"
         >
+          <button
+            type="button"
+            onClick={() => homeworkImageInputRef.current?.click()}
+            className="px-3 py-3 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors"
+            title="Chụp hoặc tải ảnh bài tập từ điện thoại / máy tính"
+          >
+            <Camera className="w-4 h-4" />
+            <span className="hidden sm:inline">Ảnh bài tập</span>
+          </button>
+
           <input
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Hỏi Gia sư AI về bài tập, công thức, đề thi, hoặc tâm sự áp lực năm 12..."
+            placeholder={`Hỏi bài tập ${selectedSubject}, công thức, đề thi hoặc đính kèm ảnh đề bài...`}
             className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-500 text-xs font-medium"
           />
 
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={(!inputMessage.trim() && !attachedImage) || isLoading}
             className="px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 active:scale-95"
           >
             <span>Gửi</span>

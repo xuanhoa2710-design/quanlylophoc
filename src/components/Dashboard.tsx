@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp, getWeekRangeByIndex } from '../context/AppContext';
+import { useApp, getWeekRangeByIndex, formatTeacherDisplayName } from '../context/AppContext';
 import {
   Users,
   CalendarCheck,
@@ -56,6 +56,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
   const currentWeekRange = getWeekRangeByIndex(currentWeek);
   const weeklySummary = getWeeklyEmulationSummary(currentWeek);
+  const teacherDisplayName = formatTeacherDisplayName(appConfig.teacherName);
 
   // Statistics calculation
   const safeStudents = students || [];
@@ -138,7 +139,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 Năm học: {appConfig.schoolYear}
               </span>
               <span className="px-2.5 py-1 rounded-lg bg-orange-500 text-[11px] font-bold text-white shadow-xs">
-                GVCN: {appConfig.teacherName}
+                GVCN: {teacherDisplayName}
               </span>
             </div>
           </div>
@@ -149,7 +150,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             <div className="text-sm font-bold text-white flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               {role === 'teacher' ? (
-                `${appConfig.teacherName} (${appConfig.teacherTitle})`
+                `${teacherDisplayName} (${appConfig.teacherTitle})`
               ) : role === 'student' ? (
                 <span className="flex items-center gap-1.5 flex-wrap">
                   <span>Học sinh: {currentStudent?.name}</span>

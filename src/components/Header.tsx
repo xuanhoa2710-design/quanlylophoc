@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
-import { useApp, getWeekRangeByIndex } from '../context/AppContext';
+import { useApp, getWeekRangeByIndex, formatTeacherDisplayName } from '../context/AppContext';
 import { Role } from '../types';
 import {
   Bell,
@@ -18,6 +18,9 @@ import {
   FileJson,
   Cloud,
   RefreshCw,
+  Monitor,
+  Smartphone,
+  LayoutGrid,
 } from 'lucide-react';
 import { StudentPasswordModal } from './StudentPasswordModal';
 
@@ -48,18 +51,24 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
     firebaseUserEmail,
     loginWithGoogleCloud,
     syncAllToCloudNow,
+    viewDeviceMode,
+    setViewDeviceMode,
+    uiDensity,
+    setUiDensity,
   } = useApp();
 
   const [showAlertModal, setShowAlertModal] = useState(false);
+  const [showDisplayModal, setShowDisplayModal] = useState(false);
   const [showStudentPicker, setShowStudentPicker] = useState(false);
   const [isResetPinModalOpen, setIsResetPinModalOpen] = useState(false);
 
   const currentWeekRange = getWeekRangeByIndex(currentWeek);
+  const teacherDisplayName = formatTeacherDisplayName(appConfig.teacherName);
 
   const rolesConfig: { id: Role; label: string; shortLabel: string; icon: any; color: string }[] = [
     {
       id: 'teacher',
-      label: 'Thầy Trương Xuân Hòa (GVCN)',
+      label: role === 'teacher' ? `${teacherDisplayName} (GVCN)` : 'GVCN',
       shortLabel: 'GVCN',
       icon: School,
       color: 'bg-blue-600 text-white',
@@ -145,8 +154,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
             <span className="hidden md:inline">
               Sĩ số: <strong className="text-white">{students.length} HS</strong>
             </span>
-            <span className="hidden xl:inline">
-              GVCN: <strong className="text-white">{appConfig.teacherName}</strong>
+            <span className="hidden sm:inline">
+              GVCN: <strong className="text-white">{teacherDisplayName}</strong>
             </span>
           </div>
         </div>
@@ -160,12 +169,137 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
             <Logo size="sm" />
           </div>
 
-          {/* Right: Alerts + Desktop Student Selector + Role Switcher */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Right: Display Mode Customizer + Alerts + Desktop Student Selector + Role Switcher */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Display Mode & Layout Customizer (Desktop / Mobile / Auto) */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowDisplayModal(!showDisplayModal);
+                  setShowAlertModal(false);
+                }}
+                className={`p-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                  viewDeviceMode !== 'auto' || uiDensity === 'compact'
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    : 'border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-100'
+                }`}
+                title="Tùy chỉnh hiển thị giao diện Máy tính / Điện thoại"
+              >
+                {viewDeviceMode === 'mobile' ? (
+                  <Smartphone className="w-4 h-4 text-indigo-600" />
+                ) : viewDeviceMode === 'desktop' ? (
+                  <Monitor className="w-4 h-4 text-indigo-600" />
+                ) : (
+                  <LayoutGrid className="w-4 h-4" />
+                )}
+                <span className="hidden xl:inline text-[11px]">
+                  {viewDeviceMode === 'mobile'
+                    ? 'Giao diện ĐT'
+                    : viewDeviceMode === 'desktop'
+                    ? 'Giao diện PC'
+                    : 'Giao diện'}
+                </span>
+              </button>
+
+              {showDisplayModal && (
+                <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 sm:w-80 rounded-2xl bg-white p-4 shadow-2xl ring-1 ring-black/10 z-50 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                      <LayoutGrid className="w-4 h-4 text-indigo-600" />
+                      Tùy Chỉnh Giao Diện Hiển Thị
+                    </span>
+                    <button
+                      onClick={() => setShowDisplayModal(false)}
+                      className="text-slate-400 hover:text-slate-600 p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                      1. Chế độ khung hình (Máy tính / Điện thoại):
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setViewDeviceMode('auto')}
+                        className={`p-2 rounded-xl border font-bold flex flex-col items-center gap-1 transition-all ${
+                          viewDeviceMode === 'auto'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        <span className="text-[11px]">Tự động</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewDeviceMode('desktop')}
+                        className={`p-2 rounded-xl border font-bold flex flex-col items-center gap-1 transition-all ${
+                          viewDeviceMode === 'desktop'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Monitor className="w-4 h-4" />
+                        <span className="text-[11px]">Máy tính</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewDeviceMode('mobile')}
+                        className={`p-2 rounded-xl border font-bold flex flex-col items-center gap-1 transition-all ${
+                          viewDeviceMode === 'mobile'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Smartphone className="w-4 h-4" />
+                        <span className="text-[11px]">Điện thoại</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                      2. Mật độ hiển thị thông tin:
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setUiDensity('comfortable')}
+                        className={`py-2 px-3 rounded-xl border font-bold transition-all ${
+                          uiDensity === 'comfortable'
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        Thoải mái (Mặc định)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUiDensity('compact')}
+                        className={`py-2 px-3 rounded-xl border font-bold transition-all ${
+                          uiDensity === 'compact'
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        Thu gọn (Tối ưu ĐT)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Automatic System Alerts Bell */}
             <div className="relative">
               <button
-                onClick={() => setShowAlertModal(!showAlertModal)}
+                onClick={() => {
+                  setShowAlertModal(!showAlertModal);
+                  setShowDisplayModal(false);
+                }}
                 className="relative p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-slate-100 transition-colors"
                 title="Thông báo hệ thống"
               >
@@ -327,7 +461,11 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                     <span className="hidden lg:inline">{r.label}</span>
                     <span className="lg:hidden">{r.shortLabel}</span>
                     {r.id === 'teacher' && !isTeacherAuthenticated && (
-                      <Lock className="w-2.5 h-2.5 text-amber-300" />
+                      <Lock
+                        className={`w-3 h-3 ${
+                          isSelected ? 'text-amber-300' : 'text-amber-600'
+                        }`}
+                      />
                     )}
                   </button>
                 );

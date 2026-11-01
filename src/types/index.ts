@@ -7,7 +7,28 @@ export type StudentCadreRole =
   | 'Bí thư'
   | 'Lớp phó lao động'
   | 'Tổ trưởng'
-  | 'Học sinh';
+  | 'Học sinh'
+  | (string & {});
+
+export type ViewDeviceMode = 'auto' | 'desktop' | 'mobile';
+export type UIDensityMode = 'comfortable' | 'compact';
+
+export interface GradeBatch {
+  id: string;
+  name: string;
+  semester: 'HK1' | 'HK2' | 'Cả năm' | 'Thi thử';
+  createdAt: string;
+  updatedAt?: string;
+  note?: string;
+  records: Record<
+    string,
+    {
+      scores: Partial<Record<keyof Student['scores'], number>>;
+      conduct?: 'Tốt' | 'Khá' | 'Đạt' | 'Chưa đạt';
+    }
+  >;
+}
+
 
 export type AttendanceStatus = 'present' | 'excused' | 'unexcused' | 'late';
 
@@ -176,6 +197,7 @@ export interface Announcement {
   createdAt: string;
   updatedAt?: string;
   isPinned?: boolean;
+  imageUrl?: string;
 }
 
 export interface ClassAppConfig {
@@ -237,6 +259,8 @@ export interface HappyPost {
   imageUrl?: string;
   createdAt: string;
   updatedAt?: string;
+  isAutoBirthday?: boolean;
+  birthdayMonth?: string;
 }
 
 export interface DutyScheduleItem {

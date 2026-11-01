@@ -20,10 +20,6 @@ import { generateAITextWithFallback } from '../utils/aiClient';
 export const AIAssistantView: React.FC = () => {
   const { role, isTeacherAuthenticated, students, announcements, addAnnouncement } = useApp();
 
-  if (role !== 'teacher' || !isTeacherAuthenticated) {
-    return <AccessGuard requiredRole="teacher" pageTitle="AI Trợ lý Giáo viên Chủ nhiệm" />;
-  }
-
   const [activeTab, setActiveTab] = useState<'comment' | 'announcement' | 'risk_analysis'>('risk_analysis');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,6 +36,10 @@ export const AIAssistantView: React.FC = () => {
   const [annKeyPoints, setAnnKeyPoints] = useState(
     '- Thời gian: Thứ Sáu ngày 23/10\n- Phòng thi: Dãy B trường THPT Vĩnh Lộc B\n- Môn thi: Toán, Ngữ văn, KHTN/KHXH\n- Lưu ý mang máy tính Casio đúng quy chuẩn và mặc trang phục chỉnh tề'
   );
+
+  if (role !== 'teacher' || !isTeacherAuthenticated) {
+    return <AccessGuard requiredRole="teacher" pageTitle="AI Trợ lý Giáo viên Chủ nhiệm" />;
+  }
 
   const selectedStudent = (students || []).find((s) => s.id === selectedStudentId);
 

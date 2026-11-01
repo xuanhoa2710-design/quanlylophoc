@@ -88,14 +88,21 @@ export const Logo: React.FC<LogoProps> = ({ className = '', size = 'md', showTex
 
       {showText && (
         <div className="flex flex-col">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xl font-extrabold tracking-tight text-blue-900">A7</span>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
               Lớp Học Hạnh Phúc
             </span>
+            <span className="hidden sm:inline-flex text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+              GVCN: Thầy Trương Xuân Hòa
+            </span>
           </div>
-          <span className="text-xs text-slate-500 font-medium">THPT Vĩnh Lộc B • Năm học 2026 - 2027</span>
-          <span className="text-[10px] text-blue-700 italic font-semibold">"Dream Big And Dare To Fail"</span>
+          <span className="text-xs text-slate-500 font-medium">
+            THPT Vĩnh Lộc B • Năm học 2026 - 2027
+          </span>
+          <span className="text-[10px] text-blue-700 italic font-semibold">
+            "Dream Big And Dare To Fail"
+          </span>
         </div>
       )}
     </div>

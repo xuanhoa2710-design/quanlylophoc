@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Announcement } from '../types';
+import { compressImageFileToDataUrl } from '../utils/imageUtils';
 import {
   Bell,
   Plus,
@@ -21,6 +22,8 @@ import {
   Check,
   Edit2,
   Save,
+  Upload,
+  Camera,
 } from 'lucide-react';
 
 export const AnnouncementsView: React.FC = () => {
@@ -44,6 +47,9 @@ export const AnnouncementsView: React.FC = () => {
   const [content, setContent] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [sendSmsNotification, setSendSmsNotification] = useState(true);
+  const [imageUrl, setImageUrl] = useState('');
+  const [isUploadingCreateImg, setIsUploadingCreateImg] = useState(false);
+  const createFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states for editing announcement (GVCN)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
@@ -52,6 +58,9 @@ export const AnnouncementsView: React.FC = () => {
   const [editTargetAudience, setEditTargetAudience] = useState<'all' | 'cadre'>('all');
   const [editContent, setEditContent] = useState('');
   const [editIsPinned, setEditIsPinned] = useState(false);
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [isUploadingEditImg, setIsUploadingEditImg] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete confirmation state
   const [deletingAnnouncement, setDeletingAnnouncement] = useState<Announcement | null>(null);
@@ -64,6 +73,33 @@ export const AnnouncementsView: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const handleImageFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: 'create' | 'edit'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (mode === 'create') {
+        setIsUploadingCreateImg(true);
+        const compressed = await compressImageFileToDataUrl(file, 960, 0.75);
+        setImageUrl(compressed);
+        setIsUploadingCreateImg(false);
+      } else {
+        setIsUploadingEditImg(true);
+        const compressed = await compressImageFileToDataUrl(file, 960, 0.75);
+        setEditImageUrl(compressed);
+        setIsUploadingEditImg(false);
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể xử lý ảnh tải lên.');
+      setIsUploadingCreateImg(false);
+      setIsUploadingEditImg(false);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handleOpenEdit = (ann: Announcement) => {
     setEditingAnnouncement(ann);
     setEditTitle(ann.title);
@@ -71,13 +107,14 @@ export const AnnouncementsView: React.FC = () => {
     setEditTargetAudience(ann.targetAudience === 'cadre' ? 'cadre' : 'all');
     setEditContent(ann.content);
     setEditIsPinned(!!ann.isPinned);
+    setEditImageUrl(ann.imageUrl || '');
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAnnouncement) return;
     if (!editTitle.trim() || !editContent.trim()) {
-      alert('Vui lòng điền đầy đủ tiêu đề và nội dung thông báo!');
+      showToast('Vui lòng điền đầy đủ tiêu đề và nội dung thông báo!');
       return;
     }
 
@@ -87,6 +124,7 @@ export const AnnouncementsView: React.FC = () => {
       targetAudience: editTargetAudience,
       content: editContent.trim(),
       isPinned: editIsPinned,
+      imageUrl: editImageUrl.trim() || undefined,
     });
 
     setEditingAnnouncement(null);
@@ -211,12 +249,15 @@ export const AnnouncementsView: React.FC = () => {
       author: authorName,
       role: authorRole,
       isPinned: targetAudience === 'cadre' ? true : isPinned,
+      imageUrl: imageUrl.trim() || undefined,
     });
 
     setTitle('');
     setContent('');
+    setImageUrl('');
     setTargetAudience('all');
     setShowCreateModal(false);
+    showToast('Đã phát hành thông báo mới lên bảng tin 12A7!');
   };
 
   const isCadreMember = Boolean(
@@ -439,6 +480,16 @@ export const AnnouncementsView: React.FC = () => {
                 {ann.content}
               </div>
 
+              {ann.imageUrl && (
+                <div className="mt-3 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-2xs max-w-2xl">
+                  <img
+                    src={ann.imageUrl}
+                    alt={ann.title}
+                    className="w-full max-h-80 object-contain bg-slate-50"
+                  />
+                </div>
+              )}
+
               {/* Cadre Acknowledgment Button */}
               {isCadre && (
                 <div className="mt-3.5 p-3 rounded-2xl bg-white/60 border border-amber-200 flex flex-wrap items-center justify-between gap-3">
@@ -634,13 +685,61 @@ export const AnnouncementsView: React.FC = () => {
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Nội dung chi tiết & Nhiệm vụ</label>
                 <textarea
-                  rows={6}
+                  rows={5}
                   placeholder="Ghi rõ thời gian, phân công cho Lớp trưởng, Lớp phó, Tổ trưởng..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 leading-relaxed font-normal"
                   required
                 />
+              </div>
+
+              {/* Upload Photo from Phone or Computer */}
+              <div className="space-y-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <label className="font-bold text-slate-700 block">
+                  Đính kèm hình ảnh thông báo / đề cương / lịch thi (Từ Máy tính hoặc Điện thoại)
+                </label>
+
+                <input
+                  ref={createFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageFileSelect(e, 'create')}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => createFileInputRef.current?.click()}
+                    disabled={isUploadingCreateImg}
+                    className="px-3 py-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/70 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 shrink-0" />
+                    <span>{isUploadingCreateImg ? 'Đang xử lý ảnh...' : 'Tải ảnh từ Máy tính / ĐT'}</span>
+                  </button>
+
+                  <input
+                    type="text"
+                    value={imageUrl.startsWith('data:image/') ? '' : imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="Hoặc dán link ảnh (https://...)"
+                    className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                  />
+                </div>
+
+                {imageUrl && (
+                  <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-white max-h-48">
+                    <img src={imageUrl} alt="Xem trước ảnh thông báo" className="w-full h-44 object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl('')}
+                      className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" /> Xóa ảnh
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-4 pt-1">
@@ -783,12 +882,60 @@ export const AnnouncementsView: React.FC = () => {
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Nội dung chi tiết & Nhiệm vụ:</label>
                 <textarea
-                  rows={6}
+                  rows={5}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 leading-relaxed font-normal bg-white text-slate-800"
                   required
                 />
+              </div>
+
+              {/* Upload Photo in Edit Modal */}
+              <div className="space-y-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <label className="font-bold text-slate-700 block">
+                  Hình ảnh đính kèm (Tải ảnh từ Máy tính / Điện thoại hoặc URL):
+                </label>
+
+                <input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageFileSelect(e, 'edit')}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => editFileInputRef.current?.click()}
+                    disabled={isUploadingEditImg}
+                    className="px-3 py-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/70 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 shrink-0" />
+                    <span>{isUploadingEditImg ? 'Đang tải ảnh...' : 'Chọn ảnh từ Máy tính / ĐT'}</span>
+                  </button>
+
+                  <input
+                    type="text"
+                    value={editImageUrl.startsWith('data:image/') ? '' : editImageUrl}
+                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    placeholder="Hoặc dán link ảnh (https://...)"
+                    className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                  />
+                </div>
+
+                {editImageUrl && (
+                  <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-white max-h-48">
+                    <img src={editImageUrl} alt="Xem trước ảnh" className="w-full h-44 object-contain" />
+                    <button
+                      type="button"
+                      onClick={() => setEditImageUrl('')}
+                      className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" /> Xóa ảnh
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="pt-1">

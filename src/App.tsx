@@ -24,7 +24,7 @@ import { School } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const { role, isTeacherAuthenticated, appConfig } = useApp();
+  const { role, isTeacherAuthenticated, appConfig, viewDeviceMode, uiDensity } = useApp();
 
   useEffect(() => {
     if (
@@ -37,26 +37,39 @@ const AppContent: React.FC = () => {
     }
   }, [role, activeTab]);
 
+  const wrapperClass =
+    viewDeviceMode === 'mobile'
+      ? 'min-h-screen flex flex-col bg-slate-50 text-slate-800 pb-20 max-w-[460px] mx-auto shadow-2xl border-x border-slate-300'
+      : viewDeviceMode === 'desktop'
+      ? 'min-h-screen flex flex-col bg-slate-50 text-slate-800 pb-6 min-w-[1024px] overflow-x-auto'
+      : 'min-h-screen flex flex-col bg-slate-50 text-slate-800 pb-16 md:pb-0';
+
+  const mainPaddingClass =
+    uiDensity === 'compact'
+      ? 'flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 lg:p-5'
+      : 'flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8';
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 pb-16 md:pb-0">
-      {/* Teacher Password Challenge Modal */}
-      <TeacherPasswordModal />
+    <div className={viewDeviceMode === 'mobile' ? 'bg-slate-200/80 min-h-screen' : ''}>
+      <div className={wrapperClass}>
+        {/* Teacher Password Challenge Modal */}
+        <TeacherPasswordModal />
 
-      {/* Teacher & Class Configuration Modal */}
-      <AppConfigModal />
+        {/* Teacher & Class Configuration Modal */}
+        <AppConfigModal />
 
-      {/* JSON Data Export / Backup & Import Modal */}
-      <DataJsonModal />
+        {/* JSON Data Export / Backup & Import Modal */}
+        <DataJsonModal />
 
-      {/* Top Header */}
-      <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Top Header */}
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Tab Navigation */}
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Main Tab Navigation */}
+        <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content Body with Role Access Guards */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
-        {activeTab === 'overview' && <Dashboard setActiveTab={setActiveTab} />}
+        {/* Main Content Body with Role Access Guards */}
+        <main className={mainPaddingClass}>
+          {activeTab === 'overview' && <Dashboard setActiveTab={setActiveTab} />}
 
         {/* Quản lý học sinh: Chỉ GVCN được phép truy cập */}
         {activeTab === 'students' && (
@@ -188,23 +201,24 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white py-6 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <School className="w-4 h-4 text-blue-600" />
-            <span>
-              <strong>{appConfig?.className || '12A7'} - Lớp Học Hạnh Phúc</strong> • {appConfig?.schoolName || 'THPT Vĩnh Lộc B'} • Năm học {appConfig?.schoolYear || '2026 - 2027'}
-            </span>
-          </div>
+        {/* Footer */}
+        <footer className="mt-auto border-t border-slate-200 bg-white py-6 px-4">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <School className="w-4 h-4 text-blue-600" />
+              <span>
+                <strong>{appConfig?.className || '12A7'} - Lớp Học Hạnh Phúc</strong> • {appConfig?.schoolName || 'THPT Vĩnh Lộc B'} • Năm học {appConfig?.schoolYear || '2026 - 2027'}
+              </span>
+            </div>
 
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-orange-600 italic">"{appConfig?.motto || 'Đoàn kết - Yêu thương - Cùng tiến bộ'}"</span>
-            <span>•</span>
-            <span className="text-slate-600 font-bold">{appConfig?.targetGoal || 'Đậu Tốt nghiệp & Đại học 100%'}</span>
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-orange-600 italic">"{appConfig?.motto || 'Đoàn kết - Yêu thương - Cùng tiến bộ'}"</span>
+              <span>•</span>
+              <span className="text-slate-600 font-bold">{appConfig?.targetGoal || 'Đậu Tốt nghiệp & Đại học 100%'}</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };
