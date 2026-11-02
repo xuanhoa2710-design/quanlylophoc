@@ -1,21 +1,61 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>A7 - Lớp Học Hạnh Phúc | THPT Vĩnh Lộc B</title>
-    <meta name="description" content="Hệ sinh thái quản lý lớp học thông minh và gắn kết dành cho giáo viên chủ nhiệm, học sinh và phụ huynh lớp 12A7 Trường THPT Vĩnh Lộc B." />
-    <meta property="og:title" content="A7 - Lớp Học Hạnh Phúc | THPT Vĩnh Lộc B" />
-    <meta property="og:description" content="Hệ sinh thái quản lý lớp học thông minh và gắn kết dành cho giáo viên chủ nhiệm, học sinh và phụ huynh lớp 12A7 Trường THPT Vĩnh Lộc B." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<script>
+  (function () {
+    const DB_URL = "https://quanlylophoc-36427-default-rtdb.asia-southeast1.firebasedatabase.app/.json";
+    const rawSetItem = Storage.prototype.setItem;
 
+    // 1. Tải dữ liệu từ nhánh gốc Firebase về trình duyệt khi mở web
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", DB_URL, false);
+      xhr.send(null);
+      if (xhr.status === 200) {
+        const cloudData = JSON.parse(xhr.responseText);
+        if (cloudData && typeof cloudData === "object") {
+          // Lưu từng mục (announcements, currentWeek, appConfig...) vào localStorage
+          Object.keys(cloudData).forEach((key) => {
+            const val = cloudData[key];
+            if (val !== null && val !== undefined) {
+              const strVal = typeof val === "string" ? val : JSON.stringify(val);
+              rawSetItem.call(localStorage, key, strVal);
+            }
+          });
+          // Nếu ứng dụng gom chung toàn bộ dữ liệu vào 1 khóa duy nhất đã có sẵn
+          for (let i = 0; i < localStorage.length; i++) {
+            const existingKey = localStorage.key(i);
+            try {
+              const parsed = JSON.parse(localStorage.getItem(existingKey));
+              if (parsed && typeof parsed === "object" && ("currentWeek" in parsed || "announcements" in parsed)) {
+                rawSetItem.call(localStorage, existingKey, JSON.stringify(cloudData));
+              }
+            } catch (err) {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Lỗi tải dữ liệu từ Firebase:", e);
+    }
+
+    // 2. Tự động đẩy lên nhánh gốc Firebase mỗi khi thêm/sửa trên web
+    Storage.prototype.setItem = function (key, value) {
+      rawSetItem.apply(this, arguments);
+      if (this === window.localStorage) {
+        let parsedValue = value;
+        try {
+          parsedValue = JSON.parse(value);
+        } catch (e) {}
+
+        // Nếu khóa lưu trữ chứa trọn bộ dữ liệu lớp (có currentWeek, announcements...)
+        const payload =
+          parsedValue && typeof parsedValue === "object" && ("currentWeek" in parsedValue || "announcements" in parsedValue)
+            ? parsedValue
+            : { [key]: parsedValue };
+
+        fetch(DB_URL, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch((err) => console.error("Lỗi đồng bộ Firebase:", err));
+      }
+    };
+  })();
+</script>
