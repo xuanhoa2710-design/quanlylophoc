@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, signInWithGooglePopup, signOutFirebaseUser } from '../firebase';
+import {
+  ClassroomSectionId,
+  ALL_SECTION_IDS,
+  CLIENT_INSTANCE_ID,
+  sanitizePayloadForFirestore,
+  ensureMasterClassroomDoc,
+  subscribeToClassroomSections,
+  saveClassroomSection,
+} from '../services/cloudSyncService';
 import { VIOLATIONS_CATALOG } from '../data/violationsCatalog';
 import {
   SchoolWeekRange,
@@ -26,7 +35,6 @@ export const formatTeacherDisplayName = (rawName?: string): string => {
   if (/^(Cô|Thầy)\s+/i.test(cleaned)) return cleaned;
   return `Thầy ${cleaned}`;
 };
-
 import {
   Student,
   Role,
@@ -232,7 +240,7 @@ interface AppContextType {
   activeStudentId: string;
   setActiveStudentId: (id: string) => void;
   currentStudent: Student | undefined;
-
+  
   // Students
   students: Student[];
   addStudent: (student: Omit<Student, 'id' | 'stt'>) => void;
@@ -244,13 +252,13 @@ interface AppContextType {
   addCustomCadreRole: (roleName: string) => { success: boolean; message: string };
   removeCustomCadreRole: (roleName: string) => void;
 
-  // UI Display & Device Optimization Mode
+  // UI Display & Device Optimization Mode (Tùy chỉnh giao diện Máy tính / Điện thoại)
   viewDeviceMode: ViewDeviceMode;
   setViewDeviceMode: (mode: ViewDeviceMode) => void;
   uiDensity: UIDensityMode;
   setUiDensity: (density: UIDensityMode) => void;
 
-  // Student Privacy & PIN Lock
+  // Student Privacy & PIN Lock (Bảo vệ thông tin hồ sơ & Gia sư AI)
   isStudentUnlocked: (studentId: string) => boolean;
   unlockStudent: (studentId: string, pin: string) => boolean;
   lockStudent: (studentId: string) => void;
@@ -276,12 +284,13 @@ interface AppContextType {
     }
   ) => void;
   markAllPresent: (targetDate?: string) => void;
+  resetDateAttendance: (targetDate?: string) => void;
   saveAttendanceNote: (note: string, targetDate?: string) => void;
   allAttendanceDays: Record<string, DailyAttendance>;
   saveDateAttendance: (date: string, attendance: DailyAttendance) => void;
   scanQRAttendance: (studentCodeOrId: string) => { success: boolean; message: string; studentName?: string };
 
-  // Supplementary Attendance
+  // Supplementary Attendance (Điểm danh bổ sung)
   supplementaryAttendanceList: SupplementaryAttendanceEntry[];
   addSupplementaryAttendance: (entry: Omit<SupplementaryAttendanceEntry, 'id' | 'createdAt'>) => void;
   deleteSupplementaryAttendance: (id: string) => void;
@@ -322,7 +331,7 @@ interface AppContextType {
   addEvaluation: (evaluation: Omit<EvaluationComment, 'id' | 'createdAt'>) => void;
   updateEvaluation: (evaluation: EvaluationComment) => void;
 
-  // Announcements
+  // Announcements (GVCN có thể thêm, sửa, xóa)
   announcements: Announcement[];
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => void;
   updateAnnouncement: (id: string, updatedData: Partial<Announcement>) => void;
@@ -335,7 +344,7 @@ interface AppContextType {
   addAppointment: (appointment: Omit<Appointment, 'id' | 'createdAt' | 'status'>) => void;
   updateAppointmentStatus: (id: string, status: Appointment['status']) => void;
 
-  // Happy Post
+  // Happy Post (GVCN có thể thêm, sửa, xóa bài viết và xóa comment)
   happyPosts: HappyPost[];
   addHappyPost: (post: Omit<HappyPost, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'comments'>) => void;
   updateHappyPost: (id: string, updatedData: Partial<HappyPost>) => void;
@@ -348,7 +357,7 @@ interface AppContextType {
     force?: boolean
   ) => { posted: boolean; count: number; month: number; message: string };
 
-  // Timetable
+  // Timetable (Sáng 4 tiết, Chiều 3 tiết, hỗ trợ thêm/bớt tiết)
   timetable: TimetableEntry[];
   updateTimetable: (newTimetable: TimetableEntry[]) => void;
   updatePeriod: (
@@ -369,22 +378,23 @@ interface AppContextType {
   ) => void;
   resetTimetable: () => void;
 
-  // Duty Schedule
+  // Phân lịch trực nhật 4 Tổ (Lớp phó Lao động & GVCN quản lý)
   dutySchedule: DutyScheduleItem[];
   updateDutySchedule: (newSchedule: DutyScheduleItem[]) => void;
   updateDutyItem: (id: string, itemData: Partial<DutyScheduleItem>) => void;
   addDutyItem: (itemData: Omit<DutyScheduleItem, 'id'>) => void;
   deleteDutyItem: (id: string) => void;
   resetDutySchedule: () => void;
+  resetDutyScheduleForNewWeek: (targetWeek?: number) => void;
 
-  // App Configuration
+  // App & GVCN Class Configuration
   appConfig: ClassAppConfig;
   updateAppConfig: (config: Partial<ClassAppConfig>) => void;
   resetAppConfig: () => void;
   isAppConfigModalOpen: boolean;
   setIsAppConfigModalOpen: (open: boolean) => void;
 
-  // Weekly Discipline & Emulation
+  // Weekly Discipline & Emulation (Mỗi học sinh mỗi tuần 100 điểm)
   currentWeek: number;
   setCurrentWeek: (week: number) => void;
   disciplineEntries: StudentDisciplineEntry[];
@@ -400,6 +410,9 @@ interface AppContextType {
     adjustment: Omit<EmulationScoreAdjustment, 'id' | 'createdAt'>
   ) => void;
   removeEmulationScoreAdjustment: (studentId: string, weekNumber: number) => void;
+  keepEmulationAcrossWeeks: boolean;
+  setKeepEmulationAcrossWeeks: (keep: boolean) => void;
+  resetWeeklyEmulationScores: (week?: number) => void;
   getStudentWeeklyScore: (studentId: string, week?: number) => {
     initialPoints: number;
     deducted: number;
@@ -419,7 +432,7 @@ interface AppContextType {
   recentAlerts: string[];
   clearAlerts: () => void;
 
-  // JSON Export & Import
+  // JSON Export & Import (Sao lưu & Xuất dữ liệu ra file JSON)
   isJsonModalOpen: boolean;
   setIsJsonModalOpen: (open: boolean) => void;
   getExportJsonPayload: (scope?: 'all' | 'students' | 'attendance_discipline') => Record<string, any>;
@@ -463,8 +476,13 @@ const STORAGE_KEYS = {
   ACTIVE_GRADE_BATCH: 'a7_active_grade_batch_v2026_10_25',
   VIEW_DEVICE_MODE: 'a7_view_device_mode_v1',
   UI_DENSITY: 'a7_ui_density_v1',
+  LAST_ATTENDANCE_DATE: 'a7_last_attendance_auto_reset_date_v2',
+  LAST_DUTY_WEEK: 'a7_last_duty_auto_reset_week_v2',
+  KEEP_EMULATION_ACROSS_WEEKS: 'a7_keep_emulation_across_weeks_v1',
+  EMULATION_RESET_BASELINE_WEEK: 'a7_emulation_reset_baseline_week_v1',
 };
 
+// Safe Storage Helpers to prevent crashes when localStorage/sessionStorage is blocked or corrupted
 const safeGetLocal = (key: string): string | null => {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -577,10 +595,8 @@ const normalizeStudentRecord = (raw: any, index: number, defaultRoles: Record<st
   };
 };
 
-// Đường dẫn kết nối trực tiếp tới Firebase Realtime Database của lớp 12A7
-const RTDB_URL = 'https://quanlylophoc-36427-default-rtdb.asia-southeast1.firebasedatabase.app/.json';
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Teacher Authentication state
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState<boolean>(() => {
     return safeGetSession('a7_teacher_auth_v1') === 'true';
   });
@@ -588,11 +604,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [pendingSuccessCallback, setPendingSuccessCallback] = useState<(() => void) | null>(null);
 
+  // Role
   const [role, setRoleState] = useState<Role>(() => {
     const savedRole = safeGetLocal(STORAGE_KEYS.ROLE) as Role | null;
     const isAuth = safeGetSession('a7_teacher_auth_v1') === 'true';
     if (savedRole === 'teacher' && !isAuth) {
-      return 'student';
+      return 'student'; // Require password before accessing teacher role
     }
     if (savedRole === 'teacher' || savedRole === 'student' || savedRole === 'parent') {
       return savedRole;
@@ -600,8 +617,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'student';
   });
 
+  // Active student id for student/parent view
   const [activeStudentId, setActiveStudentIdState] = useState<string>(() => {
-    return safeGetLocal(STORAGE_KEYS.ACTIVE_STUDENT) || 'hs-27';
+    return safeGetLocal(STORAGE_KEYS.ACTIVE_STUDENT) || 'hs-27'; // Default Huỳnh Thị Ái Ly
   });
 
   const authenticateTeacher = (password: string): boolean => {
@@ -652,18 +670,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.ACTIVE_STUDENT, id);
   };
 
+  // Default cadre roles map for 12A7 officers
   const DEFAULT_CADRE_ROLES: Record<string, StudentCadreRole> = {
-    'hs-27': 'Lớp trưởng',
-    'hs-1': 'Lớp phó học tập',
-    'hs-35': 'Lớp phó kỉ luật',
-    'hs-42': 'Bí thư',
-    'hs-21': 'Lớp phó lao động',
-    'hs-20': 'Tổ trưởng',
-    'hs-13': 'Tổ trưởng',
-    'hs-31': 'Tổ trưởng',
-    'hs-46': 'Tổ trưởng',
+    'hs-27': 'Lớp trưởng',       // Huỳnh Thị Ái Ly
+    'hs-1': 'Lớp phó học tập',     // Vũ Trịnh Bảo An
+    'hs-35': 'Lớp phó kỉ luật',    // Đặng Đình Phúc
+    'hs-42': 'Bí thư',            // Nguyễn Ngọc Bích Trâm
+    'hs-21': 'Lớp phó lao động',   // Trần Anh Khoa
+    'hs-20': 'Tổ trưởng',         // Nguyễn Hoàng Khang (Tổ 1)
+    'hs-13': 'Tổ trưởng',         // Lê Quang Hải (Tổ 2)
+    'hs-31': 'Tổ trưởng',         // Phạm Nhật Minh (Tổ 3)
+    'hs-46': 'Tổ trưởng',         // Võ Hoàng Tuấn (Tổ 4)
   };
 
+  // Students - Hardcoded 50 students from default JSON dataset
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.STUDENTS);
     if (saved) {
@@ -683,13 +703,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
   }, [students]);
 
+  // Current student object
   const currentStudent = students.find((s) => s.id === activeStudentId) || students[0];
 
+  // Attendance by dates (Strictly Monday - Friday, no Saturday/Sunday)
+  const rawTodayStr = new Date().toISOString().split('T')[0];
+  const todayStr = normalizeToSchoolDay(rawTodayStr).date;
+  const realCalendarWeek = getWeekIndexFromDate(todayStr);
+
+  // Weekly Discipline & Emulation State
+  // Automatically advance to the current calendar week when a new week starts
   const [currentWeek, setCurrentWeekState] = useState<number>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.CURRENT_WEEK);
     const num = saved ? Number(saved) : NaN;
-    return !isNaN(num) && num > 0 ? num : INITIAL_CURRENT_WEEK;
+    if (!isNaN(num) && num >= realCalendarWeek) {
+      return num;
+    }
+    return realCalendarWeek || INITIAL_CURRENT_WEEK;
   });
+
+  useEffect(() => {
+    safeSetLocal(STORAGE_KEYS.CURRENT_WEEK, String(currentWeek));
+  }, [currentWeek]);
+
+  // Emulation non-auto-reset mode:
+  // By default true ("App không tự reset lại điểm thi đua khi bắt đầu tuần mới")
+  const [keepEmulationAcrossWeeks, setKeepEmulationAcrossWeeksState] = useState<boolean>(() => {
+    const saved = safeGetLocal(STORAGE_KEYS.KEEP_EMULATION_ACROSS_WEEKS);
+    if (saved === 'false') return false;
+    return true;
+  });
+
+  const setKeepEmulationAcrossWeeks = (keep: boolean) => {
+    setKeepEmulationAcrossWeeksState(keep);
+    safeSetLocal(STORAGE_KEYS.KEEP_EMULATION_ACROSS_WEEKS, String(keep));
+  };
+
+  const [emulationResetBaselineWeek, setEmulationResetBaselineWeekState] = useState<number>(() => {
+    const saved = safeGetLocal(STORAGE_KEYS.EMULATION_RESET_BASELINE_WEEK);
+    const num = saved ? Number(saved) : NaN;
+    return !isNaN(num) && num > 0 ? num : 1;
+  });
+
+  const setEmulationResetBaselineWeek = (weekNum: number) => {
+    setEmulationResetBaselineWeekState(weekNum);
+    safeSetLocal(STORAGE_KEYS.EMULATION_RESET_BASELINE_WEEK, String(weekNum));
+  };
 
   const [disciplineEntries, setDisciplineEntries] = useState<StudentDisciplineEntry[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.DISCIPLINE_ENTRIES);
@@ -747,8 +806,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }, [emulationScoreAdjustments]);
 
-  const rawTodayStr = new Date().toISOString().split('T')[0];
-  const todayStr = normalizeToSchoolDay(rawTodayStr).date;
   const [selectedAttendanceDateState, setSelectedAttendanceDateState] = useState<string>(todayStr);
 
   const setSelectedAttendanceDate = (date: string) => {
@@ -772,39 +829,117 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const selectedAttendanceDate = selectedAttendanceDateState;
 
+  // Helper to build a fresh 100% present attendance sheet for any new school day
+  const createFreshDailyAttendance = useCallback(
+    (dateStr: string, studentList?: Student[]): DailyAttendance => {
+      const list = studentList && studentList.length > 0 ? studentList : INITIAL_STUDENTS;
+      const freshRecords: Record<string, AttendanceStatus> = {};
+      list.forEach((s) => {
+        freshRecords[s.id] = 'present';
+      });
+      return {
+        date: dateStr,
+        records: freshRecords,
+        note: '',
+        checkedBy: 'Hệ thống Tự động (Đã reset ngày mới - 100% Có mặt)',
+      };
+    },
+    []
+  );
+
+  // Sanitize any stale attendance map where a date > 2026-10-23 accidentally copied INITIAL_ATTENDANCE from 2026-10-23
+  const sanitizeAttendanceDaysMap = useCallback(
+    (rawMap: Record<string, DailyAttendance>, targetToday: string): Record<string, DailyAttendance> => {
+      const cleaned: Record<string, DailyAttendance> = {};
+      const oct23Note = INITIAL_ATTENDANCE.note;
+      for (const [dt, dayObj] of Object.entries(rawMap || {})) {
+        if (!dayObj || typeof dayObj !== 'object') continue;
+        const isStaleOct23Clone =
+          dt !== '2026-10-23' &&
+          dayObj.note === oct23Note &&
+          dayObj.records?.['hs-21'] === 'late' &&
+          dayObj.records?.['hs-29'] === 'excused';
+        if (isStaleOct23Clone) {
+          cleaned[dt] = createFreshDailyAttendance(dt);
+        } else {
+          cleaned[dt] = dayObj;
+        }
+      }
+      if (!cleaned[targetToday]) {
+        cleaned[targetToday] = createFreshDailyAttendance(targetToday);
+      }
+      return cleaned;
+    },
+    [createFreshDailyAttendance]
+  );
+
   const [allAttendanceDays, setAllAttendanceDays] = useState<Record<string, DailyAttendance>>(() => {
+    const lastResetDate = safeGetLocal(STORAGE_KEYS.LAST_ATTENDANCE_DATE);
     const saved = safeGetLocal(STORAGE_KEYS.ATTENDANCE_DAYS);
+    let initialMap: Record<string, DailyAttendance> = { ...INITIAL_ALL_ATTENDANCE_DAYS };
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
-          return parsed;
+          initialMap = parsed;
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return {
-      ...INITIAL_ALL_ATTENDANCE_DAYS,
-      [todayStr]: INITIAL_ALL_ATTENDANCE_DAYS[todayStr] || {
-        ...INITIAL_ATTENDANCE,
-        date: todayStr,
-      },
-    };
+    const sanitized = sanitizeAttendanceDaysMap(initialMap, todayStr);
+    // When entering a new day that hasn't been auto-reset yet, ensure todayStr starts fresh 100% present
+    if (lastResetDate !== todayStr) {
+      safeSetLocal(STORAGE_KEYS.LAST_ATTENDANCE_DATE, todayStr);
+      if (!INITIAL_ALL_ATTENDANCE_DAYS[todayStr]) {
+        sanitized[todayStr] = createFreshDailyAttendance(todayStr);
+      }
+    }
+    return sanitized;
   });
 
   useEffect(() => {
     safeSetLocal(STORAGE_KEYS.ATTENDANCE_DAYS, JSON.stringify(allAttendanceDays));
   }, [allAttendanceDays]);
 
+  // Live watcher: Automatically reset attendance when the clock crosses into a new school day
+  useEffect(() => {
+    const checkDayTransition = () => {
+      const currentRaw = new Date().toISOString().split('T')[0];
+      const currentNormDate = normalizeToSchoolDay(currentRaw).date;
+      const lastReset = safeGetLocal(STORAGE_KEYS.LAST_ATTENDANCE_DATE);
+      if (lastReset !== currentNormDate) {
+        safeSetLocal(STORAGE_KEYS.LAST_ATTENDANCE_DATE, currentNormDate);
+        setAllAttendanceDays((prev) => ({
+          ...prev,
+          [currentNormDate]: createFreshDailyAttendance(currentNormDate, students),
+        }));
+        setSelectedAttendanceDateState(currentNormDate);
+        const newWeekIdx = getWeekIndexFromDate(currentNormDate);
+        if (newWeekIdx !== currentWeek) {
+          setCurrentWeekState(newWeekIdx);
+        }
+      }
+    };
+    const interval = window.setInterval(checkDayTransition, 30000);
+    return () => window.clearInterval(interval);
+  }, [createFreshDailyAttendance, students, currentWeek]);
+
   const rawCurrentDay = allAttendanceDays?.[selectedAttendanceDate];
+  const fallbackFreshDay = createFreshDailyAttendance(selectedAttendanceDate, students);
   const currentDateAttendance: DailyAttendance = {
     date: rawCurrentDay?.date || selectedAttendanceDate,
-    records: rawCurrentDay?.records && typeof rawCurrentDay.records === 'object' ? rawCurrentDay.records : INITIAL_ATTENDANCE.records || {},
-    note: rawCurrentDay?.note ?? INITIAL_ATTENDANCE.note ?? '',
-    checkedBy: rawCurrentDay?.checkedBy || INITIAL_ATTENDANCE.checkedBy,
+    records:
+      rawCurrentDay?.records &&
+      typeof rawCurrentDay.records === 'object' &&
+      Object.keys(rawCurrentDay.records).length > 0
+        ? rawCurrentDay.records
+        : fallbackFreshDay.records,
+    note: rawCurrentDay?.note ?? '',
+    checkedBy: rawCurrentDay?.checkedBy || fallbackFreshDay.checkedBy,
   };
 
+  // Supplementary Attendance list state
   const [supplementaryAttendanceList, setSupplementaryAttendanceList] = useState<SupplementaryAttendanceEntry[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.SUPPLEMENTARY_ATTENDANCE);
     if (saved) {
@@ -822,12 +957,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.SUPPLEMENTARY_ATTENDANCE, JSON.stringify(supplementaryAttendanceList));
   }, [supplementaryAttendanceList]);
 
+  // System Notifications (Auto-summary after Friday & Supplementary attendance)
   const [recentAlerts, setRecentAlerts] = useState<string[]>([
     `Hệ thống tự động: Sau ngày Thứ 6, hệ thống đã tự động khóa sổ điểm danh tuần (${getWeekRangeByIndex(INITIAL_CURRENT_WEEK).rangeLabel}) và hoàn tất tổng kết điểm thi đua cho 50 học sinh lớp 12A7.`,
   ]);
 
   const clearAlerts = () => setRecentAlerts([]);
 
+  // Helper: Automatically synchronize attendance status with linked Discipline Violation (Điều 1: Đi trễ -5đ, Điều 8: Vắng có phép -5đ, Điều 9: Vắng không phép -20đ)
   const syncDisciplineViolationFromAttendance = (
     studentId: string,
     status: AttendanceStatus,
@@ -847,6 +984,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const attendanceRuleNumbers = [1, 8, 9];
 
     if (status === 'present') {
+      // Remove any attendance-linked violation for this student on this date
       setDisciplineEntries((prev) =>
         prev.filter(
           (d) =>
@@ -940,10 +1078,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    // Automatically link & sync with Discipline Violations
     if (!violationOpts?.skipViolationSync) {
       syncDisciplineViolationFromAttendance(studentId, status, dateToUse, violationOpts);
     }
 
+    // Auto-update student attendance summary stats
     setStudents((prevStudents) =>
       prevStudents.map((st) => {
         if (st.id === studentId) {
@@ -960,6 +1100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
+    // If attendance is updated on Friday (Thứ 6), auto-update the weekly emulation summary alert
     if (norm.dayIndex === 5) {
       const weekRange = getWeekRangeFromDate(dateToUse);
       const alertMsg = `Tự động tổng kết sau Thứ 6 (${dateToUse}): Đã cập nhật chuyên cần ngày Thứ 6 và tự động tổng kết điểm thi đua (${weekRange.rangeLabel}) cho lớp 12A7.`;
@@ -987,6 +1128,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
       };
     });
+
+    // Clear all attendance-linked violations on this date
+    setDisciplineEntries((prev) =>
+      prev.filter(
+        (d) =>
+          !(
+            d.date === dateToUse &&
+            (d.id.startsWith(`att-disc-${dateToUse}-`) || [1, 8, 9].includes(d.ruleNumber))
+          )
+      )
+    );
+  };
+
+  const resetDateAttendance = (targetDate?: string) => {
+    const rawDate = targetDate || selectedAttendanceDate || todayStr;
+    const norm = normalizeToSchoolDay(rawDate);
+    const dateToUse = norm.date;
+    const freshDay = createFreshDailyAttendance(dateToUse, students);
+
+    setAllAttendanceDays((prev) => ({
+      ...prev,
+      [dateToUse]: freshDay,
+    }));
 
     setDisciplineEntries((prev) =>
       prev.filter(
@@ -1021,6 +1185,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSupplementaryAttendanceList((prev) => [newEntry, ...prev]);
 
+    // Automatically synchronize with allAttendanceDays for that date
     setAllAttendanceDays((prev) => {
       const day = prev[normDate] || { date: normDate, records: {}, note: '' };
       return {
@@ -1035,11 +1200,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    // Automatically update linked Discipline Violation for that date & student
     syncDisciplineViolationFromAttendance(entryData.studentId, entryData.newStatus, normDate, {
       note: `Điểm danh bổ sung: ${entryData.reason}${entryData.note ? ` (${entryData.note})` : ''}`,
       recordedBy: entryData.recordedBy,
     });
 
+    // Auto-alert
     const statusLabels: Record<AttendanceStatus, string> = {
       present: 'Có mặt',
       late: 'Đi trễ (-5đ)',
@@ -1071,6 +1238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, message: `Điểm danh thành công cho học sinh ${stu.name} (${stu.code})!`, studentName: stu.name };
   };
 
+  // Student actions
   const addStudent = (studentData: Omit<Student, 'id' | 'stt'>) => {
     const newStt = students.length + 1;
     const newStudent: Student = {
@@ -1109,6 +1277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (s.id === studentId) {
           return { ...s, classRole: cadreRole };
         }
+        // If assigning a unique class officer role, demote previous holder to 'Học sinh'
         if (singletonRoles.includes(cadreRole) && s.classRole === cadreRole) {
           return { ...s, classRole: 'Học sinh' };
         }
@@ -1126,6 +1295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Student Privacy PIN unlock state (sessionStorage based)
   const [unlockedStudents, setUnlockedStudents] = useState<Record<string, boolean>>(() => {
     try {
       const saved = safeGetSession('a7_unlocked_students_v1');
@@ -1137,8 +1307,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const isStudentUnlocked = (studentId: string): boolean => {
+    // If authenticated teacher, always bypass
     if (role === 'teacher' && isTeacherAuthenticated) return true;
     const stu = students.find((s) => s.id === studentId);
+    // If student has no PIN set, unlocked by default
     if (!stu || !stu.pinCode || stu.pinCode.trim() === '') return true;
     return !!unlockedStudents[studentId];
   };
@@ -1252,6 +1424,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Assignments
   const [assignments, setAssignments] = useState<Assignment[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.ASSIGNMENTS);
     if (saved) {
@@ -1286,7 +1459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAssignments((prev) =>
       prev.map((asg) => {
         if (asg.id === assignmentId) {
-          const subs = { ...(asg.submissions || {}) };
+          const subs = { ...asg.submissions };
           subs[studentId] = {
             studentId,
             studentName: stu.name,
@@ -1305,7 +1478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const gradeSubmission = (assignmentId: string, studentId: string, grade: number, feedback: string) => {
     setAssignments((prev) =>
       prev.map((asg) => {
-        if (asg.id === assignmentId && asg.submissions?.[studentId]) {
+        if (asg.id === assignmentId && asg.submissions[studentId]) {
           const sub = { ...asg.submissions[studentId], grade, feedback, status: 'graded' as const };
           return {
             ...asg,
@@ -1317,6 +1490,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Grades updating
   const updateSubjectScore = (
     studentId: string,
     subjectKey: keyof Student['scores'],
@@ -1334,13 +1508,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (field === 'final') {
             subject.final = typeof value === 'number' ? value : value[0] || 0;
           }
+          // Compute subject average: (regular_avg + midterm*2 + final*3) / (regular_count + 5)
           const regAvg = subject.regular.length > 0 ? subject.regular.reduce((a, b) => a + b, 0) / subject.regular.length : 0;
           subject.avg = Number(((regAvg + subject.midterm * 2 + subject.final * 3) / 6).toFixed(1));
 
           const newScores = { ...stu.scores, [subjectKey]: subject };
+
+          // Compute overall GPA across all subjects
           const allAvgs = Object.values(newScores).map((s) => s.avg);
           const newGpa = Number((allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length).toFixed(2));
 
+          // Classification logic:
+          // Xuất sắc: GPA >= 9.0 and all >= 8.0, Conduct Tốt
+          // Giỏi: GPA >= 8.0 and all >= 6.5, Conduct Tốt
+          // Khá: GPA >= 6.5 and all >= 5.0, Conduct Khá/Tốt
+          // Đạt: GPA >= 5.0 and all >= 3.5
           let classification: Student['currentClassification'] = 'Đạt';
           const minScore = Math.min(...allAvgs);
           if (newGpa >= 9.0 && minScore >= 8.0 && stu.currentConduct === 'Tốt') {
@@ -1459,6 +1641,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Custom Cadre Roles (GVCN có thể thêm vai trò cho HS)
   const DEFAULT_CUSTOM_ROLES = [
     'Cán sự môn Hóa học',
     'Cán sự môn Toán',
@@ -1514,6 +1697,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // UI Display & Device Optimization Mode (Tùy chỉnh giao diện Máy tính / Điện thoại)
   const [viewDeviceMode, setViewDeviceModeState] = useState<ViewDeviceMode>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.VIEW_DEVICE_MODE) as ViewDeviceMode | null;
     if (saved === 'auto' || saved === 'desktop' || saved === 'mobile') return saved;
@@ -1536,6 +1720,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.UI_DENSITY, density);
   };
 
+  // Multi-Batch Grade Management (Nhập điểm mới theo từng đợt & Xóa bảng điểm)
   const buildBatchRecordsFromStudents = (stuList: Student[], scaleFactor = 1): GradeBatch['records'] => {
     const records: GradeBatch['records'] = {};
     for (const s of stuList) {
@@ -1606,6 +1791,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.ACTIVE_GRADE_BATCH, activeGradeBatchId);
   }, [activeGradeBatchId]);
 
+  // Keep active GradeBatch records synchronized whenever `students` scores change
   useEffect(() => {
     setGradeBatches((prev) => {
       const exists = prev.some((b) => b.id === activeGradeBatchId);
@@ -1822,6 +2008,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Evaluations
   const [evaluations, setEvaluations] = useState<EvaluationComment[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.EVALUATIONS);
     if (saved) {
@@ -1852,6 +2039,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEvaluations((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
   };
 
+  // Announcements
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.ANNOUNCEMENTS);
     if (saved) {
@@ -1896,6 +2084,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Chat messages
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.MESSAGES);
     if (saved) {
@@ -1937,6 +2126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
+  // Appointments
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.APPOINTMENTS);
     if (saved) {
@@ -1968,6 +2158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
   };
 
+  // Happy Posts
   const [happyPosts, setHappyPosts] = useState<HappyPost[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.HAPPY_POSTS);
     if (saved) {
@@ -2077,6 +2268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Automatic Monthly Birthday Wishes (Tự động đăng bài chúc sinh nhật các bạn sinh trong tháng vào đầu tháng)
   const postMonthlyBirthdayWishes = useCallback(
     (
       targetMonth?: number,
@@ -2178,6 +2370,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [students, happyPosts]
   );
 
+  // Automatically check and post monthly birthday wishes at the start of the month (or once per month)
   const hasCheckedBirthdayRef = useRef(false);
   useEffect(() => {
     if (hasCheckedBirthdayRef.current || students.length === 0) return;
@@ -2186,6 +2379,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     postMonthlyBirthdayWishes(currentMonth, false);
   }, [students, postMonthlyBirthdayWishes]);
 
+  // Official Class Period Times (per school schedule image: Sáng 07:20 - 11:10, Chiều 13:10 - 16:00)
   const OFFICIAL_MORNING_TIMES = [
     '07:25 - 08:10',
     '08:15 - 09:00',
@@ -2231,6 +2425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, []);
 
+  // Timetable state with persistence (Sáng 4 tiết, Chiều 3 tiết, thêm/bớt tiết)
   const [timetable, setTimetable] = useState<TimetableEntry[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.TIMETABLE);
     if (saved) {
@@ -2349,6 +2544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return true;
           });
 
+          // Re-index periods in that session sequentially
           let morningIndex = 1;
           let afternoonIndex = 1;
           const reindexed = filtered.map((p) => {
@@ -2372,22 +2568,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeRemoveLocal(STORAGE_KEYS.TIMETABLE);
   };
 
+  // Helper to reset all duty schedule items for a new week (status: 'pending', score: 10, checklist: all false)
+  const buildFreshWeeklyDutySchedule = useCallback(
+    (sourceItems: DutyScheduleItem[], weekNum: number): DutyScheduleItem[] => {
+      const baseList =
+        Array.isArray(sourceItems) && sourceItems.length > 0
+          ? sourceItems
+          : INITIAL_DUTY_SCHEDULE;
+      const range = getWeekRangeByIndex(weekNum);
+      return baseList.map((item) => ({
+        ...item,
+        weekNumber: weekNum,
+        status: 'pending',
+        score: 10,
+        note: `Lịch trực nhật tuần mới (${range.rangeLabel}) — Tự động reset đầu tuần.`,
+        checklist: (Array.isArray(item.checklist) ? item.checklist : []).map((task) => ({
+          ...task,
+          done: false,
+        })),
+      }));
+    },
+    []
+  );
+
+  // Phân lịch trực nhật 4 Tổ (Lớp phó Lao động & GVCN) - Tự động reset khi qua tuần mới
   const [dutySchedule, setDutySchedule] = useState<DutyScheduleItem[]>(() => {
+    const lastDutyWeek = Number(safeGetLocal(STORAGE_KEYS.LAST_DUTY_WEEK) || '0');
     const saved = safeGetLocal(STORAGE_KEYS.DUTY_SCHEDULE);
+    let parsedList: DutyScheduleItem[] = INITIAL_DUTY_SCHEDULE;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsedList = parsed;
+        }
       } catch (e) {
         console.error(e);
       }
     }
-    return INITIAL_DUTY_SCHEDULE;
+    const needsWeeklyReset =
+      lastDutyWeek !== realCalendarWeek ||
+      parsedList.some((item) => item.weekNumber !== realCalendarWeek);
+    if (needsWeeklyReset) {
+      safeSetLocal(STORAGE_KEYS.LAST_DUTY_WEEK, String(realCalendarWeek));
+      return buildFreshWeeklyDutySchedule(parsedList, realCalendarWeek);
+    }
+    return parsedList;
   });
 
   useEffect(() => {
     safeSetLocal(STORAGE_KEYS.DUTY_SCHEDULE, JSON.stringify(dutySchedule));
   }, [dutySchedule]);
+
+  // Automatically reset dutySchedule whenever realCalendarWeek advances to a new week
+  useEffect(() => {
+    const lastDutyWeek = Number(safeGetLocal(STORAGE_KEYS.LAST_DUTY_WEEK) || '0');
+    if (lastDutyWeek !== realCalendarWeek) {
+      safeSetLocal(STORAGE_KEYS.LAST_DUTY_WEEK, String(realCalendarWeek));
+      setDutySchedule((prev) => buildFreshWeeklyDutySchedule(prev, realCalendarWeek));
+      const range = getWeekRangeByIndex(realCalendarWeek);
+      setRecentAlerts((prev) => [
+        `🧹 Bắt đầu tuần mới (${range.rangeLabel}): Hệ thống đã tự động reset Trực nhật & Vệ sinh của 4 Tổ về trạng thái "Chưa trực" (0/4 công việc).`,
+        ...prev.slice(0, 8),
+      ]);
+    }
+  }, [realCalendarWeek, buildFreshWeeklyDutySchedule]);
 
   const updateDutySchedule = (newSchedule: DutyScheduleItem[]) => {
     setDutySchedule(newSchedule);
@@ -2395,13 +2640,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateDutyItem = (id: string, itemData: Partial<DutyScheduleItem>) => {
     setDutySchedule((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...itemData } : item))
+      prev.map((item) => (item.id === id ? { ...item, ...itemData, weekNumber: currentWeek } : item))
     );
   };
 
   const addDutyItem = (itemData: Omit<DutyScheduleItem, 'id'>) => {
     const newItem: DutyScheduleItem = {
       ...itemData,
+      weekNumber: currentWeek,
       id: `duty-${Date.now()}`,
     };
     setDutySchedule((prev) => [...prev, newItem]);
@@ -2411,11 +2657,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDutySchedule((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const resetDutySchedule = () => {
-    setDutySchedule(INITIAL_DUTY_SCHEDULE);
-    safeRemoveLocal(STORAGE_KEYS.DUTY_SCHEDULE);
+  const resetDutyScheduleForNewWeek = (targetWeek?: number) => {
+    const wk = targetWeek || currentWeek || realCalendarWeek;
+    safeSetLocal(STORAGE_KEYS.LAST_DUTY_WEEK, String(wk));
+    setDutySchedule((prev) => buildFreshWeeklyDutySchedule(prev, wk));
   };
 
+  const resetDutySchedule = () => {
+    const fresh = buildFreshWeeklyDutySchedule(INITIAL_DUTY_SCHEDULE, currentWeek || realCalendarWeek);
+    setDutySchedule(fresh);
+    safeSetLocal(STORAGE_KEYS.DUTY_SCHEDULE, JSON.stringify(fresh));
+  };
+
+  // App & Teacher Configuration State with persistence
   const [appConfig, setAppConfig] = useState<ClassAppConfig>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.APP_CONFIG);
     if (saved) {
@@ -2471,6 +2725,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setDisciplineEntries((prev) => [newEntry, ...prev]);
 
+    // Reverse-link to Daily Attendance if rule is Đi trễ (1), Vắng có phép (8), or Vắng không phép (9)
     if (entryData.ruleNumber === 1 || entryData.ruleNumber === 8 || entryData.ruleNumber === 9) {
       const mappedStatus: AttendanceStatus =
         entryData.ruleNumber === 1 ? 'late' : entryData.ruleNumber === 8 ? 'excused' : 'unexcused';
@@ -2582,18 +2837,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const resetWeeklyEmulationScores = (week?: number) => {
+    const targetWeek = week !== undefined ? week : currentWeek;
+    // Remove violations, bonuses, and manual adjustments in targetWeek (or advance baseline week so previous weeks don't carry over)
+    setEmulationResetBaselineWeek(targetWeek);
+    setDisciplineEntries((prev) =>
+      prev.filter((d) => d.weekNumber !== targetWeek && !isDateInWeek(d.date, targetWeek))
+    );
+    setBonusEntries((prev) =>
+      prev.filter((b) => b.weekNumber !== targetWeek && !isDateInWeek(b.date, targetWeek))
+    );
+    setEmulationScoreAdjustments((prev) =>
+      prev.filter((a) => a.weekNumber !== targetWeek)
+    );
+    const range = getWeekRangeByIndex(targetWeek);
+    setRecentAlerts((prev) => [
+      `🔄 Đã reset điểm thi đua (${range.rangeLabel}) của toàn bộ 50 học sinh lớp 12A7 về 100 điểm chuẩn!`,
+      ...prev.slice(0, 8),
+    ]);
+  };
+
   const getStudentWeeklyScore = (studentId: string, week?: number) => {
     const targetWeek = week !== undefined ? week : currentWeek;
     const student = students.find((s) => s.id === studentId);
+
+    const matchesWeekScope = (entryWeek: number, entryDate: string) => {
+      const effectiveWeek = entryWeek || getWeekIndexFromDate(entryDate);
+      if (keepEmulationAcrossWeeks) {
+        // Carry over / keep emulation points across weeks without auto-resetting on a new week
+        return effectiveWeek >= emulationResetBaselineWeek && effectiveWeek <= targetWeek;
+      }
+      return effectiveWeek === targetWeek || isDateInWeek(entryDate, targetWeek);
+    };
+
     const violations = disciplineEntries.filter(
-      (d) =>
-        d.studentId === studentId &&
-        (d.weekNumber === targetWeek || isDateInWeek(d.date, targetWeek))
+      (d) => d.studentId === studentId && matchesWeekScope(d.weekNumber, d.date)
     );
     const bonuses = bonusEntries.filter(
       (b) =>
         (b.studentId === studentId || (!b.studentId && b.group === student?.group)) &&
-        (b.weekNumber === targetWeek || isDateInWeek(b.date, targetWeek))
+        matchesWeekScope(b.weekNumber, b.date)
     );
 
     const initialPoints = 100;
@@ -2601,9 +2884,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const bonus = bonuses.reduce((sum, b) => sum + b.pointsAdded, 0);
     const autoScore = Math.max(0, initialPoints - deducted + bonus);
 
-    const adjustment = emulationScoreAdjustments.find(
-      (a) => a.studentId === studentId && a.weekNumber === targetWeek
-    );
+    const adjustment = keepEmulationAcrossWeeks
+      ? emulationScoreAdjustments
+          .filter(
+            (a) =>
+              a.studentId === studentId &&
+              a.weekNumber >= emulationResetBaselineWeek &&
+              a.weekNumber <= targetWeek
+          )
+          .sort((a, b) => b.weekNumber - a.weekNumber)[0]
+      : emulationScoreAdjustments.find(
+          (a) => a.studentId === studentId && a.weekNumber === targetWeek
+        );
 
     const total = adjustment !== undefined ? adjustment.adjustedScore : autoScore;
 
@@ -2627,14 +2919,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Compute Automatic Weekly Emulation Summary (Tự động tổng kết thi đua từ Thứ 2 đến Thứ 6 hàng tuần)
   const getWeeklyEmulationSummary = (week?: number): WeeklyEmulationSummary => {
     const targetWeek = week !== undefined ? week : currentWeek;
     const weekRange = getWeekRangeByIndex(targetWeek);
     const fridayIso = weekRange.fridayDate;
-    const dateRangeLabel = weekRange.rangeLabel;
+    const dateRangeLabel = weekRange.rangeLabel; // "Từ ngày 26/10 đến 30/10"
 
+    // Check if current date is after Friday or if Friday attendance is already logged
     const now = new Date();
-    const todayDayOfWeek = now.getDay();
+    const todayDayOfWeek = now.getDay(); // 0 = Sun, 6 = Sat
     const [fy, fm, fd] = fridayIso.split('-').map(Number);
     const weekFriday = new Date(fy, fm - 1, fd, 23, 59, 59);
     const isWeekendOrPastFriday =
@@ -2662,6 +2956,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (b) => b.weekNumber === targetWeek || isDateInWeek(b.date, targetWeek)
     );
 
+    // Group Rankings (Tổ 1..4)
     const rawGroups = [1, 2, 3, 4].map((g) => {
       const members = allScores.filter((i) => i.student.group === g);
       const avgScore =
@@ -2748,6 +3043,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return summary;
   };
 
+  // JSON Export & Import state and helpers
   const [isJsonModalOpen, setIsJsonModalOpen] = useState<boolean>(false);
 
   const getExportJsonPayload = (
@@ -2927,95 +3223,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ============================================================================
-  // ĐỒNG BỘ TRỰC TIẾP VỚI FIREBASE REALTIME DATABASE (quanlylophoc-36427)
-  // ============================================================================
-  const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
-  const [lastSyncedAt, setLastSyncedAt] = useState<string>(() =>
-    new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-  );
-  const [firebaseUserEmail, setFirebaseUserEmail] = useState<string | null>(null);
-  const [firebaseUserName, setFirebaseUserName] = useState<string | null>(null);
-
-  const lastSyncedJsonRef = useRef<Record<string, string>>({});
-  const isInitialRemoteLoadedRef = useRef<boolean>(false);
-
-  const buildFullCloudState = useCallback((): Record<string, any> => {
-    return {
-      appConfig,
-      currentWeek,
-      customCadreRoles,
-      gradeBatches,
-      activeGradeBatchId,
-      students,
-      allAttendanceDays,
-      supplementaryAttendanceList,
-      disciplineEntries,
-      bonusEntries,
-      emulationScoreAdjustments,
-      evaluations,
-      announcements,
-      timetable,
-      dutySchedule,
-      happyPosts,
-      assignments,
-      messages,
-      appointments,
-    };
-  }, [
-    appConfig,
-    currentWeek,
-    customCadreRoles,
-    gradeBatches,
-    activeGradeBatchId,
-    students,
-    allAttendanceDays,
-    supplementaryAttendanceList,
-    disciplineEntries,
-    bonusEntries,
-    emulationScoreAdjustments,
-    evaluations,
-    announcements,
-    timetable,
-    dutySchedule,
-    happyPosts,
-    assignments,
-    messages,
-    appointments,
-  ]);
-
-  // Khởi tạo bộ nhớ đối chiếu ban đầu để máy mới mở lên không tự ghi đè dữ liệu mặc định lên Firebase
-  if (Object.keys(lastSyncedJsonRef.current).length === 0) {
-    const initialSnap = buildFullCloudState();
-    Object.keys(initialSnap).forEach((k) => {
-      lastSyncedJsonRef.current[k] = JSON.stringify(initialSnap[k]);
-    });
-  }
-
-  const syncAllToCloudNow = useCallback(async () => {
-    setCloudSyncStatus('syncing');
-    try {
-      const fullState = buildFullCloudState();
-      Object.keys(fullState).forEach((k) => {
-        lastSyncedJsonRef.current[k] = JSON.stringify(fullState[k]);
-      });
-      const res = await fetch(RTDB_URL, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...fullState, updatedAt: Date.now() }),
-      });
-      if (res.ok) {
-        setLastSyncedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
-        setCloudSyncStatus('synced');
-      } else {
-        setCloudSyncStatus('error');
-      }
-    } catch (err) {
-      console.warn('Manual cloud sync error:', err);
-      setCloudSyncStatus('error');
-    }
-  }, [buildFullCloudState]);
-
   const resetToHardcodedDefaultData = () => {
     Object.values(STORAGE_KEYS).forEach((key) => {
       if (key !== STORAGE_KEYS.ROLE && key !== STORAGE_KEYS.ACTIVE_STUDENT) {
@@ -3046,154 +3253,391 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDutySchedule(INITIAL_DUTY_SCHEDULE);
     setHappyPosts(INITIAL_HAPPY_POSTS);
     setAssignments(INITIAL_ASSIGNMENTS);
+
+    // Clear lastSyncedJsonRef so the reset data immediately syncs to server & cloud
     lastSyncedJsonRef.current = {};
   };
 
-  // 1. Tải dữ liệu từ Firebase Realtime Database ngay khi mở ứng dụng và tự động làm mới mỗi 3 giây
+  // ============================================================================
+  // CLOUD & MULTI-USER REAL-TIME SYNCHRONIZATION (Firestore + Shared Server API)
+  // ============================================================================
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>(() =>
+    new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  );
+  const [firebaseUserEmail, setFirebaseUserEmail] = useState<string | null>(null);
+  const [firebaseUserName, setFirebaseUserName] = useState<string | null>(null);
+  const [isFirebaseAuthReady, setIsFirebaseAuthReady] = useState<boolean>(false);
+
+  const lastSyncedJsonRef = useRef<Record<string, string>>({});
+  const isInitialRemoteLoadedRef = useRef<boolean>(false);
+  const lastServerTimestampRef = useRef<number>(0);
+
+  const buildSectionPayload = useCallback(
+    (sectionId: ClassroomSectionId): Record<string, any> => {
+      switch (sectionId) {
+        case 'config':
+          return {
+            appConfig,
+            currentWeek,
+            customCadreRoles,
+            gradeBatches,
+            activeGradeBatchId,
+          };
+        case 'students_g1':
+          return { list: students.filter((s) => s.group === 1) };
+        case 'students_g2':
+          return { list: students.filter((s) => s.group === 2) };
+        case 'students_g3':
+          return { list: students.filter((s) => s.group === 3) };
+        case 'students_g4':
+          return {
+            list: students.filter((s) => s.group !== 1 && s.group !== 2 && s.group !== 3),
+          };
+        case 'attendance':
+          return { allAttendanceDays, supplementaryAttendanceList };
+        case 'emulation':
+          return { disciplineEntries, bonusEntries, emulationScoreAdjustments };
+        case 'activities':
+          return {
+            evaluations,
+            announcements,
+            happyPosts,
+            assignments,
+            messages,
+            appointments,
+          };
+        case 'schedule':
+          return { timetable, dutySchedule };
+      }
+    },
+    [
+      appConfig,
+      currentWeek,
+      customCadreRoles,
+      gradeBatches,
+      activeGradeBatchId,
+      students,
+      allAttendanceDays,
+      supplementaryAttendanceList,
+      disciplineEntries,
+      bonusEntries,
+      emulationScoreAdjustments,
+      evaluations,
+      announcements,
+      happyPosts,
+      assignments,
+      messages,
+      appointments,
+      timetable,
+      dutySchedule,
+    ]
+  );
+
+  // Initialize baseline hashes on first render so opening the app doesn't overwrite remote data before fetching
+  if (Object.keys(lastSyncedJsonRef.current).length === 0) {
+    for (const secId of ALL_SECTION_IDS) {
+      lastSyncedJsonRef.current[secId] = JSON.stringify(
+        sanitizePayloadForFirestore(buildSectionPayload(secId))
+      );
+    }
+  }
+
+  const applyRemoteSection = useCallback(
+    (sectionId: ClassroomSectionId, rawPayload: Record<string, any>) => {
+      if (!rawPayload || typeof rawPayload !== 'object') return;
+
+      const incomingJson = JSON.stringify(sanitizePayloadForFirestore(rawPayload));
+      if (lastSyncedJsonRef.current[sectionId] === incomingJson) {
+        return; // Already up to date
+      }
+
+      if (sectionId === 'config') {
+        const rawConfig =
+          rawPayload.appConfig && typeof rawPayload.appConfig === 'object'
+            ? { ...INITIAL_APP_CONFIG, ...rawPayload.appConfig }
+            : INITIAL_APP_CONFIG;
+        const nextAppConfig = {
+          ...rawConfig,
+          teacherName: formatTeacherDisplayName(rawConfig.teacherName),
+        };
+        const rawRemoteWeek =
+          typeof rawPayload.currentWeek === 'number' && rawPayload.currentWeek > 0
+            ? rawPayload.currentWeek
+            : INITIAL_CURRENT_WEEK;
+        // Always ensure currentWeek is at least the current real calendar week
+        const nextWeek = Math.max(rawRemoteWeek, realCalendarWeek);
+        const nextCustomRoles = Array.isArray(rawPayload.customCadreRoles)
+          ? rawPayload.customCadreRoles
+          : DEFAULT_CUSTOM_ROLES;
+        const nextBatches =
+          Array.isArray(rawPayload.gradeBatches) && rawPayload.gradeBatches.length > 0
+            ? rawPayload.gradeBatches
+            : INITIAL_GRADE_BATCHES;
+        const nextActiveBatchId =
+          typeof rawPayload.activeGradeBatchId === 'string' && rawPayload.activeGradeBatchId
+            ? rawPayload.activeGradeBatchId
+            : 'batch-hk1-current';
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(
+          sanitizePayloadForFirestore({
+            appConfig: nextAppConfig,
+            currentWeek: nextWeek,
+            customCadreRoles: nextCustomRoles,
+            gradeBatches: nextBatches,
+            activeGradeBatchId: nextActiveBatchId,
+          })
+        );
+        setAppConfig(nextAppConfig);
+        setCurrentWeekState(nextWeek);
+        setCustomCadreRoles(nextCustomRoles);
+        setGradeBatches(nextBatches);
+        setActiveGradeBatchIdState(nextActiveBatchId);
+        safeSetLocal(STORAGE_KEYS.CURRENT_WEEK, String(nextWeek));
+      } else if (
+        sectionId === 'students_g1' ||
+        sectionId === 'students_g2' ||
+        sectionId === 'students_g3' ||
+        sectionId === 'students_g4'
+      ) {
+        if (Array.isArray(rawPayload.list)) {
+          const targetGroup =
+            sectionId === 'students_g1'
+              ? 1
+              : sectionId === 'students_g2'
+              ? 2
+              : sectionId === 'students_g3'
+              ? 3
+              : 4;
+          const normalizedGroupList = rawPayload.list
+            .map((s: any, idx: number) =>
+              normalizeStudentRecord(
+                s,
+                typeof s?.stt === 'number' ? s.stt - 1 : idx,
+                DEFAULT_CADRE_ROLES
+              )
+            )
+            .sort((a: Student, b: Student) => a.stt - b.stt);
+          lastSyncedJsonRef.current[sectionId] = JSON.stringify(
+            sanitizePayloadForFirestore({ list: normalizedGroupList })
+          );
+          setStudents((prev) => {
+            const others = prev.filter((st) =>
+              targetGroup === 4
+                ? st.group === 1 || st.group === 2 || st.group === 3
+                : st.group !== targetGroup
+            );
+            return [...others, ...normalizedGroupList].sort((a, b) => a.stt - b.stt);
+          });
+        }
+      } else if (sectionId === 'attendance') {
+        const rawAttendanceDays =
+          rawPayload.allAttendanceDays && typeof rawPayload.allAttendanceDays === 'object'
+            ? rawPayload.allAttendanceDays
+            : {};
+        const nextAttendanceDays = sanitizeAttendanceDaysMap(rawAttendanceDays, todayStr);
+        const nextSupp = Array.isArray(rawPayload.supplementaryAttendanceList)
+          ? rawPayload.supplementaryAttendanceList
+          : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(
+          sanitizePayloadForFirestore({
+            allAttendanceDays: nextAttendanceDays,
+            supplementaryAttendanceList: nextSupp,
+          })
+        );
+        setAllAttendanceDays(nextAttendanceDays);
+        setSupplementaryAttendanceList(nextSupp);
+      } else if (sectionId === 'emulation') {
+        const nextDisc = Array.isArray(rawPayload.disciplineEntries)
+          ? rawPayload.disciplineEntries
+          : [];
+        const nextBonus = Array.isArray(rawPayload.bonusEntries) ? rawPayload.bonusEntries : [];
+        const nextAdj = Array.isArray(rawPayload.emulationScoreAdjustments)
+          ? rawPayload.emulationScoreAdjustments
+          : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(
+          sanitizePayloadForFirestore({
+            disciplineEntries: nextDisc,
+            bonusEntries: nextBonus,
+            emulationScoreAdjustments: nextAdj,
+          })
+        );
+        setDisciplineEntries(nextDisc);
+        setBonusEntries(nextBonus);
+        setEmulationScoreAdjustments(nextAdj);
+      } else if (sectionId === 'activities') {
+        const nextEvals = Array.isArray(rawPayload.evaluations) ? rawPayload.evaluations : [];
+        const nextAnn = Array.isArray(rawPayload.announcements) ? rawPayload.announcements : [];
+        const nextHappy = Array.isArray(rawPayload.happyPosts) ? rawPayload.happyPosts : [];
+        const nextAss = Array.isArray(rawPayload.assignments) ? rawPayload.assignments : [];
+        const nextMsgs =
+          rawPayload.messages && typeof rawPayload.messages === 'object'
+            ? rawPayload.messages
+            : {};
+        const nextAppts = Array.isArray(rawPayload.appointments) ? rawPayload.appointments : [];
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(
+          sanitizePayloadForFirestore({
+            evaluations: nextEvals,
+            announcements: nextAnn,
+            happyPosts: nextHappy,
+            assignments: nextAss,
+            messages: nextMsgs,
+            appointments: nextAppts,
+          })
+        );
+        setEvaluations(nextEvals);
+        setAnnouncements(nextAnn);
+        setHappyPosts(nextHappy);
+        setAssignments(nextAss);
+        setMessages(nextMsgs);
+        setAppointments(nextAppts);
+      } else if (sectionId === 'schedule') {
+        const rawTimetable = Array.isArray(rawPayload.timetable) ? rawPayload.timetable : [];
+        const nextTimetable = normalizeTimetablePeriodTimes(rawTimetable);
+        const rawDuty = Array.isArray(rawPayload.dutySchedule) ? rawPayload.dutySchedule : [];
+        // If remote dutySchedule is from an older week, automatically reset it for the new week
+        const isStaleDutyWeek =
+          rawDuty.length > 0 && rawDuty.some((item: any) => item.weekNumber !== realCalendarWeek);
+        const nextDuty = isStaleDutyWeek
+          ? buildFreshWeeklyDutySchedule(rawDuty, realCalendarWeek)
+          : rawDuty;
+        lastSyncedJsonRef.current[sectionId] = JSON.stringify(
+          sanitizePayloadForFirestore({
+            timetable: nextTimetable,
+            dutySchedule: nextDuty,
+          })
+        );
+        setTimetable(nextTimetable);
+        setDutySchedule(nextDuty);
+      }
+
+      setLastSyncedAt(
+        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      );
+      setCloudSyncStatus('synced');
+    },
+    [normalizeTimetablePeriodTimes, realCalendarWeek, sanitizeAttendanceDaysMap, todayStr, buildFreshWeeklyDutySchedule]
+  );
+
+  const syncAllToCloudNow = useCallback(async () => {
+    setCloudSyncStatus('syncing');
+    try {
+      for (const secId of ALL_SECTION_IDS) {
+        const payload = buildSectionPayload(secId);
+        const cleanJson = JSON.stringify(sanitizePayloadForFirestore(payload));
+        lastSyncedJsonRef.current[secId] = cleanJson;
+        const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
+        if (serverTs > lastServerTimestampRef.current) {
+          lastServerTimestampRef.current = serverTs;
+        }
+      }
+      setLastSyncedAt(
+        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      );
+      setCloudSyncStatus('synced');
+    } catch (err) {
+      console.warn('Manual cloud sync error:', err);
+      setCloudSyncStatus('error');
+    }
+  }, [buildSectionPayload, role, appConfig]);
+
+  // 1. Track Firebase Auth state
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setFirebaseUserEmail(user.email || null);
+        setFirebaseUserName(user.displayName || user.email || 'Người dùng');
+        setIsFirebaseAuthReady(true);
+        try {
+          await ensureMasterClassroomDoc({
+            className: appConfig.className,
+            schoolName: appConfig.schoolName,
+            teacherName: appConfig.teacherName,
+          });
+        } catch (err) {
+          console.warn('Master classroom init warning:', err);
+        }
+      } else {
+        setFirebaseUserEmail(null);
+        setFirebaseUserName(null);
+        setIsFirebaseAuthReady(true);
+      }
+    });
+    return () => unsubAuth();
+  }, [appConfig.className, appConfig.schoolName, appConfig.teacherName]);
+
+  // 2. Attach Firestore real-time listeners for all roles (GVCN, Học sinh, Phụ huynh)
+  useEffect(() => {
+    const unsubFirestore = subscribeToClassroomSections(
+      (sectionId, payload) => {
+        applyRemoteSection(sectionId, payload);
+      },
+      (status) => {
+        setCloudSyncStatus(status);
+      }
+    );
+    return () => unsubFirestore();
+  }, [applyRemoteSection]);
+
+  // 3. Real-time Server-Sent Events (SSE) + Polling & Visibility Refresh so ALL devices (GV, HS, PH) stay 100% in sync immediately
   useEffect(() => {
     let isMounted = true;
+    let eventSource: EventSource | null = null;
 
-    const fetchFromRealtimeDB = async (isInitial: boolean) => {
-      try {
-        const res = await fetch(`${RTDB_URL}?_t=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) {
-          if (isInitial) isInitialRemoteLoadedRef.current = true;
-          return;
+    const applyIncomingSectionsMap = (sectionsMap: Record<string, any>, updatedAt?: number) => {
+      if (typeof updatedAt === 'number' && updatedAt > lastServerTimestampRef.current) {
+        lastServerTimestampRef.current = updatedAt;
+      }
+      const keys = Object.keys(sectionsMap) as ClassroomSectionId[];
+      for (const secId of keys) {
+        const secObj = sectionsMap[secId];
+        if (secObj && secObj.payload) {
+          if (secObj.clientId !== CLIENT_INSTANCE_ID) {
+            applyRemoteSection(secId, secObj.payload);
+          }
         }
+      }
+    };
+
+    const fetchServerSharedState = async (isInitial: boolean) => {
+      try {
+        const res = await fetch(
+          `/api/shared-state?since=${isInitial ? 0 : lastServerTimestampRef.current}&_t=${Date.now()}`,
+          { cache: 'no-store' }
+        );
+        if (!res.ok) return;
         const data = await res.json();
         if (!isMounted) return;
 
-        // Nếu Firebase hoàn toàn trống -> Đẩy dữ liệu hiện có lên Firebase
-        if (!data || typeof data !== 'object') {
-          if (isInitial) {
-            isInitialRemoteLoadedRef.current = true;
-            await syncAllToCloudNow();
-          }
-          return;
-        }
-
-        const applyIfChanged = <T,>(key: string, normalizedVal: T, setter: (val: T) => void) => {
-          const incomingStr = JSON.stringify(normalizedVal);
-          if (lastSyncedJsonRef.current[key] !== incomingStr) {
-            lastSyncedJsonRef.current[key] = incomingStr;
-            setter(normalizedVal);
-          }
-        };
-
-        if (data.appConfig && typeof data.appConfig === 'object') {
-          const nextConfig: ClassAppConfig = {
-            ...INITIAL_APP_CONFIG,
-            ...data.appConfig,
-            teacherName: formatTeacherDisplayName(data.appConfig.teacherName || INITIAL_APP_CONFIG.teacherName),
-          };
-          applyIfChanged('appConfig', nextConfig, setAppConfig);
-        }
-
-        if (typeof data.currentWeek === 'number' && data.currentWeek > 0) {
-          applyIfChanged('currentWeek', data.currentWeek, (w) => {
-            setCurrentWeekState(w);
-            safeSetLocal(STORAGE_KEYS.CURRENT_WEEK, String(w));
-          });
-        }
-
-        if (Array.isArray(data.customCadreRoles)) {
-          applyIfChanged('customCadreRoles', data.customCadreRoles, setCustomCadreRoles);
-        }
-
-        if (Array.isArray(data.gradeBatches) && data.gradeBatches.length > 0) {
-          applyIfChanged('gradeBatches', data.gradeBatches, setGradeBatches);
-        }
-
-        if (typeof data.activeGradeBatchId === 'string' && data.activeGradeBatchId) {
-          applyIfChanged('activeGradeBatchId', data.activeGradeBatchId, setActiveGradeBatchIdState);
-        }
-
-        if (Array.isArray(data.students) && data.students.length > 0) {
-          const nextStudents = data.students.map((s: any, idx: number) =>
-            normalizeStudentRecord(s, idx, DEFAULT_CADRE_ROLES)
-          );
-          applyIfChanged('students', nextStudents, setStudents);
-        }
-
-        if (data.allAttendanceDays && typeof data.allAttendanceDays === 'object') {
-          const normalizedDays: Record<string, DailyAttendance> = {};
-          Object.keys(data.allAttendanceDays).forEach((dateKey) => {
-            const d = data.allAttendanceDays[dateKey];
-            if (d && typeof d === 'object') {
-              normalizedDays[dateKey] = {
-                date: d.date || dateKey,
-                records: d.records && typeof d.records === 'object' ? d.records : {},
-                note: d.note ?? '',
-                checkedBy: d.checkedBy,
-              };
+        if (data.hasUpdates && data.sections && typeof data.sections === 'object') {
+          const sectionKeys = Object.keys(data.sections) as ClassroomSectionId[];
+          if (sectionKeys.length > 0) {
+            applyIncomingSectionsMap(data.sections, data.updatedAt);
+            // If initial load and some sections are missing on server, seed the missing sections only
+            if (isInitial) {
+              for (const secId of ALL_SECTION_IDS) {
+                if (!data.sections[secId]) {
+                  const payload = buildSectionPayload(secId);
+                  const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
+                  if (serverTs > lastServerTimestampRef.current) {
+                    lastServerTimestampRef.current = serverTs;
+                  }
+                }
+              }
             }
-          });
-          applyIfChanged('allAttendanceDays', normalizedDays, setAllAttendanceDays);
+          } else if (isInitial) {
+            // Seed server state on initial boot if server has no sections yet
+            for (const secId of ALL_SECTION_IDS) {
+              const payload = buildSectionPayload(secId);
+              const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
+              if (serverTs > lastServerTimestampRef.current) {
+                lastServerTimestampRef.current = serverTs;
+              }
+            }
+          }
         }
-
-        if (Array.isArray(data.supplementaryAttendanceList)) {
-          applyIfChanged('supplementaryAttendanceList', data.supplementaryAttendanceList, setSupplementaryAttendanceList);
-        }
-
-        if (Array.isArray(data.disciplineEntries)) {
-          applyIfChanged('disciplineEntries', data.disciplineEntries, setDisciplineEntries);
-        }
-
-        if (Array.isArray(data.bonusEntries)) {
-          applyIfChanged('bonusEntries', data.bonusEntries, setBonusEntries);
-        }
-
-        if (Array.isArray(data.emulationScoreAdjustments)) {
-          applyIfChanged('emulationScoreAdjustments', data.emulationScoreAdjustments, setEmulationScoreAdjustments);
-        }
-
-        if (Array.isArray(data.evaluations)) {
-          applyIfChanged('evaluations', data.evaluations, setEvaluations);
-        }
-
-        if (Array.isArray(data.announcements)) {
-          applyIfChanged('announcements', data.announcements, setAnnouncements);
-        }
-
-        if (Array.isArray(data.timetable) && data.timetable.length > 0) {
-          const nextTimetable = normalizeTimetablePeriodTimes(data.timetable);
-          applyIfChanged('timetable', nextTimetable, setTimetable);
-        }
-
-        if (Array.isArray(data.dutySchedule) && data.dutySchedule.length > 0) {
-          applyIfChanged('dutySchedule', data.dutySchedule, setDutySchedule);
-        }
-
-        if (Array.isArray(data.happyPosts)) {
-          const nextPosts = data.happyPosts.map((p: any) => ({
-            ...p,
-            likedBy: Array.isArray(p?.likedBy) ? p.likedBy : [],
-            comments: Array.isArray(p?.comments) ? p.comments : [],
-          }));
-          applyIfChanged('happyPosts', nextPosts, setHappyPosts);
-        }
-
-        if (Array.isArray(data.assignments)) {
-          const nextAssignments = data.assignments.map((a: any) => ({
-            ...a,
-            submissions: a?.submissions && typeof a.submissions === 'object' ? a.submissions : {},
-          }));
-          applyIfChanged('assignments', nextAssignments, setAssignments);
-        }
-
-        if (data.messages && typeof data.messages === 'object') {
-          applyIfChanged('messages', data.messages, setMessages);
-        }
-
-        if (Array.isArray(data.appointments)) {
-          applyIfChanged('appointments', data.appointments, setAppointments);
-        }
-
         if (isInitial) {
           isInitialRemoteLoadedRef.current = true;
         }
-        setLastSyncedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
-        setCloudSyncStatus('synced');
       } catch (err) {
         if (isInitial) {
           isInitialRemoteLoadedRef.current = true;
@@ -3201,15 +3645,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
 
-    fetchFromRealtimeDB(true);
+    // Initial full state fetch
+    fetchServerSharedState(true);
 
+    // Connect real-time SSE stream for instant cross-device updates between GV, HS, and PH
+    if (typeof window !== 'undefined' && 'EventSource' in window) {
+      try {
+        eventSource = new EventSource('/api/shared-state/stream');
+        eventSource.onmessage = (evt) => {
+          if (!isMounted) return;
+          try {
+            const msg = JSON.parse(evt.data);
+            if ((msg.type === 'init' || msg.type === 'update' || msg.type === 'batch_update') && msg.sections) {
+              applyIncomingSectionsMap(msg.sections, msg.updatedAt);
+              if (msg.type === 'init') {
+                isInitialRemoteLoadedRef.current = true;
+              }
+            } else if (msg.type === 'section_update' && msg.sectionId && msg.payload) {
+              if (typeof msg.updatedAt === 'number' && msg.updatedAt > lastServerTimestampRef.current) {
+                lastServerTimestampRef.current = msg.updatedAt;
+              }
+              if (msg.clientId !== CLIENT_INSTANCE_ID) {
+                applyRemoteSection(msg.sectionId as ClassroomSectionId, msg.payload);
+              }
+            }
+          } catch (e) {
+            // Ignore malformed SSE message
+          }
+        };
+      } catch (e) {
+        // Fallback to polling
+      }
+    }
+
+    // Fast polling fallback (every 2 seconds) + focus/visibility listener for mobile browsers
     const intervalId = window.setInterval(() => {
-      fetchFromRealtimeDB(false);
-    }, 3500);
+      fetchServerSharedState(false);
+    }, 2000);
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === 'visible') {
-        fetchFromRealtimeDB(false);
+        fetchServerSharedState(false);
       }
     };
     window.addEventListener('focus', handleVisibilityOrFocus);
@@ -3220,64 +3696,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.clearInterval(intervalId);
       window.removeEventListener('focus', handleVisibilityOrFocus);
       document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      if (eventSource) {
+        eventSource.close();
+      }
     };
-  }, [normalizeTimetablePeriodTimes, syncAllToCloudNow]);
+  }, [applyRemoteSection]);
 
-  // 2. Tự động đẩy ngay mọi thay đổi từ giao diện lên Firebase Realtime Database
+  // 4. Automatically push any modified section to Server Shared State & Cloud Firestore
   useEffect(() => {
     if (!isInitialRemoteLoadedRef.current) return;
 
-    const currentFullState = buildFullCloudState();
-    const changedPatch: Record<string, any> = {};
-    let hasChanges = false;
-
-    Object.keys(currentFullState).forEach((key) => {
-      const jsonStr = JSON.stringify(currentFullState[key]);
-      if (lastSyncedJsonRef.current[key] !== jsonStr) {
-        lastSyncedJsonRef.current[key] = jsonStr;
-        changedPatch[key] = currentFullState[key];
-        hasChanges = true;
-      }
-    });
-
-    if (!hasChanges) return;
-
-    const timer = window.setTimeout(async () => {
-      setCloudSyncStatus('syncing');
-      try {
-        const res = await fetch(RTDB_URL, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...changedPatch, updatedAt: Date.now() }),
-        });
-        if (res.ok) {
-          setLastSyncedAt(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
-          setCloudSyncStatus('synced');
-        } else {
-          setCloudSyncStatus('error');
+    const pushChangedSections = async () => {
+      for (const secId of ALL_SECTION_IDS) {
+        const payload = buildSectionPayload(secId);
+        const currentJson = JSON.stringify(sanitizePayloadForFirestore(payload));
+        if (lastSyncedJsonRef.current[secId] !== currentJson) {
+          lastSyncedJsonRef.current[secId] = currentJson;
+          setCloudSyncStatus('syncing');
+          try {
+            const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
+            if (serverTs > lastServerTimestampRef.current) {
+              lastServerTimestampRef.current = serverTs;
+            }
+            setLastSyncedAt(
+              new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            );
+            setCloudSyncStatus('synced');
+          } catch (err) {
+            console.warn(`Error syncing section ${secId}:`, err);
+            setCloudSyncStatus('error');
+          }
         }
-      } catch (err) {
-        console.warn('Error syncing to Firebase RTDB:', err);
-        setCloudSyncStatus('error');
       }
-    }, 200);
+    };
 
+    const timer = window.setTimeout(pushChangedSections, 180);
     return () => window.clearTimeout(timer);
-  }, [buildFullCloudState]);
-
-  // 3. Theo dõi trạng thái đăng nhập Firebase Auth
-  useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setFirebaseUserEmail(user.email || null);
-        setFirebaseUserName(user.displayName || user.email || 'Người dùng');
-      } else {
-        setFirebaseUserEmail(null);
-        setFirebaseUserName(null);
-      }
-    });
-    return () => unsubAuth();
-  }, []);
+  }, [buildSectionPayload, role, appConfig]);
 
   const loginWithGoogleCloud = async () => {
     try {
@@ -3330,6 +3785,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedAttendanceDate,
         updateAttendanceStatus,
         markAllPresent,
+        resetDateAttendance,
         saveAttendanceNote,
         allAttendanceDays,
         saveDateAttendance,
@@ -3384,6 +3840,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addDutyItem,
         deleteDutyItem,
         resetDutySchedule,
+        resetDutyScheduleForNewWeek,
         appConfig,
         updateAppConfig,
         resetAppConfig,
@@ -3402,6 +3859,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteBonusPointEntry,
         setEmulationScoreAdjustment,
         removeEmulationScoreAdjustment,
+        keepEmulationAcrossWeeks,
+        setKeepEmulationAcrossWeeks,
+        resetWeeklyEmulationScores,
         getStudentWeeklyScore,
         getWeeklyEmulationSummary,
         triggerAutoWeeklySummary,

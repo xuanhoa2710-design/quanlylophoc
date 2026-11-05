@@ -1,7 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { HappyPost } from '../types';
-import { compressImageFileToDataUrl, parseStudentBirthday } from '../utils/imageUtils';
+import {
+  compressImageFileToDataUrl,
+  compressMultipleImageFiles,
+  parseStudentBirthday,
+} from '../utils/imageUtils';
 import {
   Heart,
   Cake,
@@ -24,6 +28,9 @@ import {
   Monitor,
   Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
 } from 'lucide-react';
 
 export const HappyCornerView: React.FC = () => {
@@ -55,7 +62,8 @@ export const HappyCornerView: React.FC = () => {
   const [category, setCategory] = useState<HappyPost['category']>('gratitude');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [customImageUrlInput, setCustomImageUrlInput] = useState('');
   const [isUploadingCreateImg, setIsUploadingCreateImg] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const createFileInputRef = useRef<HTMLInputElement>(null);
@@ -65,12 +73,33 @@ export const HappyCornerView: React.FC = () => {
   const [editCategory, setEditCategory] = useState<HappyPost['category']>('gratitude');
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
-  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editImageUrls, setEditImageUrls] = useState<string[]>([]);
+  const [editCustomImageUrlInput, setEditCustomImageUrlInput] = useState('');
   const [isUploadingEditImg, setIsUploadingEditImg] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Lightbox viewer for multi-image gallery
+  const [lightboxState, setLightboxState] = useState<{
+    images: string[];
+    currentIndex: number;
+    title: string;
+  } | null>(null);
+
   // Delete confirmation
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+
+  const getPostImages = (post: HappyPost): string[] => {
+    const list: string[] = [];
+    if (Array.isArray(post.imageUrls)) {
+      post.imageUrls.forEach((u) => {
+        if (u && typeof u === 'string' && !list.includes(u)) list.push(u);
+      });
+    }
+    if (post.imageUrl && typeof post.imageUrl === 'string' && !list.includes(post.imageUrl)) {
+      list.unshift(post.imageUrl);
+    }
+    return list;
+  };
 
   // Students born in selectedBirthdayMonth
   const birthdayStudentsInMonth = students
@@ -94,20 +123,20 @@ export const HappyCornerView: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement>,
     mode: 'create' | 'edit'
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setUploadError(null);
 
     try {
       if (mode === 'create') {
         setIsUploadingCreateImg(true);
-        const compressed = await compressImageFileToDataUrl(file, 960, 0.75);
-        setImageUrl(compressed);
+        const compressedList = await compressMultipleImageFiles(files, 1080, 0.78);
+        setImageUrls((prev) => [...prev, ...compressedList].slice(0, 12));
         setIsUploadingCreateImg(false);
       } else {
         setIsUploadingEditImg(true);
-        const compressed = await compressImageFileToDataUrl(file, 960, 0.75);
-        setEditImageUrl(compressed);
+        const compressedList = await compressMultipleImageFiles(files, 1080, 0.78);
+        setEditImageUrls((prev) => [...prev, ...compressedList].slice(0, 12));
         setIsUploadingEditImg(false);
       }
     } catch (err: any) {
@@ -130,18 +159,25 @@ export const HappyCornerView: React.FC = () => {
         ? `${currentStudent?.name} (HS)`
         : `PH em ${currentStudent?.name}`;
 
+    const finalCreateImages = [...imageUrls];
+    if (customImageUrlInput.trim()) {
+      finalCreateImages.push(customImageUrlInput.trim());
+    }
+
     addHappyPost({
       category,
       title,
       content,
       authorName,
       authorRole: role,
-      imageUrl: imageUrl.trim() || undefined,
+      imageUrl: finalCreateImages[0] || undefined,
+      imageUrls: finalCreateImages.length > 0 ? finalCreateImages : undefined,
     });
 
     setTitle('');
     setContent('');
-    setImageUrl('');
+    setImageUrls([]);
+    setCustomImageUrlInput('');
     setUploadError(null);
     setShowAddModal(false);
   };
@@ -151,7 +187,8 @@ export const HappyCornerView: React.FC = () => {
     setEditCategory(post.category);
     setEditTitle(post.title);
     setEditContent(post.content);
-    setEditImageUrl(post.imageUrl || '');
+    setEditImageUrls(getPostImages(post));
+    setEditCustomImageUrlInput('');
     setUploadError(null);
   };
 
@@ -159,11 +196,17 @@ export const HappyCornerView: React.FC = () => {
     e.preventDefault();
     if (!editingPost || !editTitle.trim() || !editContent.trim()) return;
 
+    const finalEditImages = [...editImageUrls];
+    if (editCustomImageUrlInput.trim()) {
+      finalEditImages.push(editCustomImageUrlInput.trim());
+    }
+
     updateHappyPost(editingPost.id, {
       category: editCategory,
       title: editTitle.trim(),
       content: editContent.trim(),
-      imageUrl: editImageUrl.trim() || undefined,
+      imageUrl: finalEditImages[0] || undefined,
+      imageUrls: finalEditImages.length > 0 ? finalEditImages : undefined,
     });
 
     setEditingPost(null);
@@ -421,21 +464,70 @@ export const HappyCornerView: React.FC = () => {
               }`}
             >
               <div>
-                {post.imageUrl && (
-                  <div className="relative h-56 sm:h-64 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={post.imageUrl}
-                      alt={post.title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    />
-                    {post.isAutoBirthday && (
-                      <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-500/95 text-white text-[10px] font-extrabold shadow-md flex items-center gap-1">
-                        <Cake className="w-3 h-3" />
-                        Tự động đăng đầu tháng
-                      </span>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const postImages = getPostImages(post);
+                  if (postImages.length === 0) return null;
+                  return (
+                    <div className="relative w-full bg-slate-100 border-b border-slate-100">
+                      <div
+                        className={`grid gap-1 ${
+                          postImages.length === 1
+                            ? 'grid-cols-1 h-56 sm:h-64'
+                            : postImages.length === 2
+                            ? 'grid-cols-2 h-56 sm:h-64'
+                            : postImages.length === 3
+                            ? 'grid-cols-3 h-52 sm:h-60'
+                            : 'grid-cols-2 sm:grid-cols-4 h-56 sm:h-64'
+                        }`}
+                      >
+                        {postImages.slice(0, 4).map((imgSrc, imgIdx) => {
+                          const remaining = postImages.length - 4;
+                          return (
+                            <div
+                              key={imgIdx}
+                              onClick={() =>
+                                setLightboxState({
+                                  images: postImages,
+                                  currentIndex: imgIdx,
+                                  title: post.title,
+                                })
+                              }
+                              className="relative w-full h-full overflow-hidden cursor-pointer group"
+                            >
+                              <img
+                                src={imgSrc}
+                                alt={`${post.title} - ảnh ${imgIdx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                              {imgIdx === 3 && remaining > 0 ? (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-black text-lg">
+                                  +{remaining} ảnh
+                                </div>
+                              ) : (
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                  <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {postImages.length > 1 && (
+                        <span className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 text-white text-[10px] font-bold flex items-center gap-1 pointer-events-none">
+                          <Camera className="w-3 h-3" /> {postImages.length} ảnh
+                        </span>
+                      )}
+
+                      {post.isAutoBirthday && (
+                        <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-amber-500/95 text-white text-[10px] font-extrabold shadow-md flex items-center gap-1 pointer-events-none">
+                          <Cake className="w-3 h-3" />
+                          Tự động đăng đầu tháng
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="p-5">
                   <div className="flex items-center justify-between gap-2 mb-3">
@@ -644,16 +736,28 @@ export const HappyCornerView: React.FC = () => {
                 />
               </div>
 
-              {/* Upload Photo from Phone or Computer */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">
-                  Đính kèm hình ảnh (Tải từ Điện thoại / Máy tính hoặc dán link)
-                </label>
+              {/* Upload Multiple Photos from Phone or Computer */}
+              <div className="space-y-2.5 p-3 rounded-2xl bg-rose-50/40 border border-rose-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Đính kèm nhiều hình ảnh kỷ niệm ({imageUrls.length} ảnh)
+                  </label>
+                  {imageUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setImageUrls([])}
+                      className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Xóa tất cả
+                    </button>
+                  )}
+                </div>
 
                 <input
                   ref={createFileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(e) => handleImageFileSelect(e, 'create')}
                   className="hidden"
                 />
@@ -667,37 +771,62 @@ export const HappyCornerView: React.FC = () => {
                   >
                     <Upload className="w-4 h-4 shrink-0" />
                     <span>
-                      {isUploadingCreateImg ? 'Đang xử lý ảnh...' : 'Chọn ảnh từ Máy tính / ĐT'}
+                      {isUploadingCreateImg
+                        ? 'Đang xử lý ảnh...'
+                        : '+ Chọn 1 hoặc nhiều ảnh từ Máy / ĐT'}
                     </span>
                   </button>
 
-                  <input
-                    type="text"
-                    value={imageUrl.startsWith('data:image/') ? '' : imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Hoặc dán URL hình ảnh (https://...)"
-                    className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={customImageUrlInput}
+                      onChange={(e) => setCustomImageUrlInput(e.target.value)}
+                      placeholder="Hoặc dán URL ảnh (https://...)"
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customImageUrlInput.trim()) {
+                          setImageUrls((prev) => [...prev, customImageUrlInput.trim()]);
+                          setCustomImageUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shrink-0"
+                    >
+                      Thêm
+                    </button>
+                  </div>
                 </div>
 
                 {uploadError && (
                   <p className="text-xs text-red-600 font-semibold">{uploadError}</p>
                 )}
 
-                {imageUrl && (
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 max-h-48">
-                    <img
-                      src={imageUrl}
-                      alt="Xem trước ảnh tải lên"
-                      className="w-full h-44 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl('')}
-                      className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1"
-                    >
-                      <X className="w-3.5 h-3.5" /> Xóa ảnh
-                    </button>
+                {imageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                    {imageUrls.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-28"
+                      >
+                        <img
+                          src={url}
+                          alt={`Xem trước ảnh ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setImageUrls((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-black/75 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> Xóa
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -786,15 +915,27 @@ export const HappyCornerView: React.FC = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">
-                  Hình ảnh đính kèm (Tải ảnh từ Máy tính / Điện thoại hoặc URL)
-                </label>
+              <div className="space-y-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Hình ảnh đính kèm ({editImageUrls.length} ảnh)
+                  </label>
+                  {editImageUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditImageUrls([])}
+                      className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Xóa tất cả
+                    </button>
+                  )}
+                </div>
 
                 <input
                   ref={editFileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(e) => handleImageFileSelect(e, 'edit')}
                   className="hidden"
                 />
@@ -807,32 +948,57 @@ export const HappyCornerView: React.FC = () => {
                     className="px-3.5 py-2.5 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/70 hover:bg-blue-100/80 text-blue-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <Upload className="w-4 h-4 shrink-0" />
-                    <span>{isUploadingEditImg ? 'Đang tải ảnh...' : 'Đổi ảnh từ Máy tính / ĐT'}</span>
+                    <span>
+                      {isUploadingEditImg ? 'Đang tải ảnh...' : '+ Thêm nhiều ảnh từ Máy / ĐT'}
+                    </span>
                   </button>
 
-                  <input
-                    type="text"
-                    value={editImageUrl.startsWith('data:image/') ? '' : editImageUrl}
-                    onChange={(e) => setEditImageUrl(e.target.value)}
-                    placeholder="Hoặc dán link ảnh https://..."
-                    className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {editImageUrl && (
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 max-h-48">
-                    <img
-                      src={editImageUrl}
-                      alt="Xem trước ảnh"
-                      className="w-full h-44 object-cover"
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={editCustomImageUrlInput}
+                      onChange={(e) => setEditCustomImageUrlInput(e.target.value)}
+                      placeholder="Hoặc dán link ảnh https://..."
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
                       type="button"
-                      onClick={() => setEditImageUrl('')}
-                      className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1"
+                      onClick={() => {
+                        if (editCustomImageUrlInput.trim()) {
+                          setEditImageUrls((prev) => [...prev, editCustomImageUrlInput.trim()]);
+                          setEditCustomImageUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shrink-0"
                     >
-                      <X className="w-3.5 h-3.5" /> Xóa ảnh
+                      Thêm
                     </button>
+                  </div>
+                </div>
+
+                {editImageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                    {editImageUrls.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-28"
+                      >
+                        <img
+                          src={url}
+                          alt={`Xem trước ảnh ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditImageUrls((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-black/75 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> Xóa
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -853,6 +1019,100 @@ export const HappyCornerView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN LIGHTBOX MODAL FOR MULTIPLE IMAGES */}
+      {lightboxState && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xs flex flex-col items-center justify-center p-4"
+          onClick={() => setLightboxState(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between text-white mb-3 px-2">
+              <div className="text-xs sm:text-sm font-bold truncate max-w-xl">
+                {lightboxState.title} ({lightboxState.currentIndex + 1}/
+                {lightboxState.images.length})
+              </div>
+              <button
+                onClick={() => setLightboxState(null)}
+                className="p-2 rounded-full bg-white/15 hover:bg-white/25 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative w-full flex items-center justify-center min-h-[50vh] max-h-[78vh]">
+              {lightboxState.images.length > 1 && (
+                <button
+                  onClick={() =>
+                    setLightboxState((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            currentIndex:
+                              (prev.currentIndex - 1 + prev.images.length) %
+                              prev.images.length,
+                          }
+                        : null
+                    )
+                  }
+                  className="absolute left-2 z-10 p-2.5 rounded-full bg-black/65 hover:bg-black text-white cursor-pointer"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              )}
+
+              <img
+                src={lightboxState.images[lightboxState.currentIndex]}
+                alt="Ảnh phóng to"
+                className="max-h-[76vh] max-w-full object-contain rounded-2xl shadow-2xl"
+              />
+
+              {lightboxState.images.length > 1 && (
+                <button
+                  onClick={() =>
+                    setLightboxState((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            currentIndex: (prev.currentIndex + 1) % prev.images.length,
+                          }
+                        : null
+                    )
+                  }
+                  className="absolute right-2 z-10 p-2.5 rounded-full bg-black/65 hover:bg-black text-white cursor-pointer"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+
+            {lightboxState.images.length > 1 && (
+              <div className="flex items-center gap-2 mt-4 overflow-x-auto max-w-full pb-1">
+                {lightboxState.images.map((thumb, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() =>
+                      setLightboxState((prev) =>
+                        prev ? { ...prev, currentIndex: idx } : null
+                      )
+                    }
+                    className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
+                      idx === lightboxState.currentIndex
+                        ? 'border-rose-400 scale-105'
+                        : 'border-white/20 opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={thumb} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

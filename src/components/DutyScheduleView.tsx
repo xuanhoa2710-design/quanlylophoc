@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useApp } from '../context/AppContext';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useApp, getWeekRangeByIndex } from '../context/AppContext';
 import { DutyScheduleItem } from '../types';
 import {
   ShieldCheck,
@@ -61,6 +61,7 @@ export const DutyScheduleView: React.FC = () => {
     addDutyItem,
     deleteDutyItem,
     resetDutySchedule,
+    resetDutyScheduleForNewWeek,
     appConfig,
     currentWeek,
     addBonusPointEntry,
@@ -84,6 +85,12 @@ export const DutyScheduleView: React.FC = () => {
 
   // Filters & display state
   const [selectedWeek, setSelectedWeek] = useState<number>(currentWeek || 6);
+  useEffect(() => {
+    if (currentWeek) {
+      setSelectedWeek(currentWeek);
+    }
+  }, [currentWeek]);
+  const currentWeekRange = getWeekRangeByIndex(selectedWeek);
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [viewStyle, setViewStyle] = useState<'cards' | 'table'>('cards');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -241,12 +248,8 @@ export const DutyScheduleView: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  // Auto Rotation Generator
+  // Auto Rotation Generator (Starts fresh pending for the new week)
   const handleAutoRotateDuty = () => {
-    if (!confirm('Bạn có muốn tự động tạo lịch phân công trực nhật xoay tua cho cả 4 Tổ tuần này?')) {
-      return;
-    }
-
     const rotatedSchedule: DutyScheduleItem[] = [
       {
         id: `duty-rot-1-${Date.now()}`,
@@ -264,17 +267,17 @@ export const DutyScheduleView: React.FC = () => {
           'Nguyễn Tấn Đạt (Đổ rác lớn)',
           'Đỗ Thái An (Kê bàn ghế)',
         ],
-        status: 'completed',
+        status: 'pending',
         score: 10,
         criteriaScores: { boardAndDesk: 2.0, floorClean: 3.0, desksOrder: 2.0, trashDisposal: 1.5, powerAndWindows: 1.5 },
         checklist: [
-          { id: '1', label: 'Lau bảng sạch & chuẩn bị phấn trước 6h45', done: true },
-          { id: '2', label: 'Quét sạch rác dưới sàn và các góc', done: true },
-          { id: '3', label: 'Hộc bàn không để lại rác thừa', done: true },
-          { id: '4', label: 'Đổ rác ra xe gom rác trường', done: true },
-          { id: '5', label: 'Tắt 6 quạt trần, đèn và chốt cửa sổ', done: true },
+          { id: '1', label: 'Lau bảng sạch & chuẩn bị phấn trước 6h45', done: false },
+          { id: '2', label: 'Quét sạch rác dưới sàn và các góc', done: false },
+          { id: '3', label: 'Hộc bàn không để lại rác thừa', done: false },
+          { id: '4', label: 'Đổ rác ra xe gom rác trường', done: false },
+          { id: '5', label: 'Tắt 6 quạt trần, đèn và chốt cửa sổ', done: false },
         ],
-        note: 'Tổ 1 đã hoàn thành xuất sắc ngày đầu tuần.',
+        note: `Phân công trực nhật tuần mới (${currentWeekRange.rangeLabel}).`,
       },
       {
         id: `duty-rot-2-${Date.now()}`,
@@ -292,17 +295,17 @@ export const DutyScheduleView: React.FC = () => {
           `${laborCadreStudent?.name || 'Đặng Nguyễn Kha'} (Kiểm tra quạt đèn & đổ rác)`,
           'Nguyễn Lê Hoàng (Kê bàn ghế)',
         ],
-        status: 'in_progress',
+        status: 'pending',
         score: 10,
         criteriaScores: { boardAndDesk: 2.0, floorClean: 3.0, desksOrder: 2.0, trashDisposal: 1.5, powerAndWindows: 1.5 },
         checklist: [
-          { id: '1', label: 'Lau bảng sạch & chuẩn bị phấn trước 6h45', done: true },
-          { id: '2', label: 'Quét sạch rác dưới sàn và các góc', done: true },
-          { id: '3', label: 'Hộc bàn không để lại rác thừa', done: true },
+          { id: '1', label: 'Lau bảng sạch & chuẩn bị phấn trước 6h45', done: false },
+          { id: '2', label: 'Quét sạch rác dưới sàn và các góc', done: false },
+          { id: '3', label: 'Hộc bàn không để lại rác thừa', done: false },
           { id: '4', label: 'Đổ rác ra xe gom rác trường', done: false },
           { id: '5', label: 'Tắt 6 quạt trần, đèn và chốt cửa sổ', done: false },
         ],
-        note: 'Đang theo dõi trực nhật buổi chiều.',
+        note: `Phân công trực nhật tuần mới (${currentWeekRange.rangeLabel}).`,
       },
       {
         id: `duty-rot-3-${Date.now()}`,
@@ -371,7 +374,7 @@ export const DutyScheduleView: React.FC = () => {
   const handleSaveNewDuty = (e: React.FormEvent) => {
     e.preventDefault();
     if (!dutyForm.task.trim()) {
-      alert('Vui lòng nhập nhiệm vụ trực nhật chi tiết!');
+      showToast('Vui lòng nhập nhiệm vụ trực nhật chi tiết!');
       return;
     }
 
@@ -567,11 +570,14 @@ export const DutyScheduleView: React.FC = () => {
                   Phân Lịch Trực Nhật & Vệ Sinh Lớp {appConfig.className}
                 </h1>
                 <span className="px-3 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 text-xs font-bold border border-emerald-400/30">
-                  Năm học {appConfig.schoolYear}
+                  {currentWeekRange.rangeLabel}
+                </span>
+                <span className="px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-200 text-xs font-bold border border-amber-300/30 flex items-center gap-1">
+                  <RotateCcw className="w-3 h-3" /> Tự động reset khi qua tuần mới
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-emerald-100 mt-1 max-w-2xl leading-relaxed">
-                Ban cán sự Lao động & Vệ sinh • Theo dõi vệ sinh phòng học trước 6h45 và sau tiết 3 chiều • Chấm điểm thi đua trực nhật 4 Tổ
+                Ban cán sự Lao động & Vệ sinh • Theo dõi vệ sinh phòng học trước 6h45 và sau tiết 3 chiều • Tự động reset trạng thái trực nhật mỗi đầu tuần mới
               </p>
 
               {/* Identity & Current Cadre Badge */}
@@ -634,11 +640,14 @@ export const DutyScheduleView: React.FC = () => {
                   <Plus className="w-4 h-4 text-emerald-700" /> Phân công ca trực mới
                 </button>
                 <button
-                  onClick={handleAutoRotateDuty}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white border border-emerald-500 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5"
-                  title="Tự động xoay tua nhiệm vụ 4 Tổ trong tuần"
+                  onClick={() => {
+                    resetDutyScheduleForNewWeek(selectedWeek);
+                    showToast(`Đã reset toàn bộ lịch trực nhật (${currentWeekRange.rangeLabel}) về trạng thái tuần mới (Chưa trực)!`);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white border border-teal-400 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5"
+                  title="Reset toàn bộ trạng thái trực nhật 4 Tổ về đầu tuần mới"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Tự động xoay tua 4 Tổ
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset trực nhật tuần mới
                 </button>
                 <button
                   onClick={() => setIsReminderModalOpen(true)}

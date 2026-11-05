@@ -198,6 +198,7 @@ export interface Announcement {
   updatedAt?: string;
   isPinned?: boolean;
   imageUrl?: string;
+  imageUrls?: string[];
 }
 
 export interface ClassAppConfig {
@@ -257,6 +258,7 @@ export interface HappyPost {
     time: string;
   }[];
   imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt?: string;
   isAutoBirthday?: boolean;

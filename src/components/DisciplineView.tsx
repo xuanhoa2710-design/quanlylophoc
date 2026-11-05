@@ -58,11 +58,17 @@ export const DisciplineView: React.FC = () => {
     deleteBonusPointEntry,
     setEmulationScoreAdjustment,
     removeEmulationScoreAdjustment,
+    keepEmulationAcrossWeeks,
+    setKeepEmulationAcrossWeeks,
+    resetWeeklyEmulationScores,
     getStudentWeeklyScore,
     getWeeklyEmulationSummary,
     triggerAutoWeeklySummary,
     appConfig,
   } = useApp();
+
+  const [emulationToastMsg, setEmulationToastMsg] = useState<string | null>(null);
+  const [confirmResetEmulation, setConfirmResetEmulation] = useState<boolean>(false);
 
   const currentWeekRange = getWeekRangeByIndex(currentWeek);
   const allSchoolWeeks = useMemo(() => getAllSchoolWeeks(35), []);
@@ -474,7 +480,92 @@ export const DisciplineView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Emulation Reset Mode & Manual Reset Bar */}
+        <div className="relative z-10 mt-4 pt-3.5 border-t border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+              {keepEmulationAcrossWeeks
+                ? 'Chế độ: Không tự reset điểm thi đua khi bắt đầu tuần mới (Giữ nguyên & cộng dồn điểm)'
+                : 'Chế độ: Tự động reset về 100 điểm khi bắt đầu tuần mới'}
+            </span>
+          </div>
+
+          {(role === 'teacher' || (role === 'student' && currentStudent?.classRole && currentStudent.classRole !== 'Học sinh')) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !keepEmulationAcrossWeeks;
+                  setKeepEmulationAcrossWeeks(nextVal);
+                  setEmulationToastMsg(
+                    nextVal
+                      ? 'Đã bật chế độ: Không tự reset điểm thi đua khi qua tuần mới (Giữ nguyên điểm qua các tuần).'
+                      : 'Đã chuyển sang chế độ: Tự động reset 100đ theo từng tuần.'
+                  );
+                  setTimeout(() => setEmulationToastMsg(null), 3500);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-300" />
+                {keepEmulationAcrossWeeks ? 'Đổi sang: Reset theo tuần' : 'Đổi sang: Không tự reset tuần mới'}
+              </button>
+
+              {!confirmResetEmulation ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmResetEmulation(true)}
+                  className="px-3 py-1.5 rounded-xl bg-rose-500/90 hover:bg-rose-600 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset Điểm Thi Đua Về 100đ
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-rose-950/90 px-2.5 py-1 rounded-xl border border-rose-400/50">
+                  <span className="text-[11px] font-bold text-rose-200">Reset cả lớp về 100đ?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetWeeklyEmulationScores(currentWeek);
+                      setConfirmResetEmulation(false);
+                      setEmulationToastMsg(
+                        `Đã reset điểm thi đua (${currentWeekRange.rangeLabel}) của toàn bộ 50 học sinh về 100 điểm!`
+                      );
+                      setTimeout(() => setEmulationToastMsg(null), 3500);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black"
+                  >
+                    Xác nhận
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmResetEmulation(false)}
+                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {emulationToastMsg && (
+        <div className="p-3.5 rounded-2xl bg-emerald-600 text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{emulationToastMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEmulationToastMsg(null)}
+            className="text-white/80 hover:text-white text-xs underline"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">

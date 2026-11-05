@@ -55,6 +55,7 @@ export const AttendanceView: React.FC = () => {
     setSelectedAttendanceDate,
     updateAttendanceStatus,
     markAllPresent,
+    resetDateAttendance,
     saveAttendanceNote,
     scanQRAttendance,
     supplementaryAttendanceList,
@@ -113,6 +114,7 @@ export const AttendanceView: React.FC = () => {
   // Note for selected date
   const [noteText, setNoteText] = useState(currentDateAttendance.note || '');
   const [weekendWarning, setWeekendWarning] = useState<string | null>(null);
+  const [resetToastMsg, setResetToastMsg] = useState<string | null>(null);
 
   const selectedDayInfo = normalizeToSchoolDay(selectedAttendanceDate);
   const weekSchoolDays = getWeekSchoolDays(selectedAttendanceDate);
@@ -371,6 +373,17 @@ export const AttendanceView: React.FC = () => {
 
   const handleMarkAllPresent = () => {
     markAllPresent(selectedAttendanceDate);
+    setResetToastMsg(`Đã đánh dấu Có mặt 100% (50/50 HS) cho ngày ${selectedAttendanceDate}!`);
+    setTimeout(() => setResetToastMsg(null), 3000);
+  };
+
+  const handleResetDailyAttendance = () => {
+    resetDateAttendance(selectedAttendanceDate);
+    setNoteText('');
+    setResetToastMsg(
+      `Đã reset bảng điểm danh ngày ${selectedAttendanceDate} về mặc định ngày mới (100% Có mặt)!`
+    );
+    setTimeout(() => setResetToastMsg(null), 3500);
   };
 
   const handleScanSubmit = (e: React.FormEvent) => {
@@ -506,6 +519,22 @@ export const AttendanceView: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {resetToastMsg && (
+        <div className="p-3.5 rounded-2xl bg-emerald-600 text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{resetToastMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setResetToastMsg(null)}
+            className="text-white/80 hover:text-white text-xs underline"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
@@ -520,6 +549,9 @@ export const AttendanceView: React.FC = () => {
                 </h2>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-bold">
                   {currentWeekRange.rangeLabel}
+                </span>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" /> Tự động reset khi qua ngày mới
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
@@ -565,12 +597,21 @@ export const AttendanceView: React.FC = () => {
             )}
 
             {canEditAttendance && activeTab === 'daily' && (
-              <button
-                onClick={handleMarkAllPresent}
-                className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
-              >
-                <Check className="w-4 h-4 shrink-0" /> Có mặt tất cả
-              </button>
+              <>
+                <button
+                  onClick={handleMarkAllPresent}
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 shrink-0" /> Có mặt tất cả
+                </button>
+                <button
+                  onClick={handleResetDailyAttendance}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  title="Reset điểm danh ngày này về mặc định ngày mới (100% Có mặt)"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Reset ngày mới
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -93,3 +93,30 @@ export function parseStudentBirthday(birthdayStr?: string): { day: number; month
   }
   return null;
 }
+
+/**
+ * Compress multiple image files in parallel while keeping total payload light for Firestore & SSE sync
+ */
+export async function compressMultipleImageFiles(
+  files: FileList | File[],
+  maxDimension: number = 900,
+  quality: number = 0.72
+): Promise<string[]> {
+  const fileArray = Array.from(files || []);
+  if (fileArray.length === 0) return [];
+  // Adjust dimension slightly if uploading many photos at once so Firestore doc stays well under 1MB
+  const adjustedDim = fileArray.length > 4 ? Math.min(maxDimension, 780) : maxDimension;
+  const adjustedQuality = fileArray.length > 4 ? Math.min(quality, 0.68) : quality;
+
+  const results: string[] = [];
+  for (const file of fileArray) {
+    try {
+      const dataUrl = await compressImageFileToDataUrl(file, adjustedDim, adjustedQuality);
+      if (dataUrl) results.push(dataUrl);
+    } catch (err) {
+      console.warn('Error compressing image file:', err);
+    }
+  }
+  return results;
+}
+
