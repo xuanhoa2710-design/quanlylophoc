@@ -10,7 +10,6 @@ import {
   Check,
   Sparkles,
   FileSpreadsheet,
-  Camera,
   BarChart3,
   Plus,
   Trash2,
@@ -73,7 +72,7 @@ export const GradesView: React.FC = () => {
     gdqp: '8.0',
   });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importInitialTab, setImportInitialTab] = useState<'excel' | 'image' | 'analysis'>('image');
+  const [importInitialTab, setImportInitialTab] = useState<'excel' | 'grid'>('excel');
 
   // New Grade Batch Modal state ("Nhập thêm điểm mới theo từng đợt")
   const [isNewBatchModalOpen, setIsNewBatchModalOpen] = useState(false);
@@ -181,7 +180,7 @@ export const GradesView: React.FC = () => {
               Bảng Điểm Tổng Hợp Tất Cả Các Môn Lớp 12A7 (10 Môn)
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Quản lý điểm theo từng đợt kiểm tra/thi thử • Nhập bảng điểm bằng Ảnh AI hoặc Excel • Chỉnh sửa hoặc xóa bảng điểm nhanh
+              Quản lý điểm theo từng đợt kiểm tra/thi thử • Nhập / Xuất bảng điểm bằng file Excel • Chỉnh sửa hoặc xóa bảng điểm nhanh
             </p>
           </div>
 
@@ -200,13 +199,13 @@ export const GradesView: React.FC = () => {
 
               <button
                 onClick={() => {
-                  setImportInitialTab('image');
+                  setImportInitialTab('excel');
                   setIsImportModalOpen(true);
                 }}
-                className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
               >
-                <Camera className="w-4 h-4 text-yellow-300" />
-                <span>Nhập Điểm Bằng Ảnh AI / Excel</span>
+                <FileSpreadsheet className="w-4 h-4 text-amber-300" />
+                <span>Nhập Điểm Bằng File Excel</span>
               </button>
 
               <button
@@ -623,7 +622,7 @@ export const GradesView: React.FC = () => {
                     className="text-emerald-600"
                   />
                   <span className="font-semibold text-slate-800">
-                    Tạo bảng điểm trống (Tất cả = 0) để nhập điểm mới từ đầu / quét ảnh AI
+                    Tạo bảng điểm trống (Tất cả = 0) để nhập điểm mới từ đầu hoặc từ file Excel
                   </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">

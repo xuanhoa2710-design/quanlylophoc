@@ -490,7 +490,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </h3>
                 <p className="text-xs text-blue-200/90 mt-1 line-clamp-2">
-                  Nhập nhanh toàn bộ 10 môn học (Toán, Văn, Anh, Lý, Hóa, Sử, KTPL, Tin, GDĐP, GDQP); hỗ trợ tải file Excel, quét ảnh AI Gemini và dán trực tiếp (Ctrl+V) tự động tính GPA và xếp loại.
+                  Nhập nhanh toàn bộ 10 môn học (Toán, Văn, Anh, Lý, Hóa, Sử, KTPL, Tin, GDĐP, GDQP); hỗ trợ tải file Excel (.xlsx/.xls/.csv) và dán trực tiếp từ Excel (Ctrl+V), tự động tính GPA và xếp loại.
                 </p>
               </div>
             </div>

@@ -726,28 +726,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.CURRENT_WEEK, String(currentWeek));
   }, [currentWeek]);
 
-  // Emulation non-auto-reset mode:
-  // By default true ("App không tự reset lại điểm thi đua khi bắt đầu tuần mới")
-  const [keepEmulationAcrossWeeks, setKeepEmulationAcrossWeeksState] = useState<boolean>(() => {
-    const saved = safeGetLocal(STORAGE_KEYS.KEEP_EMULATION_ACROSS_WEEKS);
-    if (saved === 'false') return false;
-    return true;
+  // Strict per-week emulation isolation:
+  // Mỗi tuần học sinh luôn bắt đầu từ 100 điểm chuẩn, không giữ lại hay cộng dồn qua các tuần khác ("tuần nào rõ tuần đó").
+  const [keepEmulationAcrossWeeks] = useState<boolean>(() => {
+    safeRemoveLocal(STORAGE_KEYS.KEEP_EMULATION_ACROSS_WEEKS);
+    safeRemoveLocal(STORAGE_KEYS.EMULATION_RESET_BASELINE_WEEK);
+    return false;
   });
 
-  const setKeepEmulationAcrossWeeks = (keep: boolean) => {
-    setKeepEmulationAcrossWeeksState(keep);
-    safeSetLocal(STORAGE_KEYS.KEEP_EMULATION_ACROSS_WEEKS, String(keep));
-  };
-
-  const [emulationResetBaselineWeek, setEmulationResetBaselineWeekState] = useState<number>(() => {
-    const saved = safeGetLocal(STORAGE_KEYS.EMULATION_RESET_BASELINE_WEEK);
-    const num = saved ? Number(saved) : NaN;
-    return !isNaN(num) && num > 0 ? num : 1;
-  });
-
-  const setEmulationResetBaselineWeek = (weekNum: number) => {
-    setEmulationResetBaselineWeekState(weekNum);
-    safeSetLocal(STORAGE_KEYS.EMULATION_RESET_BASELINE_WEEK, String(weekNum));
+  const setKeepEmulationAcrossWeeks = (_keep: boolean) => {
+    safeRemoveLocal(STORAGE_KEYS.KEEP_EMULATION_ACROSS_WEEKS);
+    safeRemoveLocal(STORAGE_KEYS.EMULATION_RESET_BASELINE_WEEK);
   };
 
   const [disciplineEntries, setDisciplineEntries] = useState<StudentDisciplineEntry[]>(() => {
@@ -2811,7 +2800,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updated: Partial<BonusPointEntry>
   ) => {
     setBonusEntries((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...updated } : b))
+      prev.map((b) => {
+        if (b.id === id) {
+          const nextDate = updated.date ? normalizeToSchoolDay(updated.date).date : b.date;
+          const nextWeek = updated.date
+            ? getWeekIndexFromDate(nextDate)
+            : (updated.weekNumber ?? b.weekNumber);
+          return { ...b, ...updated, date: nextDate, weekNumber: nextWeek };
+        }
+        return b;
+      })
     );
   };
 
@@ -2847,15 +2845,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Xác định chính xác tuần áp dụng (tuần nào rõ tuần đó, không trùng lặp sang tuần khác)
+  const getEntryWeekIndex = (entryWeek?: number, entryDate?: string): number => {
+    if (entryDate && /^\d{4}-\d{2}-\d{2}$/.test(entryDate.trim())) {
+      const normalized = normalizeToSchoolDay(entryDate.trim()).date;
+      return getWeekIndexFromDate(normalized);
+    }
+    return typeof entryWeek === 'number' && !isNaN(entryWeek) && entryWeek > 0
+      ? entryWeek
+      : currentWeek;
+  };
+
   const resetWeeklyEmulationScores = (week?: number) => {
     const targetWeek = week !== undefined ? week : currentWeek;
-    // Remove violations, bonuses, and manual adjustments in targetWeek (or advance baseline week so previous weeks don't carry over)
-    setEmulationResetBaselineWeek(targetWeek);
+    // Chỉ xóa vi phạm, điểm cộng và điều chỉnh thuộc đúng tuần targetWeek (giữ nguyên dữ liệu các tuần khác)
     setDisciplineEntries((prev) =>
-      prev.filter((d) => d.weekNumber !== targetWeek && !isDateInWeek(d.date, targetWeek))
+      prev.filter((d) => getEntryWeekIndex(d.weekNumber, d.date) !== targetWeek)
     );
     setBonusEntries((prev) =>
-      prev.filter((b) => b.weekNumber !== targetWeek && !isDateInWeek(b.date, targetWeek))
+      prev.filter((b) => getEntryWeekIndex(b.weekNumber, b.date) !== targetWeek)
     );
     setEmulationScoreAdjustments((prev) =>
       prev.filter((a) => a.weekNumber !== targetWeek)
@@ -2871,22 +2879,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetWeek = week !== undefined ? week : currentWeek;
     const student = students.find((s) => s.id === studentId);
 
-    const matchesWeekScope = (entryWeek: number, entryDate: string) => {
-      const effectiveWeek = entryWeek || getWeekIndexFromDate(entryDate);
-      if (keepEmulationAcrossWeeks) {
-        // Carry over / keep emulation points across weeks without auto-resetting on a new week
-        return effectiveWeek >= emulationResetBaselineWeek && effectiveWeek <= targetWeek;
-      }
-      return effectiveWeek === targetWeek || isDateInWeek(entryDate, targetWeek);
-    };
-
+    // Tuần nào rõ tuần đó: chỉ tính các lỗi vi phạm và điểm cộng thuộc đúng targetWeek, không cộng dồn từ tuần khác
     const violations = disciplineEntries.filter(
-      (d) => d.studentId === studentId && matchesWeekScope(d.weekNumber, d.date)
+      (d) => d.studentId === studentId && getEntryWeekIndex(d.weekNumber, d.date) === targetWeek
     );
     const bonuses = bonusEntries.filter(
       (b) =>
         (b.studentId === studentId || (!b.studentId && b.group === student?.group)) &&
-        matchesWeekScope(b.weekNumber, b.date)
+        getEntryWeekIndex(b.weekNumber, b.date) === targetWeek
     );
 
     const initialPoints = 100;
@@ -2894,18 +2894,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const bonus = bonuses.reduce((sum, b) => sum + b.pointsAdded, 0);
     const autoScore = Math.max(0, initialPoints - deducted + bonus);
 
-    const adjustment = keepEmulationAcrossWeeks
-      ? emulationScoreAdjustments
-          .filter(
-            (a) =>
-              a.studentId === studentId &&
-              a.weekNumber >= emulationResetBaselineWeek &&
-              a.weekNumber <= targetWeek
-          )
-          .sort((a, b) => b.weekNumber - a.weekNumber)[0]
-      : emulationScoreAdjustments.find(
-          (a) => a.studentId === studentId && a.weekNumber === targetWeek
-        );
+    const adjustment = emulationScoreAdjustments.find(
+      (a) => a.studentId === studentId && a.weekNumber === targetWeek
+    );
 
     const total = adjustment !== undefined ? adjustment.adjustedScore : autoScore;
 
@@ -2960,10 +2951,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const deductedCount = allScores.filter((i) => i.deducted > 0).length;
 
     const weekViolations = disciplineEntries.filter(
-      (d) => d.weekNumber === targetWeek || isDateInWeek(d.date, targetWeek)
+      (d) => getEntryWeekIndex(d.weekNumber, d.date) === targetWeek
     );
     const weekBonuses = bonusEntries.filter(
-      (b) => b.weekNumber === targetWeek || isDateInWeek(b.date, targetWeek)
+      (b) => getEntryWeekIndex(b.weekNumber, b.date) === targetWeek
     );
 
     // Group Rankings (Tổ 1..4)

@@ -229,138 +229,193 @@ Trân trọng,
   res.json({ text: fallback });
 });
 
+const parseImageDataUrlPart = (
+  img: any,
+  fallbackMime = 'image/jpeg'
+): { inlineData: { mimeType: string; data: string } } | null => {
+  const rawData = typeof img === 'string' ? img : img?.base64 || img?.imageBase64 || '';
+  if (!rawData || typeof rawData !== 'string') return null;
+  const trimmed = rawData.trim();
+  const dataUrlMatch = trimmed.match(/^data:([^;]+);base64,(.+)$/);
+  if (dataUrlMatch) {
+    const detectedMime = dataUrlMatch[1]?.startsWith('image/') ? dataUrlMatch[1] : fallbackMime;
+    return {
+      inlineData: {
+        mimeType: detectedMime,
+        data: dataUrlMatch[2],
+      },
+    };
+  }
+  return {
+    inlineData: {
+      mimeType: (typeof img === 'object' && img?.mimeType) || fallbackMime,
+      data: trimmed,
+    },
+  };
+};
+
 // 5. AI Grade OCR from Image (Nhận diện điểm số qua ảnh chụp bảng điểm)
 app.post('/api/ai/grade-ocr', async (req, res) => {
-  const { imageBase64, mimeType = 'image/jpeg', subject = 'Hóa học' } = req.body;
+  const { imageBase64, mimeType = 'image/jpeg', subject = 'Hóa học' } = req.body || {};
+  const imagePart = parseImageDataUrlPart(imageBase64, mimeType);
 
-  if (!imageBase64) {
-    return res.status(400).json({ error: 'Thiếu dữ liệu hình ảnh (imageBase64)' });
+  if (!imagePart) {
+    return res.status(400).json({ success: false, error: 'Thiếu dữ liệu hình ảnh bảng điểm hợp lệ.' });
   }
 
-  const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, '');
-  const aiClient = getAiClient();
+  const prompt = `Bạn là hệ thống AI OCR trích xuất bảng điểm lớp 12A7 trường THPT Vĩnh Lộc B (GVCN: Thầy Trương Xuân Hòa).
+Hãy quan sát thật kỹ hình ảnh bảng điểm / sổ điểm / bài kiểm tra được cung cấp và trích xuất CHÍNH XÁC dữ liệu học sinh đọc được từ ảnh (chỉ lấy những dòng và điểm thực sự có trong ảnh, không tự bịa số).
 
-  if (aiClient) {
-    try {
-      const prompt = `Bạn là hệ thống AI trích xuất và phân tích bảng điểm của lớp 12A7 trường THPT Vĩnh Lộc B (GVCN: Thầy Trương Xuân Hòa).
-Hãy quan sát hình ảnh bảng điểm / sổ điểm / bài kiểm tra được cung cấp và trích xuất dữ liệu thành định dạng JSON hợp lệ (không kèm văn bản ngoài JSON hoặc bọc trong \`\`\`json ... \`\`\`).
+Quy tắc:
+- Điểm theo thang 10 (nếu ảnh dùng dấu phẩy "8,5" -> đổi thành 8.5).
+- Cố gắng trích xuất đầy đủ stt, code (mã HS nếu có), name (họ tên), score (điểm tổng/điểm chính hoặc ĐTB), regular (các điểm thường xuyên nếu có), midterm (giữa kỳ), final (cuối kỳ), note (ghi chú nếu có).`;
 
-Cấu trúc JSON yêu cầu:
-{
-  "title": "Tên bảng điểm trích xuất được (ví dụ: Bảng điểm kiểm tra định kỳ môn ${subject} 12A7)",
-  "subject": "${subject}",
-  "extractedRows": [
-    {
-      "stt": 1,
-      "code": "12A7-01",
-      "name": "Họ và tên học sinh",
-      "score": 8.5,
-      "regular": [8.0, 9.0],
-      "midterm": 8.5,
-      "final": 8.5,
-      "note": "Ghi chú nếu có"
-    }
-  ],
-  "overallAnalysis": "Nhận xét tổng quan tình hình điểm số của cả lớp từ ảnh",
-  "guidancePlan": "Các bước kế hoạch hành động cụ thể của GVCN giúp đỡ học sinh có điểm dưới 6.5 tiến bộ"
-}
-
-Nếu ảnh chỉ nhận diện được một số học sinh, hãy trích xuất tối đa các dòng đọc được rõ ràng.`;
-
-      const text = await generateGeminiText({
-        parts: [
-          {
-            inlineData: {
-              mimeType: mimeType || 'image/jpeg',
-              data: cleanBase64,
-            },
+  const singleGradeSchema = {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING },
+      subject: { type: Type.STRING },
+      overallAnalysis: { type: Type.STRING },
+      guidancePlan: { type: Type.STRING },
+      extractedRows: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            stt: { type: Type.INTEGER },
+            code: { type: Type.STRING },
+            name: { type: Type.STRING },
+            score: { type: Type.NUMBER },
+            regular: { type: Type.ARRAY, items: { type: Type.NUMBER } },
+            midterm: { type: Type.NUMBER },
+            final: { type: Type.NUMBER },
+            note: { type: Type.STRING },
           },
-          {
-            text: prompt,
-          },
-        ],
-      });
-      if (text) {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return res.json({ success: true, data: parsed, rawText: text });
-          } catch (parseErr) {
-            console.warn('JSON parse failed:', parseErr);
-          }
-        }
-        return res.json({ success: true, rawText: text });
-      }
-    } catch (err: any) {
-      console.warn('Gemini OCR failed:', err?.message);
-    }
-  }
-
-  // Fallback simulated OCR if AI unavailable
-  res.json({
-    success: true,
-    data: {
-      title: `Bảng Điểm Kiểm Tra Môn ${subject} - Nhận Diện Hình Ảnh`,
-      subject: subject || 'Hóa học',
-      extractedRows: [
-        { stt: 1, code: '12A7-01', name: 'Vũ Trịnh Bảo An', score: 7.5, note: 'Khá' },
-        { stt: 2, code: '12A7-03', name: 'Trần Ngọc Mai Anh', score: 9.5, note: 'Xuất sắc' },
-        { stt: 3, code: '12A7-05', name: 'Nguyễn Tấn Đạt', score: 8.5, note: 'Giỏi' },
-        { stt: 4, code: '12A7-21', name: 'Trần Anh Khoa', score: 6.5, note: 'Cần bồi dưỡng' },
-        { stt: 5, code: '12A7-29', name: 'Phạm Thị Trà My', score: 7.0, note: 'Khá' },
-      ],
-      overallAnalysis: 'Lớp 12A7 có nền tảng tốt, tuy nhiên một số bạn cần củng cố các câu vận dụng cao este và bài tập đồ thị.',
-      guidancePlan: 'Tổ chức "Đôi bạn cùng tiến" bồi dưỡng 15 phút đầu giờ thứ Ba và thứ Năm. Khen ngợi em Mai Anh đạt 9.5.',
+          required: ['name'],
+        },
+      },
     },
-  });
+    required: ['extractedRows'],
+  };
+
+  const aiResult = await generateGeminiDetailed(
+    { parts: [imagePart, { text: prompt }] },
+    undefined,
+    {
+      responseMimeType: 'application/json',
+      responseSchema: singleGradeSchema,
+    }
+  );
+
+  if (!aiResult.text) {
+    return res.status(502).json({
+      success: false,
+      error: aiResult.error || 'AI không thể phân tích ảnh bảng điểm lúc này. Vui lòng thử lại.',
+    });
+  }
+
+  try {
+    const cleaned = aiResult.text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+    const rows = Array.isArray(parsed?.extractedRows) ? parsed.extractedRows : [];
+    if (rows.length === 0) {
+      return res.status(422).json({
+        success: false,
+        error: 'AI không đọc được dòng điểm hợp lệ nào trong ảnh. Vui lòng chọn ảnh rõ nét hơn.',
+      });
+    }
+    return res.json({
+      success: true,
+      modelUsed: aiResult.modelUsed,
+      data: {
+        title: parsed.title || `Bảng điểm môn ${subject} (Nhận diện AI)`,
+        subject: parsed.subject || subject,
+        extractedRows: rows,
+        overallAnalysis: parsed.overallAnalysis || `Đã trích xuất ${rows.length} học sinh từ ảnh.`,
+        guidancePlan: parsed.guidancePlan || '',
+      },
+    });
+  } catch (parseErr: any) {
+    console.warn('Grade OCR JSON parse failed:', parseErr?.message);
+    return res.status(422).json({
+      success: false,
+      error: 'AI trả về dữ liệu chưa đúng cấu trúc bảng điểm. Vui lòng chụp rõ hơn và thử lại.',
+    });
+  }
 });
 
 // Helper to normalize Vietnamese subject names or aliases to canonical 10-subject keys
+const normalizeAsciiLower = (val: string): string =>
+  String(val || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+
 const SUBJECT_KEY_ALIASES: Record<string, string> = {
   toan: 'toan',
-  'toán': 'toan',
-  'môn toán': 'toan',
+  'toan hoc': 'toan',
+  'mon toan': 'toan',
+  toanhoc: 'toan',
   math: 'toan',
   van: 'van',
-  'văn': 'van',
-  'ngữ văn': 'van',
+  'ngu van': 'van',
   nguvan: 'van',
+  'mon van': 'van',
+  'van hoc': 'van',
+  literature: 'van',
   anh: 'anh',
-  'tiếng anh': 'anh',
-  'ngoại ngữ': 'anh',
+  'tieng anh': 'anh',
+  'ngoai ngu': 'anh',
+  'anh van': 'anh',
+  anhvan: 'anh',
+  ngoaingu: 'anh',
   tienganh: 'anh',
   english: 'anh',
   ly: 'ly',
-  'lý': 'ly',
-  'lí': 'ly',
-  'vật lý': 'ly',
-  'vật lí': 'ly',
+  li: 'ly',
+  'vat ly': 'ly',
+  'vat li': 'ly',
   vatly: 'ly',
+  vatli: 'ly',
+  physics: 'ly',
   hoa: 'hoa',
-  'hóa': 'hoa',
-  'hóa học': 'hoa',
+  'hoa hoc': 'hoa',
   hoahoc: 'hoa',
+  chemistry: 'hoa',
   su: 'su',
-  'sử': 'su',
-  'lịch sử': 'su',
+  'lich su': 'su',
   lichsu: 'su',
+  history: 'su',
   gdktpl: 'gdktpl',
   ktpl: 'gdktpl',
+  'kt&pl': 'gdktpl',
   'gdkt&pl': 'gdktpl',
   'gdkt-pl': 'gdktpl',
   'gdkt & pl': 'gdktpl',
-  'kinh tế pháp luật': 'gdktpl',
+  'gdkt va pl': 'gdktpl',
+  'kinh te phap luat': 'gdktpl',
+  'kinh te & phap luat': 'gdktpl',
   tin: 'tin',
-  'tin học': 'tin',
+  'tin hoc': 'tin',
   tinhoc: 'tin',
+  informatics: 'tin',
   gddp: 'gddp',
-  'gdđp': 'gddp',
-  'giáo dục địa phương': 'gddp',
+  'gd dia phuong': 'gddp',
+  'giao duc dia phuong': 'gddp',
+  'dia phuong': 'gddp',
   gdqp: 'gdqp',
   'gdqp-an': 'gdqp',
-  'gdqpan': 'gdqp',
-  'quốc phòng': 'gdqp',
+  'gdqp&an': 'gdqp',
+  gdqpan: 'gdqp',
+  'qp-an': 'gdqp',
+  qpan: 'gdqp',
+  'quoc phong': 'gdqp',
+  'quoc phong an ninh': 'gdqp',
+  'giao duc quoc phong': 'gdqp',
 };
 
 const VALID_SUBJECT_KEYS = new Set([
@@ -376,27 +431,53 @@ const VALID_SUBJECT_KEYS = new Set([
   'gdqp',
 ]);
 
+const resolveCanonicalSubjectKey = (raw: any): string | null => {
+  if (!raw) return null;
+  const ascii = normalizeAsciiLower(String(raw));
+  if (VALID_SUBJECT_KEYS.has(ascii)) return ascii;
+  if (SUBJECT_KEY_ALIASES[ascii]) return SUBJECT_KEY_ALIASES[ascii];
+  const compact = ascii.replace(/[^a-z0-9]/g, '');
+  if (VALID_SUBJECT_KEYS.has(compact)) return compact;
+  if (SUBJECT_KEY_ALIASES[compact]) return SUBJECT_KEY_ALIASES[compact];
+  return null;
+};
+
 const parseScoreNumber = (val: any): number | null => {
   if (typeof val === 'number' && !isNaN(val)) {
-    return Math.min(10, Math.max(0, Number(val.toFixed(1))));
+    if (val < 0 || val > 10) return null;
+    return Number(val.toFixed(1));
   }
   if (typeof val === 'string') {
     const cleaned = val.trim().replace(',', '.');
-    const num = parseFloat(cleaned);
-    if (!isNaN(num)) {
-      return Math.min(10, Math.max(0, Number(num.toFixed(1))));
+    if (!cleaned || cleaned === '-' || cleaned === '—') return null;
+    const match = cleaned.match(/^\d+(?:\.\d+)?/);
+    if (!match) return null;
+    const num = parseFloat(match[0]);
+    if (!isNaN(num) && num >= 0 && num <= 10) {
+      return Number(num.toFixed(1));
     }
   }
   if (val && typeof val === 'object') {
-    const candidate = val.avg ?? val.score ?? val.final ?? val.midterm;
+    const candidate = val.avg ?? val.dtb ?? val.score ?? val.final ?? val.midterm;
     return parseScoreNumber(candidate);
   }
   return null;
 };
 
+const normalizeConductValue = (raw: any): string | undefined => {
+  if (!raw) return undefined;
+  const s = normalizeAsciiLower(String(raw));
+  if (s.includes('tot')) return 'Tốt';
+  if (s.includes('kha')) return 'Khá';
+  if (s.includes('chua')) return 'Chưa đạt';
+  if (s === 'dat' || s.includes('trung binh') || s === 'tb') return 'Đạt';
+  return undefined;
+};
+
 const normalizeExtractedGradeRows = (
   rawRows: any[],
-  targetSubject: string
+  targetSubject: string,
+  detectedSubject?: string
 ): Array<{
   stt?: number;
   code?: string;
@@ -409,7 +490,7 @@ const normalizeExtractedGradeRows = (
   const defaultTargetSub =
     targetSubject && targetSubject !== 'all' && VALID_SUBJECT_KEYS.has(targetSubject)
       ? targetSubject
-      : null;
+      : resolveCanonicalSubjectKey(detectedSubject);
 
   return rawRows
     .map((row: any, idx: number) => {
@@ -419,44 +500,52 @@ const normalizeExtractedGradeRows = (
         row.scores && typeof row.scores === 'object' ? row.scores : {};
 
       for (const [k, v] of Object.entries(rawScoresObj)) {
-        const lowerKey = k.trim().toLowerCase();
-        const mappedKey =
-          SUBJECT_KEY_ALIASES[lowerKey] ||
-          (VALID_SUBJECT_KEYS.has(lowerKey) ? lowerKey : null);
+        const mappedKey = resolveCanonicalSubjectKey(k);
         const num = parseScoreNumber(v);
         if (mappedKey && num !== null) {
-          normalizedScores[mappedKey] = num;
+          if (targetSubject === 'all' || targetSubject === mappedKey) {
+            normalizedScores[mappedKey] = num;
+          }
         } else if (defaultTargetSub && num !== null) {
           normalizedScores[defaultTargetSub] = num;
         }
       }
 
-      // Also check top-level score/avg/diem or subject fields directly on row
-      const singleScoreCandidate =
-        row.score ?? row.avg ?? row.diem ?? row.tb ?? row.dtb;
-      const singleParsed = parseScoreNumber(singleScoreCandidate);
-      if (singleParsed !== null && Object.keys(normalizedScores).length === 0) {
-        normalizedScores[defaultTargetSub || 'hoa'] = singleParsed;
-      }
-
+      // Check top-level subject columns directly on row
+      const skipKeys = new Set(['scores', 'stt', 'code', 'name', 'hoTen', 'studentName', 'conduct', 'note', 'score', 'avg', 'diem', 'tb', 'dtb']);
       for (const [k, v] of Object.entries(row)) {
-        if (k === 'scores' || k === 'stt' || k === 'code' || k === 'name' || k === 'conduct') continue;
-        const lowerKey = k.trim().toLowerCase();
-        const mappedKey = SUBJECT_KEY_ALIASES[lowerKey];
+        if (skipKeys.has(k)) continue;
+        const mappedKey = resolveCanonicalSubjectKey(k);
         const num = parseScoreNumber(v);
         if (mappedKey && num !== null && normalizedScores[mappedKey] === undefined) {
-          normalizedScores[mappedKey] = num;
+          if (targetSubject === 'all' || targetSubject === mappedKey) {
+            normalizedScores[mappedKey] = num;
+          }
         }
       }
 
-      const name = String(row.name || row.hoTen || row.studentName || `Học sinh ${idx + 1}`).trim();
+      // Single-score fallback if row only has score/avg/diem/dtb
+      const singleScoreCandidate =
+        row.score ?? row.avg ?? row.diem ?? row.tb ?? row.dtb;
+      const singleParsed = parseScoreNumber(singleScoreCandidate);
+      if (singleParsed !== null && Object.keys(normalizedScores).length === 0 && defaultTargetSub) {
+        normalizedScores[defaultTargetSub] = singleParsed;
+      }
+
+      const name = String(row.name || row.hoTen || row.studentName || '').trim();
+      const conduct = normalizeConductValue(row.conduct ?? row.hanhKiem ?? row.renLuyen);
+      if (Object.keys(normalizedScores).length === 0 && !conduct) {
+        return null;
+      }
+
+      const rawStt = typeof row.stt === 'number' ? row.stt : parseInt(String(row.stt || ''), 10);
       return {
-        stt: typeof row.stt === 'number' ? row.stt : idx + 1,
+        stt: !isNaN(rawStt) && rawStt > 0 ? rawStt : idx + 1,
         code: row.code ? String(row.code).trim() : undefined,
-        name,
+        name: name || `Học sinh ${idx + 1}`,
         scores: normalizedScores,
-        conduct: row.conduct || 'Tốt',
-        note: row.note ? String(row.note) : undefined,
+        conduct,
+        note: row.note ? String(row.note).trim() : undefined,
       };
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
@@ -471,221 +560,184 @@ app.post('/api/ai/grade-ocr-comprehensive', async (req, res) => {
     targetSubject = 'all',
     studentNames = [],
     studentRoster = [],
-  } = req.body;
+  } = req.body || {};
 
   const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
   if (Array.isArray(images) && images.length > 0) {
     for (const img of images) {
-      const rawData = typeof img === 'string' ? img : img?.base64 || img?.imageBase64 || '';
-      if (rawData) {
-        const clean = rawData.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, '');
-        imageParts.push({
-          inlineData: {
-            mimeType: (typeof img === 'object' && img?.mimeType) || mimeType || 'image/jpeg',
-            data: clean,
-          },
-        });
-      }
+      const part = parseImageDataUrlPart(img, mimeType);
+      if (part) imageParts.push(part);
     }
   } else if (imageBase64 && typeof imageBase64 === 'string') {
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, '');
-    imageParts.push({
-      inlineData: {
-        mimeType: mimeType || 'image/jpeg',
-        data: cleanBase64,
-      },
-    });
+    const part = parseImageDataUrlPart(imageBase64, mimeType);
+    if (part) imageParts.push(part);
   }
 
   if (imageParts.length === 0) {
-    return res.status(400).json({ error: 'Thiếu dữ liệu hình ảnh bảng điểm (imageBase64 / images)' });
+    return res.status(400).json({
+      success: false,
+      error: 'Thiếu dữ liệu hình ảnh bảng điểm hợp lệ. Vui lòng chọn, kéo thả hoặc dán ảnh bảng điểm.',
+    });
   }
 
-  const aiClient = getAiClient();
+  const rosterLines =
+    Array.isArray(studentRoster) && studentRoster.length > 0
+      ? studentRoster
+          .map((s: any) => `${s.stt}. [${s.code}] ${s.name}`)
+          .join('\n')
+      : Array.isArray(studentNames) && studentNames.length > 0
+      ? studentNames.join(', ')
+      : '';
 
-  if (aiClient) {
-    try {
-      const rosterLines =
-        Array.isArray(studentRoster) && studentRoster.length > 0
-          ? studentRoster
-              .map((s: any) => `${s.stt}. [${s.code}] ${s.name}`)
-              .join('\n')
-          : Array.isArray(studentNames) && studentNames.length > 0
-          ? studentNames.join(', ')
-          : '';
+  const studentHint = rosterLines
+    ? `\nDanh sách 50 học sinh chuẩn lớp 12A7 để đối chiếu chính xác STT, Mã HS và Họ tên:\n${rosterLines}\n`
+    : '';
 
-      const studentHint = rosterLines
-        ? `\nDanh sách 50 học sinh chuẩn của lớp 12A7 để đối chiếu chính xác STT, Mã HS và Họ tên:\n${rosterLines}\n`
-        : '';
-
-      const subjectInstruction =
-        targetSubject && targetSubject !== 'all'
-          ? `Lưu ý: Người dùng đang chọn quét bảng điểm cho môn "${targetSubject}". Nếu ảnh có cột điểm TB môn / Điểm kiểm tra hoặc chỉ có 1 môn, hãy gán điểm số đó vào đúng khóa "${targetSubject}" trong đối tượng "scores".`
-          : `Hãy quan sát kỹ tất cả các cột điểm môn học trong ảnh và ánh xạ chính xác vào các khóa chuẩn sau:
+  const subjectInstruction =
+    targetSubject && targetSubject !== 'all'
+      ? `Người dùng ĐANG CHỌN QUÉT RIÊNG MÔN "${targetSubject}".
+- Nếu ảnh là bảng điểm 1 môn (có thể có các cột Thường xuyên/Miệng, Giữa kỳ, Cuối kỳ, ĐTB môn), hãy ưu tiên lấy cột ĐTB môn / Tổng kết / Điểm kiểm tra chính của mỗi học sinh và điền vào scores["${targetSubject}"]. Nếu chỉ có các điểm thành phần mà chưa có cột ĐTB, hãy tính ĐTB theo hệ số (TB TX + 2*GK + 3*CK)/6 hoặc trung bình cộng hợp lý.
+- Nếu ảnh có nhiều môn, hãy trích xuất chính xác cột điểm của môn "${targetSubject}" vào scores["${targetSubject}"].`
+      : `Hãy quan sát tất cả các cột điểm môn học có mặt trong ảnh và ánh xạ CHÍNH XÁC vào các khóa chuẩn sau:
 - Toán -> "toan"
 - Ngữ văn / Văn -> "van"
 - Tiếng Anh / Ngoại ngữ / Anh -> "anh"
 - Vật lý / Vật lí / Lý -> "ly"
 - Hóa học / Hóa -> "hoa"
 - Lịch sử / Sử -> "su"
-- GDKT & PL / KTPL -> "gdktpl"
+- GDKT-PL / KTPL / Kinh tế & Pháp luật -> "gdktpl"
 - Tin học / Tin -> "tin"
 - GDĐP / Giáo dục địa phương -> "gddp"
 - GDQP-AN / Quốc phòng -> "gdqp"
-Nếu ảnh là bảng điểm của 1 môn duy nhất, hãy tự nhận diện tên môn trên tiêu đề ảnh (hoặc gán vào "hoa" nếu không ghi môn) và điền điểm vào đúng khóa môn đó.`;
+Nếu ảnh thực chất chỉ là bảng điểm của 1 môn duy nhất, hãy ghi mã môn đó vào "detectedSubject" và chỉ điền khóa môn đó trong "scores".`;
 
-      const prompt = `Bạn là hệ thống AI OCR chuyên dụng nhận diện Bảng điểm học sinh lớp 12A7 trường THPT Vĩnh Lộc B (GVCN: Thầy Trương Xuân Hòa).
+  const prompt = `Bạn là hệ thống AI OCR chuyên dụng đọc Bảng điểm học sinh THPT Việt Nam (lớp 12A7, Trường THPT Vĩnh Lộc B, GVCN: Thầy Trương Xuân Hòa).
+Hãy quan sát thật kỹ TẤT CẢ ${imageParts.length} hình ảnh đính kèm (ảnh chụp sổ điểm giấy, màn hình Excel, Google Sheets, hoặc hệ thống VNedu/CSDL ngành) và trích xuất CHÍNH XÁC từng dòng học sinh đọc được.
+
 ${subjectInstruction}
 ${studentHint}
-Hãy trích xuất TẤT CẢ các dòng học sinh đọc được từ ${imageParts.length} hình ảnh đính kèm sang định dạng JSON hợp lệ (chỉ trả về JSON, không bọc markdown phức tạp):
 
-{
-  "title": "Tên bảng điểm nhận diện được từ ảnh",
-  "detectedSubject": "${targetSubject}",
-  "extractedRows": [
-    {
-      "stt": 1,
-      "code": "12A7-01",
-      "name": "Họ và tên học sinh",
-      "scores": {
-        "toan": 8.5,
-        "van": 8.0,
-        "anh": 8.8,
-        "ly": 8.0,
-        "hoa": 8.5,
-        "su": 8.0,
-        "gdktpl": 8.5,
-        "tin": 9.0,
-        "gddp": 8.5,
-        "gdqp": 9.0
+QUY TẮC BẮT BUỘC:
+1. TUYỆT ĐỐI CHỈ trích xuất học sinh và điểm số THỰC SỰ NHÌN THẤY trong ảnh. KHÔNG tự bịa hay điền điểm cho học sinh không có mặt trong ảnh.
+2. Điểm số thang 10 dạng số thực (từ 0 đến 10). Nếu ảnh dùng dấu phẩy thập phân (ví dụ "8,5", "7,25") hãy chuyển sang dấu chấm (8.5, 7.3).
+3. Trong "scores" của từng học sinh, CHỈ đưa vào những môn thực sự có điểm trong ảnh; ô nào trống hoặc gạch ngang thì bỏ qua khóa đó.
+4. Đối chiếu Họ và tên (hoặc Mã HS / STT nếu khớp rõ ràng) với danh sách lớp 12A7 để điền chuẩn "stt", "code" và "name". Nếu một học sinh xuất hiện trên ảnh nhưng không khớp danh sách 12A7, vẫn trích xuất nguyên tên đọc được từ ảnh.
+5. Trả về đúng cấu trúc JSON Schema được yêu cầu.`;
+
+  const comprehensiveGradeSchema = {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING, description: 'Tiêu đề bảng điểm đọc được từ ảnh' },
+      detectedSubject: {
+        type: Type.STRING,
+        description: 'Mã môn học nếu ảnh chỉ có 1 môn (toan, van, anh, ly, hoa, su, gdktpl, tin, gddp, gdqp), hoặc "all" nếu bảng điểm nhiều môn',
       },
-      "conduct": "Tốt",
-      "note": "Ghi chú nếu có"
+      overallAnalysis: { type: Type.STRING, description: 'Tóm tắt ngắn số lượng học sinh, môn học và nhận xét chung từ ảnh' },
+      guidancePlan: { type: Type.STRING, description: 'Gợi ý ngắn kế hoạch hỗ trợ học tập' },
+      extractedRows: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            stt: { type: Type.INTEGER, description: 'Số thứ tự học sinh' },
+            code: { type: Type.STRING, description: 'Mã học sinh (VD: 12A7-01)' },
+            name: { type: Type.STRING, description: 'Họ và tên học sinh' },
+            scores: {
+              type: Type.OBJECT,
+              properties: {
+                toan: { type: Type.NUMBER },
+                van: { type: Type.NUMBER },
+                anh: { type: Type.NUMBER },
+                ly: { type: Type.NUMBER },
+                hoa: { type: Type.NUMBER },
+                su: { type: Type.NUMBER },
+                gdktpl: { type: Type.NUMBER },
+                tin: { type: Type.NUMBER },
+                gddp: { type: Type.NUMBER },
+                gdqp: { type: Type.NUMBER },
+              },
+            },
+            conduct: { type: Type.STRING, description: 'Hạnh kiểm/Rèn luyện nếu thấy trong ảnh (Tốt, Khá, Đạt, Chưa đạt)' },
+            note: { type: Type.STRING },
+          },
+          required: ['name', 'scores'],
+        },
+      },
+    },
+    required: ['extractedRows'],
+  };
+
+  const aiResult = await generateGeminiDetailed(
+    { parts: [...imageParts, { text: prompt }] },
+    undefined,
+    {
+      responseMimeType: 'application/json',
+      responseSchema: comprehensiveGradeSchema,
     }
-  ],
-  "overallAnalysis": "Đánh giá mặt bằng chung điểm số từ bảng điểm vừa quét",
-  "guidancePlan": "Đề xuất kế hoạch bồi dưỡng cho học sinh lớp 12A7"
-}
+  );
 
-Quy tắc bắt buộc:
-1. Điểm số phải là số thực từ 0 đến 10 (nếu ảnh ghi dấu phẩy như "8,5" thì phải đổi thành 8.5). Nếu một môn có nhiều cột điểm (Thường xuyên, Giữa kỳ, Cuối kỳ, ĐTB), ưu tiên lấy cột ĐTB môn hoặc tính trung bình cộng hợp lý.
-2. Chỉ đưa vào đối tượng "scores" những môn thực sự có điểm trong ảnh.
-3. Đối chiếu STT hoặc Họ tên trong ảnh với danh sách học sinh chuẩn của lớp 12A7 để điền đúng "stt", "code" và "name".`;
-
-      const text = await generateGeminiText({
-        parts: [...imageParts, { text: prompt }],
-      });
-
-      if (text) {
-        const cleanedText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0]);
-            const rawRows = Array.isArray(parsed.extractedRows)
-              ? parsed.extractedRows
-              : Array.isArray(parsed.rows)
-              ? parsed.rows
-              : Array.isArray(parsed.students)
-              ? parsed.students
-              : [];
-            const normalizedRows = normalizeExtractedGradeRows(rawRows, targetSubject);
-            if (normalizedRows.length > 0) {
-              return res.json({
-                success: true,
-                data: {
-                  ...parsed,
-                  title: parsed.title || 'Bảng điểm lớp 12A7 (Trích xuất từ hình ảnh AI)',
-                  detectedSubject: parsed.detectedSubject || targetSubject || 'all',
-                  extractedRows: normalizedRows,
-                },
-                rawText: text,
-              });
-            }
-          } catch (parseErr) {
-            console.warn('JSON parse failed:', parseErr);
-          }
-        }
-      }
-    } catch (err: any) {
-      console.warn('Gemini OCR Comprehensive failed:', err?.message);
-    }
+  if (!aiResult.text) {
+    return res.status(502).json({
+      success: false,
+      error:
+        aiResult.error ||
+        'Không thể kết nối Gemini AI để đọc bảng điểm. Vui lòng kiểm tra Settings > Secrets hoặc thử lại.',
+    });
   }
 
-  // Fallback comprehensive OCR: generate rows for the full student roster passed from client (or default roster)
-  const singleSubKey =
-    targetSubject && targetSubject !== 'all' && VALID_SUBJECT_KEYS.has(targetSubject)
-      ? targetSubject
-      : null;
+  try {
+    const cleanedText = aiResult.text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleanedText);
+    const rawRows = Array.isArray(parsed?.extractedRows)
+      ? parsed.extractedRows
+      : Array.isArray(parsed?.rows)
+      ? parsed.rows
+      : Array.isArray(parsed?.students)
+      ? parsed.students
+      : [];
 
-  const baseRoster =
-    Array.isArray(studentRoster) && studentRoster.length > 0
-      ? studentRoster
-      : Array.isArray(studentNames) && studentNames.length > 0
-      ? studentNames.map((n: string, i: number) => ({
-          stt: i + 1,
-          code: `12A7-${String(i + 1).padStart(2, '0')}`,
-          name: String(n).replace(/^\d+\.\s*/, '').trim(),
-        }))
-      : [
-          { stt: 1, code: '12A7-01', name: 'Vũ Trịnh Bảo An' },
-          { stt: 2, code: '12A7-02', name: 'Đỗ Thái An' },
-          { stt: 3, code: '12A7-03', name: 'Trần Ngọc Mai Anh' },
-          { stt: 21, code: '12A7-21', name: 'Trần Anh Khoa' },
-          { stt: 27, code: '12A7-27', name: 'Huỳnh Thị Ái Ly' },
-        ];
+    const normalizedRows = normalizeExtractedGradeRows(
+      rawRows,
+      targetSubject,
+      parsed?.detectedSubject
+    );
 
-  const fallbackRows = baseRoster.map((stu: any, idx: number) => {
-    const sttNum = typeof stu.stt === 'number' ? stu.stt : idx + 1;
-    const seed = ((sttNum * 7) % 25) / 10; // 0.0 .. 2.4
-    const baseScore = Number(Math.min(9.8, Math.max(6.8, 7.4 + seed)).toFixed(1));
-    const existingScores = stu.scores && typeof stu.scores === 'object' ? stu.scores : null;
+    if (normalizedRows.length === 0) {
+      return res.status(422).json({
+        success: false,
+        error:
+          'AI đã quét ảnh nhưng không tìm thấy dòng điểm số hợp lệ nào. Hãy thử chụp gần bảng điểm hơn, đủ sáng, không bị mờ hoặc chọn đúng môn học cần quét.',
+      });
+    }
 
-    const buildSubScore = (key: string, offset: number) => {
-      if (existingScores && typeof existingScores[key] === 'number' && existingScores[key] > 0) {
-        return existingScores[key];
-      }
-      if (existingScores && typeof existingScores[key]?.avg === 'number' && existingScores[key].avg > 0) {
-        return existingScores[key].avg;
-      }
-      return Number(Math.min(10, Math.max(6.5, baseScore + offset)).toFixed(1));
-    };
+    const totalScoreCells = normalizedRows.reduce(
+      (sum, row) => sum + Object.keys(row.scores).length,
+      0
+    );
 
-    return {
-      stt: sttNum,
-      code: stu.code || `12A7-${String(sttNum).padStart(2, '0')}`,
-      name: stu.name,
-      scores: singleSubKey
-        ? { [singleSubKey]: buildSubScore(singleSubKey, 0) }
-        : {
-            toan: buildSubScore('toan', 0.2),
-            van: buildSubScore('van', -0.2),
-            anh: buildSubScore('anh', 0.3),
-            ly: buildSubScore('ly', 0.0),
-            hoa: buildSubScore('hoa', 0.4),
-            su: buildSubScore('su', -0.1),
-            gdktpl: buildSubScore('gdktpl', 0.2),
-            tin: buildSubScore('tin', 0.5),
-            gddp: buildSubScore('gddp', 0.4),
-            gdqp: buildSubScore('gdqp', 0.5),
-          },
-      conduct: stu.conduct || 'Tốt',
-    };
-  });
-
-  res.json({
-    success: true,
-    data: {
-      title: singleSubKey
-        ? `Bảng Điểm Môn ${singleSubKey.toUpperCase()} Lớp 12A7 (Trích xuất từ ảnh)`
-        : 'Bảng Điểm Tổng Hợp 10 Môn Lớp 12A7 (Trích xuất từ ảnh)',
-      detectedSubject: targetSubject || 'all',
-      extractedRows: fallbackRows,
-      overallAnalysis: `Đã nhận diện và khớp tự động danh sách ${fallbackRows.length} học sinh lớp 12A7 từ hình ảnh tải lên. GVCN có thể kiểm tra và chỉnh sửa trực tiếp từng ô điểm trước khi lưu.`,
-      guidancePlan:
-        'Tiếp tục duy trì mô hình "Đôi bạn cùng tiến" hỗ trợ các học sinh có môn tự chọn dưới 7.5 để bứt phá kỳ thi TN THPT 2027.',
-    },
-  });
+    return res.json({
+      success: true,
+      modelUsed: aiResult.modelUsed,
+      totalScoreCells,
+      data: {
+        title: parsed.title || 'Bảng điểm lớp 12A7 (Trích xuất từ ảnh AI)',
+        detectedSubject: parsed.detectedSubject || targetSubject || 'all',
+        extractedRows: normalizedRows,
+        overallAnalysis:
+          parsed.overallAnalysis ||
+          `AI đã trích xuất ${normalizedRows.length} dòng học sinh với ${totalScoreCells} ô điểm từ ${imageParts.length} ảnh bảng điểm.`,
+        guidancePlan: parsed.guidancePlan || '',
+      },
+    });
+  } catch (parseErr: any) {
+    console.warn('Gemini OCR Comprehensive JSON parse failed:', parseErr?.message);
+    return res.status(422).json({
+      success: false,
+      error:
+        'AI trả về dữ liệu chưa đúng cấu trúc bảng điểm. Vui lòng thử lại hoặc tải ảnh rõ nét hơn.',
+    });
+  }
 });
 
 // Helpers for AI Timetable OCR normalization (12A7 THPT Vĩnh Lộc B)
@@ -829,31 +881,6 @@ const DEFAULT_12A7_TIMETABLE = [
     ],
   },
 ];
-
-const parseImageDataUrlPart = (
-  img: any,
-  fallbackMime = 'image/jpeg'
-): { inlineData: { mimeType: string; data: string } } | null => {
-  const rawData = typeof img === 'string' ? img : img?.base64 || img?.imageBase64 || '';
-  if (!rawData || typeof rawData !== 'string') return null;
-  const trimmed = rawData.trim();
-  const dataUrlMatch = trimmed.match(/^data:([^;]+);base64,(.+)$/);
-  if (dataUrlMatch) {
-    const detectedMime = dataUrlMatch[1]?.startsWith('image/') ? dataUrlMatch[1] : fallbackMime;
-    return {
-      inlineData: {
-        mimeType: detectedMime,
-        data: dataUrlMatch[2],
-      },
-    };
-  }
-  return {
-    inlineData: {
-      mimeType: (typeof img === 'object' && img?.mimeType) || fallbackMime,
-      data: trimmed,
-    },
-  };
-};
 
 const normalizeExtractedTimetable = (rawTimetable: any[]): typeof DEFAULT_12A7_TIMETABLE => {
   const dayOrder = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu'];

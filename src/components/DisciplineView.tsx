@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   useApp,
   getWeekRangeByIndex,
   getWeekIndexFromDate,
+  getWeekRangeFromDate,
+  isDateInWeek,
   getAllSchoolWeeks,
 } from '../context/AppContext';
 import { StudentDisciplineEntry, BonusPointEntry } from '../types';
@@ -58,8 +60,6 @@ export const DisciplineView: React.FC = () => {
     deleteBonusPointEntry,
     setEmulationScoreAdjustment,
     removeEmulationScoreAdjustment,
-    keepEmulationAcrossWeeks,
-    setKeepEmulationAcrossWeeks,
     resetWeeklyEmulationScores,
     getStudentWeeklyScore,
     getWeeklyEmulationSummary,
@@ -72,6 +72,13 @@ export const DisciplineView: React.FC = () => {
 
   const currentWeekRange = getWeekRangeByIndex(currentWeek);
   const allSchoolWeeks = useMemo(() => getAllSchoolWeeks(35), []);
+
+  const getDefaultDateForWeek = (targetWeek: number) => {
+    if (selectedAttendanceDate && isDateInWeek(selectedAttendanceDate, targetWeek)) {
+      return selectedAttendanceDate;
+    }
+    return getWeekRangeByIndex(targetWeek).mondayIso;
+  };
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,7 +96,7 @@ export const DisciplineView: React.FC = () => {
   const [selectedRuleNumber, setSelectedRuleNumber] = useState<number>(1);
   const [customPointsDeducted, setCustomPointsDeducted] = useState<number>(5);
   const [violationDate, setViolationDate] = useState<string>(
-    selectedAttendanceDate || currentWeekRange.mondayIso
+    getDefaultDateForWeek(currentWeek)
   );
   const [violationNote, setViolationNote] = useState<string>('');
   const [recordedByTitle, setRecordedByTitle] = useState<string>(() =>
@@ -107,8 +114,42 @@ export const DisciplineView: React.FC = () => {
   const [bonusReason, setBonusReason] = useState<string>(BONUS_PRESETS[0].reason);
   const [bonusPoints, setBonusPoints] = useState<number>(BONUS_PRESETS[0].points);
   const [bonusDate, setBonusDate] = useState<string>(
-    selectedAttendanceDate || currentWeekRange.mondayIso
+    getDefaultDateForWeek(currentWeek)
   );
+
+  // Sync default dates whenever user switches week so entries always land cleanly in the selected week
+  useEffect(() => {
+    const defaultDate = isDateInWeek(selectedAttendanceDate, currentWeek)
+      ? selectedAttendanceDate
+      : getWeekRangeByIndex(currentWeek).mondayIso;
+    if (!showAddViolationModal) {
+      setViolationDate(defaultDate);
+    }
+    if (!showAddBonusModal) {
+      setBonusDate(defaultDate);
+    }
+  }, [currentWeek, selectedAttendanceDate, showAddViolationModal, showAddBonusModal]);
+
+  const handleOpenAddViolationModal = (studentId?: string, targetWeek = currentWeek) => {
+    if (studentId) setSelectedStudentId(studentId);
+    const defaultDate = isDateInWeek(selectedAttendanceDate, targetWeek)
+      ? selectedAttendanceDate
+      : getWeekRangeByIndex(targetWeek).mondayIso;
+    setViolationDate(defaultDate);
+    setShowAddViolationModal(true);
+  };
+
+  const handleOpenAddBonusModal = (studentId?: string, targetWeek = currentWeek) => {
+    if (studentId) {
+      setBonusTargetType('student');
+      setBonusStudentId(studentId);
+    }
+    const defaultDate = isDateInWeek(selectedAttendanceDate, targetWeek)
+      ? selectedAttendanceDate
+      : getWeekRangeByIndex(targetWeek).mondayIso;
+    setBonusDate(defaultDate);
+    setShowAddBonusModal(true);
+  };
 
   // Form states for Sửa điểm thi đua của GVCN
   const [showEditScoreModal, setShowEditScoreModal] = useState(false);
@@ -255,11 +296,12 @@ export const DisciplineView: React.FC = () => {
     const text = rule ? rule.title : 'Vi phạm nội quy trường học';
     const level = rule ? rule.level : 'Mức độ III';
 
+    const violationWeek = violationDate ? getWeekIndexFromDate(violationDate) : currentWeek;
     addDisciplineEntry({
       studentId: student.id,
       studentName: student.name,
       group: student.group,
-      weekNumber: currentWeek,
+      weekNumber: violationWeek,
       date: violationDate,
       ruleNumber: selectedRuleNumber,
       violationText: text,
@@ -281,6 +323,7 @@ export const DisciplineView: React.FC = () => {
         : currentStudent?.name
         ? `${currentStudent.name} (${currentStudent.classRole || 'Ban cán sự'})`
         : 'Ban cán sự 12A7';
+    const targetBonusWeek = bonusDate ? getWeekIndexFromDate(bonusDate) : currentWeek;
     if (bonusTargetType === 'student') {
       const student = students.find((s) => s.id === bonusStudentId);
       if (!student) return;
@@ -288,7 +331,7 @@ export const DisciplineView: React.FC = () => {
         studentId: student.id,
         studentName: student.name,
         group: student.group,
-        weekNumber: currentWeek,
+        weekNumber: targetBonusWeek,
         date: bonusDate,
         reason: bonusReason,
         pointsAdded: bonusPoints,
@@ -297,7 +340,7 @@ export const DisciplineView: React.FC = () => {
     } else {
       addBonusPointEntry({
         group: bonusGroupNumber,
-        weekNumber: currentWeek,
+        weekNumber: targetBonusWeek,
         date: bonusDate,
         reason: `Cộng điểm cả Tổ ${bonusGroupNumber}: ${bonusReason}`,
         pointsAdded: bonusPoints,
@@ -423,7 +466,7 @@ export const DisciplineView: React.FC = () => {
               Quản Lý Điểm Thi Đua & Nề Nếp Lớp {appConfig.className}
             </h1>
             <p className="text-xs sm:text-sm text-blue-200 mt-1 max-w-2xl leading-relaxed">
-              Mỗi học sinh mỗi tuần khởi đầu với <strong>100 điểm trọn vẹn</strong>. Điểm trừ được áp dụng nghiêm ngặt theo <em>Thang điểm thi đua học sinh (Nội quy - Chuyên cần - Phong trào - Sổ đầu bài)</em> do Trường THPT Vĩnh Lộc B ban hành ngày 05/09/2026.
+              Đầu mỗi tuần, mỗi học sinh luôn bắt đầu với <strong>100 điểm trọn vẹn</strong>, <strong>không cộng dồn điểm thi đua giữa các tuần</strong> (tuần nào rõ tuần đó). Điểm trừ được áp dụng nghiêm ngặt theo <em>Thang điểm thi đua học sinh (Nội quy - Chuyên cần - Phong trào - Sổ đầu bài)</em> do Trường THPT Vĩnh Lộc B ban hành ngày 05/09/2026.
             </p>
           </div>
 
@@ -481,48 +524,30 @@ export const DisciplineView: React.FC = () => {
           </div>
         </div>
 
-        {/* Emulation Reset Mode & Manual Reset Bar */}
+        {/* Strict Per-Week Emulation Policy & Manual Reset Bar */}
         <div className="relative z-10 mt-4 pt-3.5 border-t border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-bold">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-              {keepEmulationAcrossWeeks
-                ? 'Chế độ: Không tự reset điểm thi đua khi bắt đầu tuần mới (Giữ nguyên & cộng dồn điểm)'
-                : 'Chế độ: Tự động reset về 100 điểm khi bắt đầu tuần mới'}
+              Quy tắc chuẩn: Đầu mỗi tuần bắt đầu 100 điểm • Không cộng dồn giữa các tuần (Tuần nào rõ tuần đó)
             </span>
           </div>
 
           {role === 'teacher' && isTeacherAuthenticated && (
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  const nextVal = !keepEmulationAcrossWeeks;
-                  setKeepEmulationAcrossWeeks(nextVal);
-                  setEmulationToastMsg(
-                    nextVal
-                      ? 'Đã bật chế độ: Không tự reset điểm thi đua khi qua tuần mới (Giữ nguyên điểm qua các tuần).'
-                      : 'Đã chuyển sang chế độ: Tự động reset 100đ theo từng tuần.'
-                  );
-                  setTimeout(() => setEmulationToastMsg(null), 3500);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-bold transition-all flex items-center gap-1.5"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-300" />
-                {keepEmulationAcrossWeeks ? 'Đổi sang: Reset theo tuần' : 'Đổi sang: Không tự reset tuần mới'}
-              </button>
-
               {!confirmResetEmulation ? (
                 <button
                   type="button"
                   onClick={() => setConfirmResetEmulation(true)}
                   className="px-3 py-1.5 rounded-xl bg-rose-500/90 hover:bg-rose-600 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Reset Điểm Thi Đua Về 100đ
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset Tuần Này Về 100đ
                 </button>
               ) : (
                 <div className="flex items-center gap-1.5 bg-rose-950/90 px-2.5 py-1 rounded-xl border border-rose-400/50">
-                  <span className="text-[11px] font-bold text-rose-200">Reset cả lớp về 100đ?</span>
+                  <span className="text-[11px] font-bold text-rose-200">
+                    Reset tuần ({currentWeekRange.shortRangeLabel}) về 100đ?
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
@@ -898,14 +923,14 @@ export const DisciplineView: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setShowAddBonusModal(true)}
+              onClick={() => handleOpenAddBonusModal(undefined, currentWeek)}
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
             >
               <Sparkles className="w-4 h-4" /> Cộng Điểm Thi Đua
             </button>
 
             <button
-              onClick={() => setShowAddViolationModal(true)}
+              onClick={() => handleOpenAddViolationModal(undefined, currentWeek)}
               className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
             >
               <Plus className="w-4 h-4" /> Ghi Nhận Lỗi Vi Phạm
@@ -923,7 +948,7 @@ export const DisciplineView: React.FC = () => {
               Bảng Tổng Hợp Điểm Thi Đua ({currentWeekRange.rangeLabel})
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Hiển thị {sortedStudents.length}/{students.length} học sinh 12A7 • Khởi điểm 100đ
+              Hiển thị {sortedStudents.length}/{students.length} học sinh 12A7 • Đầu tuần khởi điểm 100đ (Chỉ tính riêng trong tuần {currentWeekRange.shortRangeLabel}, không cộng dồn tuần khác)
             </p>
           </div>
         </div>
@@ -1288,6 +1313,11 @@ export const DisciplineView: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-slate-300"
                     required
                   />
+                  {violationDate && (
+                    <div className="text-[10px] text-indigo-700 font-semibold mt-1">
+                      Tính vào tuần: {getWeekRangeFromDate(violationDate).rangeLabel}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1474,6 +1504,11 @@ export const DisciplineView: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-slate-300"
                     required
                   />
+                  {bonusDate && (
+                    <div className="text-[10px] text-emerald-700 font-semibold mt-1">
+                      Tính vào tuần: {getWeekRangeFromDate(bonusDate).rangeLabel}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2080,21 +2115,14 @@ export const DisciplineView: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedStudentId(editScoreStudentId);
-                            setShowAddViolationModal(true);
-                          }}
+                          onClick={() => handleOpenAddViolationModal(editScoreStudentId, editScoreWeek)}
                           className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2 py-1 rounded-lg"
                         >
                           + Thêm lỗi vi phạm
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setBonusTargetType('student');
-                            setBonusStudentId(editScoreStudentId);
-                            setShowAddBonusModal(true);
-                          }}
+                          onClick={() => handleOpenAddBonusModal(editScoreStudentId, editScoreWeek)}
                           className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg"
                         >
                           + Thêm điểm cộng

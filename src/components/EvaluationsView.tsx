@@ -150,7 +150,7 @@ export const EvaluationsView: React.FC = () => {
               onClick={() => setShowGradeImportModal(true)}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-2 active:scale-95"
             >
-              <FileSpreadsheet className="w-4 h-4" /> Nhập bảng điểm tổng hợp 10 môn (Excel / Ảnh AI)
+              <FileSpreadsheet className="w-4 h-4" /> Nhập bảng điểm tổng hợp 10 môn (File Excel)
             </button>
             <button
               onClick={() => {

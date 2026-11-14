@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, getWeekRangeByIndex } from '../context/AppContext';
 import { StudentProfileModal } from './StudentProfileModal';
 import {
   User,
@@ -331,7 +331,9 @@ export const StudentProfileView: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[11px] text-slate-500 block">Điểm thi đua Tuần {currentWeek}:</span>
+                <span className="text-[11px] text-slate-500 block">
+                  Điểm thi đua ({getWeekRangeByIndex(currentWeek).shortRangeLabel}):
+                </span>
                 <span className="text-sm font-black text-blue-600">
                   {getStudentWeeklyScore(currentStudent.id, currentWeek).total}đ
                   {getStudentWeeklyScore(currentStudent.id, currentWeek).isAdjustedByTeacher && (
