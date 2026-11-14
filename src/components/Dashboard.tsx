@@ -335,27 +335,62 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
           className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Chuyên cần hôm nay</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              {role === 'teacher'
+                ? 'Chuyên cần hôm nay'
+                : role === 'student'
+                ? 'Chuyên cần của em'
+                : 'Chuyên cần của con'}
+            </span>
             <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform">
               <CalendarCheck className="w-5 h-5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">{attendanceRate}%</div>
-          <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
-            <span className="text-emerald-700 font-semibold">{presentCount} có mặt</span>
-            <span>•</span>
-            <span className="text-amber-600 font-semibold">{lateCount} trễ</span>
-            <span>•</span>
-            <span className="text-blue-600 font-semibold">{excusedCount} phép</span>
-            {supplementaryAttendanceList.length > 0 && (
-              <>
+          {role === 'teacher' ? (
+            <>
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">{attendanceRate}%</div>
+              <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                <span className="text-emerald-700 font-semibold">{presentCount} có mặt</span>
                 <span>•</span>
-                <span className="text-amber-700 font-semibold bg-amber-50 px-1 rounded-sm">
-                  {supplementaryAttendanceList.length} bổ sung
-                </span>
-              </>
-            )}
-          </div>
+                <span className="text-amber-600 font-semibold">{lateCount} trễ</span>
+                <span>•</span>
+                <span className="text-blue-600 font-semibold">{excusedCount} phép</span>
+                {supplementaryAttendanceList.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="text-amber-700 font-semibold bg-amber-50 px-1 rounded-sm">
+                      {supplementaryAttendanceList.length} bổ sung
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600">
+                {currentStudent?.attendanceStats?.rate ?? 100}%
+              </div>
+              <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                {(() => {
+                  const myTodayStatus = currentStudent
+                    ? safeRecords[currentStudent.id] || 'present'
+                    : 'present';
+                  if (myTodayStatus === 'present') {
+                    return <span className="text-emerald-700 font-bold">Hôm nay: Có mặt</span>;
+                  }
+                  if (myTodayStatus === 'late') {
+                    return <span className="text-amber-600 font-bold">Hôm nay: Đi trễ (-5đ)</span>;
+                  }
+                  if (myTodayStatus === 'excused') {
+                    return <span className="text-blue-600 font-bold">Hôm nay: Có phép (-5đ)</span>;
+                  }
+                  return <span className="text-red-600 font-bold">Hôm nay: K.Phép (-20đ)</span>;
+                })()}
+                <span>•</span>
+                <span>{currentStudent?.attendanceStats?.present ?? 0} buổi có mặt</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Card 3: Điểm thi đua tuần (100đ gốc) */}

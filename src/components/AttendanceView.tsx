@@ -51,6 +51,7 @@ export const AttendanceView: React.FC = () => {
     students,
     currentStudent,
     currentDateAttendance,
+    allAttendanceDays,
     selectedAttendanceDate,
     setSelectedAttendanceDate,
     updateAttendanceStatus,
@@ -122,11 +123,8 @@ export const AttendanceView: React.FC = () => {
   const allSchoolWeeks = useMemo(() => getAllSchoolWeeks(35), []);
   const weeklySummary = getWeeklyEmulationSummary(currentWeek);
 
-  const canEditAttendance =
-    role === 'teacher' ||
-    (role === 'student' &&
-      currentStudent?.classRole &&
-      currentStudent.classRole !== 'Học sinh');
+  // Only GVCN (teacher) has permission to edit attendance; no student or cadre in the class can edit
+  const canEditAttendance = role === 'teacher' && isTeacherAuthenticated;
 
   const handleDateChange = (rawDate: string) => {
     if (!rawDate) return;
@@ -180,9 +178,9 @@ export const AttendanceView: React.FC = () => {
   const rate =
     totalStudents > 0 ? Math.round(((presentCount + lateCount) / totalStudents) * 100) : 100;
 
-  // Filter students for Daily table
+  // Filter students for Daily table: Students and Parents only view their own attendance
   const filteredStudents = useMemo(() => {
-    if (role === 'parent') {
+    if (role !== 'teacher') {
       return students.filter((s) => s.id === (currentStudent?.id || 'hs-27'));
     }
     return students.filter((s) => {
@@ -196,12 +194,19 @@ export const AttendanceView: React.FC = () => {
     });
   }, [students, role, currentStudent, searchTerm, filterGroup, filterStatus, records]);
 
+  // Personal supplementary list (for Student/Parent) vs Class supplementary list (for Teacher)
+  const visibleSupplementaryBase = useMemo(() => {
+    if (role !== 'teacher') {
+      return supplementaryAttendanceList.filter(
+        (item) => item.studentId === (currentStudent?.id || 'hs-27')
+      );
+    }
+    return supplementaryAttendanceList;
+  }, [supplementaryAttendanceList, role, currentStudent]);
+
   // Filter supplementary records
   const filteredSupplementaryList = useMemo(() => {
-    return supplementaryAttendanceList.filter((item) => {
-      if (role === 'parent') {
-        if (item.studentId !== (currentStudent?.id || 'hs-27')) return false;
-      }
+    return visibleSupplementaryBase.filter((item) => {
       const matchSearch =
         item.studentName.toLowerCase().includes(suppSearchTerm.toLowerCase()) ||
         item.studentCode.toLowerCase().includes(suppSearchTerm.toLowerCase()) ||
@@ -210,16 +215,16 @@ export const AttendanceView: React.FC = () => {
       const matchStatus = suppStatusFilter === 'all' || item.newStatus === suppStatusFilter;
       return matchSearch && matchStatus;
     });
-  }, [supplementaryAttendanceList, role, currentStudent, suppSearchTerm, suppStatusFilter]);
+  }, [visibleSupplementaryBase, suppSearchTerm, suppStatusFilter]);
 
   // Supplementary Stats
-  const suppExcusedCount = supplementaryAttendanceList.filter(
+  const suppExcusedCount = visibleSupplementaryBase.filter(
     (i) => i.newStatus === 'excused'
   ).length;
-  const suppPresentCount = supplementaryAttendanceList.filter(
+  const suppPresentCount = visibleSupplementaryBase.filter(
     (i) => i.newStatus === 'present'
   ).length;
-  const suppLateCount = supplementaryAttendanceList.filter((i) => i.newStatus === 'late').length;
+  const suppLateCount = visibleSupplementaryBase.filter((i) => i.newStatus === 'late').length;
 
   if (role === 'teacher' && !isTeacherAuthenticated) {
     return <AccessGuard requiredRole="teacher" pageTitle="Điểm danh & Chuyên cần 12A7" />;
@@ -545,7 +550,11 @@ export const AttendanceView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-xl font-bold text-slate-900">
-                  Điểm danh & Liên kết Thi đua 12A7
+                  {role === 'teacher'
+                    ? 'Điểm danh & Liên kết Thi đua 12A7'
+                    : role === 'student'
+                    ? `Chuyên cần cá nhân của em: ${currentStudent?.name || ''}`
+                    : `Chuyên cần của con: ${currentStudent?.name || ''}`}
                 </h2>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-bold">
                   {currentWeekRange.rangeLabel}
@@ -563,57 +572,62 @@ export const AttendanceView: React.FC = () => {
           </div>
 
           {/* Action Buttons Toolbar */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
-            {canEditAttendance && (
+          {canEditAttendance ? (
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
               <button
                 onClick={() => handleOpenSupplementaryModal()}
                 className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
               >
                 <PlusCircle className="w-4 h-4 shrink-0" /> Điểm danh bổ sung
               </button>
-            )}
 
-            <button
-              onClick={() => setShowQrModal(true)}
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
-            >
-              <QrCode className="w-4 h-4 shrink-0" /> Quét QR
-            </button>
-
-            {activeTab === 'daily' ? (
               <button
-                onClick={handleExportDailyReport}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                onClick={() => setShowQrModal(true)}
+                className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
               >
-                <Download className="w-4 h-4 text-emerald-600 shrink-0" /> Xuất CSV ngày
+                <QrCode className="w-4 h-4 shrink-0" /> Quét QR
               </button>
-            ) : (
-              <button
-                onClick={handleExportSupplementaryReport}
-                className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Download className="w-4 h-4 text-amber-600 shrink-0" /> Xuất Sổ bổ sung
-              </button>
-            )}
 
-            {canEditAttendance && activeTab === 'daily' && (
-              <>
+              {activeTab === 'daily' ? (
                 <button
-                  onClick={handleMarkAllPresent}
-                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
+                  onClick={handleExportDailyReport}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Check className="w-4 h-4 shrink-0" /> Có mặt tất cả
+                  <Download className="w-4 h-4 text-emerald-600 shrink-0" /> Xuất CSV ngày
                 </button>
+              ) : (
                 <button
-                  onClick={handleResetDailyAttendance}
-                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                  title="Reset điểm danh ngày này về mặc định ngày mới (100% Có mặt)"
+                  onClick={handleExportSupplementaryReport}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Reset ngày mới
+                  <Download className="w-4 h-4 text-amber-600 shrink-0" /> Xuất Sổ bổ sung
                 </button>
-              </>
-            )}
-          </div>
+              )}
+
+              {activeTab === 'daily' && (
+                <>
+                  <button
+                    onClick={handleMarkAllPresent}
+                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4 shrink-0" /> Có mặt tất cả
+                  </button>
+                  <button
+                    onClick={handleResetDailyAttendance}
+                    className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                    title="Reset điểm danh ngày này về mặc định ngày mới (100% Có mặt)"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Reset ngày mới
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold shrink-0">
+              <ShieldAlert className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Chế độ Chỉ xem chuyên cần cá nhân • Học sinh & cả lớp không có quyền chỉnh sửa</span>
+            </div>
+          )}
         </div>
 
         {/* Week Range Selector (Monday to Friday only, NO week numbers) */}
@@ -718,149 +732,271 @@ export const AttendanceView: React.FC = () => {
           )}
         </div>
 
-        {/* Attendance Status Filter Cards (Tap to filter!) */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mt-4">
-          <button
-            type="button"
-            onClick={() => setFilterStatus(filterStatus === 'present' ? 'all' : 'present')}
-            className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
-              filterStatus === 'present'
-                ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                : 'bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100/70'
-            }`}
-          >
-            <div
-              className={`text-[10px] sm:text-[11px] font-bold uppercase ${
-                filterStatus === 'present' ? 'text-emerald-100' : 'text-emerald-700'
+        {/* Attendance Summary Cards: Class-wide for Teacher, Personal Attendance Summary for Student/Parent */}
+        {role === 'teacher' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mt-4">
+            <button
+              type="button"
+              onClick={() => setFilterStatus(filterStatus === 'present' ? 'all' : 'present')}
+              className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
+                filterStatus === 'present'
+                  ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                  : 'bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100/70'
               }`}
             >
-              Có mặt
-            </div>
-            <div
-              className={`text-xl sm:text-2xl font-black mt-0.5 ${
-                filterStatus === 'present' ? 'text-white' : 'text-emerald-800'
-              }`}
-            >
-              {presentCount}
-            </div>
-            <div
-              className={`text-[10px] ${
-                filterStatus === 'present' ? 'text-emerald-100' : 'text-emerald-600'
-              }`}
-            >
-              Không trừ điểm
-            </div>
-          </button>
+              <div
+                className={`text-[10px] sm:text-[11px] font-bold uppercase ${
+                  filterStatus === 'present' ? 'text-emerald-100' : 'text-emerald-700'
+                }`}
+              >
+                Có mặt
+              </div>
+              <div
+                className={`text-xl sm:text-2xl font-black mt-0.5 ${
+                  filterStatus === 'present' ? 'text-white' : 'text-emerald-800'
+                }`}
+              >
+                {presentCount}
+              </div>
+              <div
+                className={`text-[10px] ${
+                  filterStatus === 'present' ? 'text-emerald-100' : 'text-emerald-600'
+                }`}
+              >
+                Không trừ điểm
+              </div>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setFilterStatus(filterStatus === 'late' ? 'all' : 'late')}
-            className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
-              filterStatus === 'late'
-                ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                : 'bg-amber-50/80 border-amber-200 hover:bg-amber-100/70'
-            }`}
-          >
-            <div
-              className={`text-[10px] sm:text-[11px] font-bold uppercase ${
-                filterStatus === 'late' ? 'text-amber-100' : 'text-amber-700'
+            <button
+              type="button"
+              onClick={() => setFilterStatus(filterStatus === 'late' ? 'all' : 'late')}
+              className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
+                filterStatus === 'late'
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : 'bg-amber-50/80 border-amber-200 hover:bg-amber-100/70'
               }`}
             >
-              Đi trễ (Điều 1)
-            </div>
-            <div
-              className={`text-xl sm:text-2xl font-black mt-0.5 ${
-                filterStatus === 'late' ? 'text-white' : 'text-amber-800'
-              }`}
-            >
-              {lateCount}
-            </div>
-            <div
-              className={`text-[10px] font-semibold ${
-                filterStatus === 'late' ? 'text-amber-100' : 'text-amber-700'
-              }`}
-            >
-              Tự động -5đ/lần
-            </div>
-          </button>
+              <div
+                className={`text-[10px] sm:text-[11px] font-bold uppercase ${
+                  filterStatus === 'late' ? 'text-amber-100' : 'text-amber-700'
+                }`}
+              >
+                Đi trễ (Điều 1)
+              </div>
+              <div
+                className={`text-xl sm:text-2xl font-black mt-0.5 ${
+                  filterStatus === 'late' ? 'text-white' : 'text-amber-800'
+                }`}
+              >
+                {lateCount}
+              </div>
+              <div
+                className={`text-[10px] font-semibold ${
+                  filterStatus === 'late' ? 'text-amber-100' : 'text-amber-700'
+                }`}
+              >
+                Tự động -5đ/lần
+              </div>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setFilterStatus(filterStatus === 'excused' ? 'all' : 'excused')}
-            className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
-              filterStatus === 'excused'
-                ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
-                : 'bg-blue-50/80 border-blue-200 hover:bg-blue-100/70'
-            }`}
-          >
-            <div
-              className={`text-[10px] sm:text-[11px] font-bold uppercase ${
-                filterStatus === 'excused' ? 'text-blue-100' : 'text-blue-700'
+            <button
+              type="button"
+              onClick={() => setFilterStatus(filterStatus === 'excused' ? 'all' : 'excused')}
+              className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
+                filterStatus === 'excused'
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
+                  : 'bg-blue-50/80 border-blue-200 hover:bg-blue-100/70'
               }`}
             >
-              Vắng có phép (Đ8)
-            </div>
-            <div
-              className={`text-xl sm:text-2xl font-black mt-0.5 ${
-                filterStatus === 'excused' ? 'text-white' : 'text-blue-800'
-              }`}
-            >
-              {excusedCount}
-            </div>
-            <div
-              className={`text-[10px] font-semibold ${
-                filterStatus === 'excused' ? 'text-blue-100' : 'text-blue-700'
-              }`}
-            >
-              Tự động -5đ/buổi
-            </div>
-          </button>
+              <div
+                className={`text-[10px] sm:text-[11px] font-bold uppercase ${
+                  filterStatus === 'excused' ? 'text-blue-100' : 'text-blue-700'
+                }`}
+              >
+                Vắng có phép (Đ8)
+              </div>
+              <div
+                className={`text-xl sm:text-2xl font-black mt-0.5 ${
+                  filterStatus === 'excused' ? 'text-white' : 'text-blue-800'
+                }`}
+              >
+                {excusedCount}
+              </div>
+              <div
+                className={`text-[10px] font-semibold ${
+                  filterStatus === 'excused' ? 'text-blue-100' : 'text-blue-700'
+                }`}
+              >
+                Tự động -5đ/buổi
+              </div>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setFilterStatus(filterStatus === 'unexcused' ? 'all' : 'unexcused')}
-            className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
-              filterStatus === 'unexcused'
-                ? 'bg-red-600 text-white border-red-700 shadow-sm'
-                : 'bg-red-50/80 border-red-200 hover:bg-red-100/70'
-            }`}
-          >
-            <div
-              className={`text-[10px] sm:text-[11px] font-bold uppercase ${
-                filterStatus === 'unexcused' ? 'text-red-100' : 'text-red-700'
+            <button
+              type="button"
+              onClick={() => setFilterStatus(filterStatus === 'unexcused' ? 'all' : 'unexcused')}
+              className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
+                filterStatus === 'unexcused'
+                  ? 'bg-red-600 text-white border-red-700 shadow-sm'
+                  : 'bg-red-50/80 border-red-200 hover:bg-red-100/70'
               }`}
             >
-              Không phép (Đ9)
-            </div>
-            <div
-              className={`text-xl sm:text-2xl font-black mt-0.5 ${
-                filterStatus === 'unexcused' ? 'text-white' : 'text-red-800'
-              }`}
-            >
-              {unexcusedCount}
-            </div>
-            <div
-              className={`text-[10px] font-semibold ${
-                filterStatus === 'unexcused' ? 'text-red-100' : 'text-red-700'
-              }`}
-            >
-              Tự động -20đ/buổi
-            </div>
-          </button>
+              <div
+                className={`text-[10px] sm:text-[11px] font-bold uppercase ${
+                  filterStatus === 'unexcused' ? 'text-red-100' : 'text-red-700'
+                }`}
+              >
+                Không phép (Đ9)
+              </div>
+              <div
+                className={`text-xl sm:text-2xl font-black mt-0.5 ${
+                  filterStatus === 'unexcused' ? 'text-white' : 'text-red-800'
+                }`}
+              >
+                {unexcusedCount}
+              </div>
+              <div
+                className={`text-[10px] font-semibold ${
+                  filterStatus === 'unexcused' ? 'text-red-100' : 'text-red-700'
+                }`}
+              >
+                Tự động -20đ/buổi
+              </div>
+            </button>
 
-          <div className="p-2.5 sm:p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-center col-span-2 sm:col-span-1">
-            <div className="text-[10px] sm:text-[11px] font-bold text-indigo-700 uppercase">
-              Chuyên cần ngày
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-indigo-800 mt-0.5">{rate}%</div>
-            <div className="text-[10px] text-indigo-600 font-medium">
-              {rate >= 95 ? 'Xuất sắc' : rate >= 90 ? 'Đạt chuẩn' : 'Cần nhắc nhở'}
+            <div className="p-2.5 sm:p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-center col-span-2 sm:col-span-1">
+              <div className="text-[10px] sm:text-[11px] font-bold text-indigo-700 uppercase">
+                Chuyên cần ngày
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-indigo-800 mt-0.5">{rate}%</div>
+              <div className="text-[10px] text-indigo-600 font-medium">
+                {rate >= 95 ? 'Xuất sắc' : rate >= 90 ? 'Đạt chuẩn' : 'Cần nhắc nhở'}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          currentStudent && (
+            <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-blue-50/90 via-indigo-50/60 to-emerald-50/60 border border-blue-200 space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-blue-200/70">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={currentStudent.avatar}
+                    alt={currentStudent.name}
+                    className="w-11 h-11 rounded-full object-cover border-2 border-blue-500 shadow-xs shrink-0"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm sm:text-base font-black text-slate-900">
+                        Hồ Sơ Chuyên Cần Cá Nhân: {currentStudent.name}
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-bold">
+                        {currentStudent.code} • Tổ {currentStudent.group}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Ngày đang chọn ({selectedDayInfo.dayLabel} - {selectedAttendanceDate}):{' '}
+                      <strong className="text-slate-900">
+                        {getStatusLabel(records[currentStudent.id] || 'present')}
+                      </strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border shadow-2xs ${getStatusBadgeClass(
+                      records[currentStudent.id] || 'present'
+                    )}`}
+                  >
+                    {getStatusLabel(records[currentStudent.id] || 'present')}
+                  </span>
+                </div>
+              </div>
 
-        {/* Weekly Summary Banner */}
-        {(selectedDayInfo.dayIndex === 5 || weeklySummary.isAutoSummarized) && (
+              {/* 5-Day Personal Attendance Strip (Thứ 2 -> Thứ 6) */}
+              <div>
+                <div className="text-[11px] font-bold text-slate-700 mb-2">
+                  Lịch sử điểm danh 5 ngày trong tuần ({currentWeekRange.rangeLabel}) của{' '}
+                  {currentStudent.name}:
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {weekSchoolDays.map((d) => {
+                    const dayRecordMap =
+                      d.date === selectedAttendanceDate
+                        ? records
+                        : allAttendanceDays[d.date]?.records || {};
+                    const myDayStatus: AttendanceStatus =
+                      dayRecordMap[currentStudent.id] || 'present';
+                    const isSelected = d.date === selectedAttendanceDate;
+                    return (
+                      <button
+                        type="button"
+                        key={d.date}
+                        onClick={() => handleDateChange(d.date)}
+                        className={`p-2.5 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-blue-500 bg-white border-blue-400 shadow-xs'
+                            : 'bg-white/80 border-slate-200 hover:bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                          <span>{d.dayLabel}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{d.shortDate}</span>
+                        </div>
+                        <div className="mt-1.5">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${getStatusBadgeClass(
+                              myDayStatus
+                            )}`}
+                          >
+                            {getStatusLabel(myDayStatus)}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Personal Cumulative Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                <div className="p-2.5 rounded-xl bg-white border border-emerald-200 text-center">
+                  <div className="text-[10px] font-bold text-emerald-700 uppercase">Có mặt tích lũy</div>
+                  <div className="text-lg font-black text-emerald-800 mt-0.5">
+                    {currentStudent.attendanceStats?.present ?? 0} buổi
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-amber-200 text-center">
+                  <div className="text-[10px] font-bold text-amber-700 uppercase">Đi trễ</div>
+                  <div className="text-lg font-black text-amber-800 mt-0.5">
+                    {currentStudent.attendanceStats?.late ?? 0} lần
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-blue-200 text-center">
+                  <div className="text-[10px] font-bold text-blue-700 uppercase">Vắng có phép</div>
+                  <div className="text-lg font-black text-blue-800 mt-0.5">
+                    {currentStudent.attendanceStats?.excused ?? 0} buổi
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white border border-red-200 text-center">
+                  <div className="text-[10px] font-bold text-red-700 uppercase">Vắng K.Phép</div>
+                  <div className="text-lg font-black text-red-800 mt-0.5">
+                    {currentStudent.attendanceStats?.unexcused ?? 0} buổi
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-indigo-600 text-white text-center col-span-2 sm:col-span-1">
+                  <div className="text-[10px] font-bold text-indigo-100 uppercase">
+                    Tỷ lệ chuyên cần
+                  </div>
+                  <div className="text-lg font-black mt-0.5">
+                    {currentStudent.attendanceStats?.rate ?? 100}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Weekly Summary Banner (Only for Teacher) */}
+        {role === 'teacher' && (selectedDayInfo.dayIndex === 5 || weeklySummary.isAutoSummarized) && (
           <div className="mt-4 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 text-white border border-indigo-500/30 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -885,7 +1021,7 @@ export const AttendanceView: React.FC = () => {
               </p>
             </div>
 
-            {role === 'teacher' && (
+            {canEditAttendance && (
               <button
                 onClick={() => triggerAutoWeeklySummary(currentWeek)}
                 className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-95"
@@ -899,16 +1035,21 @@ export const AttendanceView: React.FC = () => {
         {/* Note from GVCN */}
         <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <span className="text-xs font-bold text-slate-700 shrink-0">
-            Ghi chú ({selectedDayInfo.dayLabel} - {selectedAttendanceDate}):
+            Ghi chú GVCN ({selectedDayInfo.dayLabel} - {selectedAttendanceDate}):
           </span>
           <input
             type="text"
             value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            onBlur={() => saveAttendanceNote(noteText, selectedAttendanceDate)}
-            placeholder="Ghi nhận lý do vắng, sĩ số, nhắc nhở nề nếp trong ngày..."
-            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => canEditAttendance && setNoteText(e.target.value)}
+            onBlur={() => canEditAttendance && saveAttendanceNote(noteText, selectedAttendanceDate)}
+            placeholder={
+              canEditAttendance
+                ? 'Ghi nhận lý do vắng, sĩ số, nhắc nhở nề nếp trong ngày...'
+                : 'Chưa có ghi chú từ GVCN cho ngày này'
+            }
+            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-80"
             disabled={!canEditAttendance}
+            readOnly={!canEditAttendance}
           />
           {canEditAttendance && (
             <button
@@ -942,9 +1083,10 @@ export const AttendanceView: React.FC = () => {
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <FileText className="w-4 h-4" /> Sổ Điểm danh bổ sung
+          <FileText className="w-4 h-4" />{' '}
+          {role === 'teacher' ? 'Sổ Điểm danh bổ sung' : 'Lịch sử Điểm danh bổ sung của em'}
           <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-amber-100 text-amber-800">
-            {supplementaryAttendanceList.length}
+            {visibleSupplementaryBase.length}
           </span>
         </button>
       </div>
@@ -952,49 +1094,51 @@ export const AttendanceView: React.FC = () => {
       {/* TAB 1: DAILY ATTENDANCE & LINKED VIOLATIONS */}
       {activeTab === 'daily' && (
         <div className="space-y-3 sm:space-y-4">
-          {/* Filter and Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto no-scrollbar">
-              <button
-                onClick={() => setFilterGroup('all')}
-                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
-                  filterGroup === 'all' ? 'bg-blue-600 text-white' : 'text-slate-600'
-                }`}
-              >
-                Cả lớp ({students.length})
-              </button>
-              {[1, 2, 3, 4].map((g) => (
+          {/* Filter and Search Bar (Only for Teacher) */}
+          {role === 'teacher' && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto no-scrollbar">
                 <button
-                  key={g}
-                  onClick={() => setFilterGroup(g)}
+                  onClick={() => setFilterGroup('all')}
                   className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
-                    filterGroup === g ? 'bg-blue-600 text-white' : 'text-slate-600'
+                    filterGroup === 'all' ? 'bg-blue-600 text-white' : 'text-slate-600'
                   }`}
                 >
-                  Tổ {g}
+                  Cả lớp ({students.length})
                 </button>
-              ))}
-              {filterStatus !== 'all' && (
-                <button
-                  onClick={() => setFilterStatus('all')}
-                  className="px-2.5 py-1.5 rounded-lg bg-rose-100 text-rose-700 font-bold whitespace-nowrap ml-1"
-                >
-                  ✕ Bỏ lọc trạng thái
-                </button>
-              )}
-            </div>
+                {[1, 2, 3, 4].map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setFilterGroup(g)}
+                    className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
+                      filterGroup === g ? 'bg-blue-600 text-white' : 'text-slate-600'
+                    }`}
+                  >
+                    Tổ {g}
+                  </button>
+                ))}
+                {filterStatus !== 'all' && (
+                  <button
+                    onClick={() => setFilterStatus('all')}
+                    className="px-2.5 py-1.5 rounded-lg bg-rose-100 text-rose-700 font-bold whitespace-nowrap ml-1"
+                  >
+                    ✕ Bỏ lọc trạng thái
+                  </button>
+                )}
+              </div>
 
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Tìm tên hoặc mã học sinh..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Tìm tên hoặc mã học sinh..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* MOBILE CARD VIEW (Optimized for Smartphones) */}
           <div className="md:hidden space-y-2.5">
@@ -1217,7 +1361,7 @@ export const AttendanceView: React.FC = () => {
                     <th className="py-3 px-3">Trạng thái Điểm danh</th>
                     <th className="py-3 px-3">Lỗi vi phạm liên kết ({selectedDayInfo.dayLabel})</th>
                     <th className="py-3 px-3 text-center">Điểm tuần</th>
-                    <th className="py-3 px-3 text-center">Thao tác</th>
+                    {canEditAttendance && <th className="py-3 px-3 text-center">Thao tác</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1373,9 +1517,9 @@ export const AttendanceView: React.FC = () => {
                             {weeklyScoreObj.total}đ
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {canEditAttendance && (
+                        {canEditAttendance && (
+                          <td className="py-2.5 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleOpenViolationLinkModal(stu.id)}
                                 className="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold transition-colors inline-flex items-center gap-1"
@@ -1383,16 +1527,16 @@ export const AttendanceView: React.FC = () => {
                               >
                                 <ShieldAlert className="w-3 h-3" /> Lỗi
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleOpenSupplementaryModal(stu.id)}
-                              className="px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold transition-colors inline-flex items-center gap-1"
-                              title="Ghi nhận điểm danh bổ sung / đơn xin phép"
-                            >
-                              <PlusCircle className="w-3 h-3 text-amber-600" /> Bổ sung
-                            </button>
-                          </div>
-                        </td>
+                              <button
+                                onClick={() => handleOpenSupplementaryModal(stu.id)}
+                                className="px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold transition-colors inline-flex items-center gap-1"
+                                title="Ghi nhận điểm danh bổ sung / đơn xin phép"
+                              >
+                                <PlusCircle className="w-3 h-3 text-amber-600" /> Bổ sung
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -1410,7 +1554,7 @@ export const AttendanceView: React.FC = () => {
             <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
               <div className="text-xs font-bold text-slate-500">Tổng số lượt bổ sung</div>
               <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                {supplementaryAttendanceList.length}
+                {visibleSupplementaryBase.length}
               </div>
               <div className="text-[11px] text-slate-400 mt-0.5">Tự động đồng bộ thi đua</div>
             </div>
@@ -1436,63 +1580,67 @@ export const AttendanceView: React.FC = () => {
           </div>
 
           {/* Filter and Search Bar for Supplementary History */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto no-scrollbar">
-              <button
-                onClick={() => setSuppStatusFilter('all')}
-                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
-                  suppStatusFilter === 'all' ? 'bg-amber-500 text-white' : 'text-slate-600'
-                }`}
-              >
-                Tất cả ({supplementaryAttendanceList.length})
-              </button>
-              <button
-                onClick={() => setSuppStatusFilter('excused')}
-                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
-                  suppStatusFilter === 'excused' ? 'bg-blue-600 text-white' : 'text-slate-600'
-                }`}
-              >
-                Có phép ({suppExcusedCount})
-              </button>
-              <button
-                onClick={() => setSuppStatusFilter('late')}
-                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
-                  suppStatusFilter === 'late' ? 'bg-amber-500 text-white' : 'text-slate-600'
-                }`}
-              >
-                Đi trễ ({suppLateCount})
-              </button>
-              <button
-                onClick={() => setSuppStatusFilter('present')}
-                className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
-                  suppStatusFilter === 'present' ? 'bg-emerald-600 text-white' : 'text-slate-600'
-                }`}
-              >
-                Có mặt ({suppPresentCount})
-              </button>
-            </div>
+          {role === 'teacher' && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto no-scrollbar">
+                <button
+                  onClick={() => setSuppStatusFilter('all')}
+                  className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
+                    suppStatusFilter === 'all' ? 'bg-amber-500 text-white' : 'text-slate-600'
+                  }`}
+                >
+                  Tất cả ({visibleSupplementaryBase.length})
+                </button>
+                <button
+                  onClick={() => setSuppStatusFilter('excused')}
+                  className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
+                    suppStatusFilter === 'excused' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                  }`}
+                >
+                  Có phép ({suppExcusedCount})
+                </button>
+                <button
+                  onClick={() => setSuppStatusFilter('late')}
+                  className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
+                    suppStatusFilter === 'late' ? 'bg-amber-500 text-white' : 'text-slate-600'
+                  }`}
+                >
+                  Đi trễ ({suppLateCount})
+                </button>
+                <button
+                  onClick={() => setSuppStatusFilter('present')}
+                  className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
+                    suppStatusFilter === 'present' ? 'bg-emerald-600 text-white' : 'text-slate-600'
+                  }`}
+                >
+                  Có mặt ({suppPresentCount})
+                </button>
+              </div>
 
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Tìm theo tên học sinh, lý do, ngày..."
-                value={suppSearchTerm}
-                onChange={(e) => setSuppSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
-              />
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên học sinh, lý do, ngày..."
+                  value={suppSearchTerm}
+                  onChange={(e) => setSuppSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             {filteredSupplementaryList.length === 0 ? (
               <div className="text-center py-12 px-4">
                 <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                 <h4 className="text-sm font-bold text-slate-700">
-                  Chưa có bản ghi điểm danh bổ sung nào phù hợp
+                  Chưa có bản ghi điểm danh bổ sung nào
                 </h4>
                 <p className="text-xs text-slate-400 mt-1">
-                  Nhấn vào nút "Điểm danh bổ sung" để thêm đơn xin phép hoặc đính chính chuyên cần.
+                  {canEditAttendance
+                    ? 'Nhấn vào nút "Điểm danh bổ sung" để thêm đơn xin phép hoặc đính chính chuyên cần.'
+                    : 'Mọi cập nhật bổ sung chuyên cần sẽ do GVCN xác nhận và đồng bộ tại đây.'}
                 </p>
               </div>
             ) : (
@@ -1505,7 +1653,7 @@ export const AttendanceView: React.FC = () => {
                       <th className="py-3 px-4">Thay đổi trạng thái</th>
                       <th className="py-3 px-4">Lý do & Ghi chú bổ sung</th>
                       <th className="py-3 px-4">Người ghi nhận</th>
-                      {role === 'teacher' && <th className="py-3 px-4 text-center w-16">Xóa</th>}
+                      {canEditAttendance && <th className="py-3 px-4 text-center w-16">Xóa</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1566,7 +1714,7 @@ export const AttendanceView: React.FC = () => {
                               {item.createdAt}
                             </div>
                           </td>
-                          {role === 'teacher' && (
+                          {canEditAttendance && (
                             <td className="py-3 px-4 text-center">
                               <button
                                 onClick={() => deleteSupplementaryAttendance(item.id)}
@@ -1589,7 +1737,7 @@ export const AttendanceView: React.FC = () => {
       )}
 
       {/* MODAL 1: LIÊN KẾT ĐIỂM DANH & LỖI VI PHẠM NỘI QUY */}
-      {violationModalStudent && (
+      {canEditAttendance && violationModalStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative my-8 border border-slate-100">
             <button
@@ -1711,7 +1859,7 @@ export const AttendanceView: React.FC = () => {
       )}
 
       {/* MODAL 2: GHI NHẬN ĐIỂM DANH BỔ SUNG */}
-      {showSupplementaryModal && (
+      {canEditAttendance && showSupplementaryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative my-8 border border-slate-100">
             <button
@@ -1882,7 +2030,7 @@ export const AttendanceView: React.FC = () => {
       )}
 
       {/* QR Code Attendance Modal */}
-      {showQrModal && (
+      {canEditAttendance && showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
             <button

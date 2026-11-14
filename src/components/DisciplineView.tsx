@@ -492,7 +492,7 @@ export const DisciplineView: React.FC = () => {
             </span>
           </div>
 
-          {(role === 'teacher' || (role === 'student' && currentStudent?.classRole && currentStudent.classRole !== 'Học sinh')) && (
+          {role === 'teacher' && isTeacherAuthenticated && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"

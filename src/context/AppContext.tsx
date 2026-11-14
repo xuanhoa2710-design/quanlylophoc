@@ -1062,6 +1062,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       skipViolationSync?: boolean;
     }
   ) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     const rawDate = targetDate || selectedAttendanceDate || todayStr;
     const norm = normalizeToSchoolDay(rawDate);
     const dateToUse = norm.date;
@@ -1109,6 +1110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markAllPresent = (targetDate?: string) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     const rawDate = targetDate || selectedAttendanceDate || todayStr;
     const norm = normalizeToSchoolDay(rawDate);
     const dateToUse = norm.date;
@@ -1142,6 +1144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetDateAttendance = (targetDate?: string) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     const rawDate = targetDate || selectedAttendanceDate || todayStr;
     const norm = normalizeToSchoolDay(rawDate);
     const dateToUse = norm.date;
@@ -1164,6 +1167,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const saveAttendanceNote = (note: string, targetDate?: string) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     const dateToUse = targetDate || selectedAttendanceDate || todayStr;
     setAllAttendanceDays((prev) => {
       const targetDay = prev[dateToUse] || { date: dateToUse, records: {}, note: '' };
@@ -1175,6 +1179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addSupplementaryAttendance = (entryData: Omit<SupplementaryAttendanceEntry, 'id' | 'createdAt'>) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     const normDate = normalizeToSchoolDay(entryData.date).date;
     const newEntry: SupplementaryAttendanceEntry = {
       ...entryData,
@@ -1218,10 +1223,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteSupplementaryAttendance = (id: string) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     setSupplementaryAttendanceList((prev) => prev.filter((item) => item.id !== id));
   };
 
   const saveDateAttendance = (date: string, attendance: DailyAttendance) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) return;
     setAllAttendanceDays((prev) => ({
       ...prev,
       [date]: attendance,
@@ -1229,6 +1236,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const scanQRAttendance = (codeOrId: string) => {
+    if (role !== 'teacher' || !isTeacherAuthenticated) {
+      return { success: false, message: 'Chỉ Giáo viên chủ nhiệm mới có quyền điểm danh!' };
+    }
     const trimmed = codeOrId.trim().toUpperCase();
     const stu = students.find((s) => s.code.toUpperCase() === trimmed || s.id.toUpperCase() === trimmed || s.name.toUpperCase().includes(trimmed));
     if (!stu) {
