@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { buildComprehensiveTutorAnswer } from './src/utils/tutorKnowledgeBase';
 
 dotenv.config();
@@ -36,29 +36,60 @@ function getAiClient(): GoogleGenAI | null {
   return null;
 }
 
-async function generateGeminiText(
-  contents: any,
-  systemInstruction?: string
-): Promise<string | null> {
-  const client = getAiClient();
-  if (!client) return null;
+interface GeminiGenerateResult {
+  text: string | null;
+  error?: string;
+  modelUsed?: string;
+}
 
-  const modelsToTry = ['gemini-3.8-flash', 'gemini-flash-latest'];
+async function generateGeminiDetailed(
+  contents: any,
+  systemInstruction?: string,
+  extraConfig?: Record<string, any>
+): Promise<GeminiGenerateResult> {
+  const client = getAiClient();
+  if (!client) {
+    return {
+      text: null,
+      error: 'Chưa cấu hình GEMINI_API_KEY trên máy chủ. Vui lòng kiểm tra Settings > Secrets.',
+    };
+  }
+
+  const modelsToTry = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
+  let lastErrorMsg = 'Không nhận được phản hồi từ Gemini AI.';
+
   for (const modelName of modelsToTry) {
     try {
+      const config: Record<string, any> = {
+        ...(extraConfig || {}),
+      };
+      if (systemInstruction) {
+        config.systemInstruction = systemInstruction;
+      }
       const response = await client.models.generateContent({
         model: modelName,
         contents,
-        config: systemInstruction ? { systemInstruction } : undefined,
+        config: Object.keys(config).length > 0 ? config : undefined,
       });
       if (response.text && response.text.trim().length > 0) {
-        return response.text;
+        return { text: response.text, modelUsed: modelName };
       }
+      lastErrorMsg = `Mô hình ${modelName} trả về nội dung trống.`;
     } catch (err: any) {
-      console.warn(`Gemini call with ${modelName} failed:`, err?.message || err);
+      lastErrorMsg = err?.message || String(err);
+      console.warn(`Gemini call with ${modelName} failed:`, lastErrorMsg);
     }
   }
-  return null;
+  return { text: null, error: lastErrorMsg };
+}
+
+async function generateGeminiText(
+  contents: any,
+  systemInstruction?: string,
+  extraConfig?: Record<string, any>
+): Promise<string | null> {
+  const res = await generateGeminiDetailed(contents, systemInstruction, extraConfig);
+  return res.text;
 }
 
 // 1. AI Student Evaluation
@@ -675,18 +706,39 @@ const OFFICIAL_12A7_AFTERNOON_TIMES = [
 
 const infer12A7TeacherBySubject = (subjectRaw: string): string => {
   const s = (subjectRaw || '').toLowerCase();
-  if (s.includes('hóa') || s.includes('chào cờ') || s.includes('sinh hoạt') || s.includes('shl') || s.includes('hđtn') || s.includes('trải nghiệm')) {
-    return 'Thầy Trương Xuân Hòa';
+  if (s.includes('hóa') || s.includes('hoa hoc')) return 'Thầy Trương Xuân Hòa';
+  if (
+    s.includes('chào cờ') ||
+    s.includes('shdc') ||
+    s.includes('sinh hoạt') ||
+    s.includes('shl') ||
+    s.includes('hđtn') ||
+    s.includes('tnhn') ||
+    s.includes('trải nghiệm')
+  ) {
+    return 'Thầy Trương Xuân Hòa (GVCN)';
   }
+  if (s.includes('stem')) return 'Thầy Trương Xuân Hòa & Tổ STEM';
+  if (s.includes('bản ngữ')) return 'Giáo viên Bản ngữ';
   if (s.includes('toán')) return 'Thầy Hồ Quốc Thanh';
-  if (s.includes('văn') || s.includes('ngữ văn')) return 'Cô Đinh Thị Đào';
-  if (s.includes('anh') || s.includes('ngoại ngữ')) return 'Cô Ngô Thị Thảo';
-  if (s.includes('lý') || s.includes('lí') || s.includes('vật lý') || s.includes('vật lí')) return 'Thầy Nguyễn Văn Tèo';
+  if (s.includes('văn') || s.includes('ngữ văn') || s.includes('địa phương') || s.includes('gdđp') || s.includes('gddp')) {
+    return 'Cô Đinh Thị Đào';
+  }
+  if (s.includes('anh') || s.includes('ngoại ngữ') || s.includes('av')) return 'Cô Ngô Thị Thảo';
+  if (s.includes('lý') || s.includes('lí') || s.includes('vật lý') || s.includes('vật lí')) {
+    return 'Thầy Nguyễn Văn Tèo';
+  }
   if (s.includes('sử') || s.includes('lịch sử')) return 'Thầy Trịnh Ngọc Thiện';
-  if (s.includes('ktpl') || s.includes('kinh tế') || s.includes('pháp luật') || s.includes('gdkt')) return 'Cô Hồ Thị Vân Anh';
-  if (s.includes('tin')) return 'Thầy Nguyễn Hữu Nhân';
-  if (s.includes('địa phương') || s.includes('gdđp') || s.includes('gddp')) return 'Cô Đinh Thị Liên';
-  if (s.includes('quốc phòng') || s.includes('gdqp') || s.includes('thể dục') || s.includes('gdtc')) return 'Cô Tạ Thị Tình';
+  if (s.includes('ktpl') || s.includes('kinh tế') || s.includes('pháp luật') || s.includes('gdkt')) {
+    return 'Cô Hồ Thị Vân Anh';
+  }
+  if (s.includes('thể chất') || s.includes('gdtc') || s.includes('thể dục') || s.includes('td')) {
+    return 'Thầy Nguyễn Hữu Nhân';
+  }
+  if (s.includes('quốc phòng') || s.includes('gdqp') || s.includes('qp')) {
+    return 'Cô Đinh Thị Liên';
+  }
+  if (s.includes('tin')) return 'Cô Tạ Thị Tình';
   return 'Thầy Trương Xuân Hòa';
 };
 
@@ -695,20 +747,23 @@ const infer12A7RoomBySubject = (subjectRaw: string, rawRoom?: string): string =>
     return rawRoom.trim();
   }
   const s = (subjectRaw || '').toLowerCase();
-  if (s.includes('chào cờ') || s.includes('quốc phòng') || s.includes('gdqp') || s.includes('thể dục') || s.includes('gdtc')) {
-    return 'Sân trường';
+  if (s.includes('thể chất') || s.includes('gdtc') || s.includes('thể dục')) {
+    return 'Sân đa năng';
   }
-  if (s.includes('tin')) return 'Phòng Máy 2';
+  if (s.includes('chào cờ') || s.includes('shdc') || s.includes('quốc phòng') || s.includes('gdqp')) {
+    return 'Sân trường / P.12A7';
+  }
+  if (s.includes('tin')) return 'Phòng Tin học';
   return 'P.12A7';
 };
 
 const normalizeDayLabel = (rawDay: string): string | null => {
   const d = (rawDay || '').trim().toLowerCase();
-  if (d.includes('hai') || d === 'thứ 2' || d === 't2' || d === '2' || d.includes('mon')) return 'Thứ Hai';
-  if (d.includes('ba') || d === 'thứ 3' || d === 't3' || d === '3' || d.includes('tue')) return 'Thứ Ba';
-  if (d.includes('tư') || d.includes('tu') || d === 'thứ 4' || d === 't4' || d === '4' || d.includes('wed')) return 'Thứ Tư';
-  if (d.includes('năm') || d.includes('nam') || d === 'thứ 5' || d === 't5' || d === '5' || d.includes('thu')) return 'Thứ Năm';
-  if (d.includes('sáu') || d.includes('sau') || d === 'thứ 6' || d === 't6' || d === '6' || d.includes('fri')) return 'Thứ Sáu';
+  if (d.includes('hai') || d === 'thứ 2' || d === 'thu 2' || d === 't2' || d === '2' || d.includes('mon')) return 'Thứ Hai';
+  if (d.includes('ba') || d === 'thứ 3' || d === 'thu 3' || d === 't3' || d === '3' || d.includes('tue')) return 'Thứ Ba';
+  if (d.includes('tư') || d.includes('tu') || d === 'thứ 4' || d === 'thu 4' || d === 't4' || d === '4' || d.includes('wed')) return 'Thứ Tư';
+  if (d.includes('năm') || d.includes('nam') || d === 'thứ 5' || d === 'thu 5' || d === 't5' || d === '5' || d.includes('thu')) return 'Thứ Năm';
+  if (d.includes('sáu') || d.includes('sau') || d === 'thứ 6' || d === 'thu 6' || d === 't6' || d === '6' || d.includes('fri')) return 'Thứ Sáu';
   return null;
 };
 
@@ -716,64 +771,89 @@ const DEFAULT_12A7_TIMETABLE = [
   {
     day: 'Thứ Hai',
     periods: [
-      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'HĐTN - HN (Chào cờ)', teacher: 'Thầy Trương Xuân Hòa', room: 'Sân trường' },
-      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Toán', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
-      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Vật lý', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
-      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'GDĐP', teacher: 'Cô Đinh Thị Liên', room: 'P.12A7' },
-      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'CĐ Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
-      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Lịch sử', teacher: 'Thầy Trịnh Ngọc Thiện', room: 'P.12A7' },
-      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'GDTC (Thể dục)', teacher: 'Cô Tạ Thị Tình', room: 'Sân tập' },
+      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'SHDC (Chào cờ & Sinh hoạt dưới cờ)', teacher: 'Thầy Trương Xuân Hòa (GVCN)', room: 'Sân trường / P.12A7' },
+      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'HĐTN 1 (Hoạt động trải nghiệm)', teacher: 'Thầy Trương Xuân Hòa (GVCN)', room: 'P.12A7' },
+      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'GDĐP (Giáo dục địa phương)', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
+      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
+      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'Tiếng Anh', teacher: 'Cô Ngô Thị Thảo', room: 'P.12A7' },
+      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Toán học', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
+      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Toán học', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
     ],
   },
   {
     day: 'Thứ Ba',
     periods: [
-      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
-      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
-      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
-      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'GDKT & PL', teacher: 'Cô Hồ Thị Vân Anh', room: 'P.12A7' },
-      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'CĐ Toán', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
-      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Tin học', teacher: 'Thầy Nguyễn Hữu Nhân', room: 'Phòng Máy 2' },
-      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Ôn thi Tiếng Anh', teacher: 'Cô Ngô Thị Thảo', room: 'P.12A7' },
+      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
+      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
+      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
+      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
+      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'Giáo dục thể chất (GDTC)', teacher: 'Thầy Nguyễn Hữu Nhân', room: 'Sân đa năng' },
+      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Giáo dục thể chất (GDTC)', teacher: 'Thầy Nguyễn Hữu Nhân', room: 'Sân đa năng' },
+      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Vật lý', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
     ],
   },
   {
     day: 'Thứ Tư',
     periods: [
       { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Tiếng Anh', teacher: 'Cô Ngô Thị Thảo', room: 'P.12A7' },
-      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Toán', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
-      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Vật lý', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
-      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'Lịch sử', teacher: 'Thầy Trịnh Ngọc Thiện', room: 'P.12A7' },
-      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'CĐ Vật lý', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
-      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
-      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Tự học Đôi bạn cùng tiến', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
+      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Tiếng Anh', teacher: 'Cô Ngô Thị Thảo', room: 'P.12A7' },
+      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'HĐTN 2 (Hoạt động trải nghiệm)', teacher: 'Thầy Trương Xuân Hòa (GVCN)', room: 'P.12A7' },
+      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'Tiếng Anh bản ngữ', teacher: 'Giáo viên Bản ngữ', room: 'P.12A7' },
+      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'Lịch sử', teacher: 'Thầy Trịnh Ngọc Thiện', room: 'P.12A7' },
+      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Toán học', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
+      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Toán học', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
     ],
   },
   {
     day: 'Thứ Năm',
     periods: [
-      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
-      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'GDKT & PL', teacher: 'Cô Hồ Thị Vân Anh', room: 'P.12A7' },
-      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Tiếng Anh', teacher: 'Cô Ngô Thị Thảo', room: 'P.12A7' },
-      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'Tin học', teacher: 'Thầy Nguyễn Hữu Nhân', room: 'Phòng Máy 2' },
-      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
-      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'GDQP - AN', teacher: 'Cô Tạ Thị Tình', room: 'Sân trường' },
-      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Ôn thi Toán', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
+      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Tin học', teacher: 'Cô Tạ Thị Tình', room: 'Phòng Tin học' },
+      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Tin học', teacher: 'Cô Tạ Thị Tình', room: 'Phòng Tin học' },
+      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Giáo dục Quốc phòng (GDQP)', teacher: 'Cô Đinh Thị Liên', room: 'Sân trường / P.12A7' },
+      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'Vật lý', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
+      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'GDKT-PL (Kinh tế & Pháp luật)', teacher: 'Cô Hồ Thị Vân Anh', room: 'P.12A7' },
+      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'GDKT-PL (Kinh tế & Pháp luật)', teacher: 'Cô Hồ Thị Vân Anh', room: 'P.12A7' },
+      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Hóa học', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
     ],
   },
   {
     day: 'Thứ Sáu',
     periods: [
-      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Toán', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
-      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Tiếng Anh', teacher: 'Cô Ngô Thị Thảo', room: 'P.12A7' },
-      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
-      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'HĐTN - HN (Sinh hoạt lớp)', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
-      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'Luyện đề Hóa học TN THPT', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
-      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Luyện đề Vật lý TN THPT', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
-      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'Tổng kết tuần & Vệ sinh lớp', teacher: 'Thầy Trương Xuân Hòa', room: 'P.12A7' },
+      { period: 1, session: 'morning', time: '07:25 - 08:10', subject: 'Lịch sử', teacher: 'Thầy Trịnh Ngọc Thiện', room: 'P.12A7' },
+      { period: 2, session: 'morning', time: '08:15 - 09:00', subject: 'Toán học', teacher: 'Thầy Hồ Quốc Thanh', room: 'P.12A7' },
+      { period: 3, session: 'morning', time: '09:35 - 10:20', subject: 'Vật lý', teacher: 'Thầy Nguyễn Văn Tèo', room: 'P.12A7' },
+      { period: 4, session: 'morning', time: '10:25 - 11:10', subject: 'HĐTN 3 (Sinh hoạt lớp & HĐTN)', teacher: 'Thầy Trương Xuân Hòa (GVCN)', room: 'P.12A7' },
+      { period: 1, session: 'afternoon', time: '13:15 - 14:00', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
+      { period: 2, session: 'afternoon', time: '14:05 - 14:50', subject: 'Ngữ văn', teacher: 'Cô Đinh Thị Đào', room: 'P.12A7' },
+      { period: 3, session: 'afternoon', time: '15:15 - 16:00', subject: 'STEM', teacher: 'Thầy Trương Xuân Hòa & Tổ STEM', room: 'P.12A7' },
     ],
   },
 ];
+
+const parseImageDataUrlPart = (
+  img: any,
+  fallbackMime = 'image/jpeg'
+): { inlineData: { mimeType: string; data: string } } | null => {
+  const rawData = typeof img === 'string' ? img : img?.base64 || img?.imageBase64 || '';
+  if (!rawData || typeof rawData !== 'string') return null;
+  const trimmed = rawData.trim();
+  const dataUrlMatch = trimmed.match(/^data:([^;]+);base64,(.+)$/);
+  if (dataUrlMatch) {
+    const detectedMime = dataUrlMatch[1]?.startsWith('image/') ? dataUrlMatch[1] : fallbackMime;
+    return {
+      inlineData: {
+        mimeType: detectedMime,
+        data: dataUrlMatch[2],
+      },
+    };
+  }
+  return {
+    inlineData: {
+      mimeType: (typeof img === 'object' && img?.mimeType) || fallbackMime,
+      data: trimmed,
+    },
+  };
+};
 
 const normalizeExtractedTimetable = (rawTimetable: any[]): typeof DEFAULT_12A7_TIMETABLE => {
   const dayOrder = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu'];
@@ -797,13 +877,25 @@ const normalizeExtractedTimetable = (rawTimetable: any[]): typeof DEFAULT_12A7_T
 
       let morningIdx = 1;
       let afternoonIdx = 1;
-      const normalizedPeriods = rawPeriods
+      const parsedDayPeriods = rawPeriods
         .map((p: any) => {
           if (!p || typeof p !== 'object') return null;
           const subject = String(p.subject || p.mon || p.name || '').trim();
-          if (!subject || subject === '-' || subject.toLowerCase() === 'trống' || subject.toLowerCase() === 'nghỉ') {
+          const lowerSub = subject.toLowerCase();
+          if (
+            !subject ||
+            subject === '-' ||
+            subject === '—' ||
+            lowerSub === 'trống' ||
+            lowerSub === 'nghỉ' ||
+            lowerSub === 'nghi' ||
+            lowerSub === 'x' ||
+            lowerSub === 'none' ||
+            lowerSub === 'null'
+          ) {
             return null;
           }
+
           const rawSess = String(p.session || p.buoi || '').toLowerCase();
           const rawPeriodNum = Number(p.period || p.tiet || 0);
           const isAfternoon =
@@ -814,23 +906,10 @@ const normalizeExtractedTimetable = (rawTimetable: any[]): typeof DEFAULT_12A7_T
             (!rawSess && rawPeriodNum >= 5);
 
           const session: 'morning' | 'afternoon' = isAfternoon ? 'afternoon' : 'morning';
-          const periodNum = isAfternoon
-            ? rawPeriodNum >= 5
-              ? rawPeriodNum - 4
-              : rawPeriodNum > 0
-              ? rawPeriodNum
-              : afternoonIdx
-            : rawPeriodNum > 0
-            ? rawPeriodNum
-            : morningIdx;
+          const rawP = rawPeriodNum > 0 ? rawPeriodNum : session === 'morning' ? morningIdx : afternoonIdx;
 
-          if (session === 'morning') morningIdx = periodNum + 1;
-          else afternoonIdx = periodNum + 1;
-
-          const time =
-            session === 'morning'
-              ? OFFICIAL_12A7_MORNING_TIMES[periodNum - 1] || p.time || '07:25 - 08:10'
-              : OFFICIAL_12A7_AFTERNOON_TIMES[periodNum - 1] || p.time || '13:15 - 14:00';
+          if (session === 'morning') morningIdx = Math.max(morningIdx + 1, rawP + 1);
+          else afternoonIdx = Math.max(afternoonIdx + 1, rawP + 1);
 
           const rawTeacher = String(p.teacher || p.gv || '').trim();
           const teacher =
@@ -838,16 +917,17 @@ const normalizeExtractedTimetable = (rawTimetable: any[]): typeof DEFAULT_12A7_T
             !rawTeacher.includes('Nguyễn Văn Tùng') &&
             !rawTeacher.includes('Lê Thị Hồng Hạnh') &&
             !rawTeacher.includes('Phạm Minh Thư') &&
-            !rawTeacher.includes('Giáo viên')
+            !rawTeacher.includes('Giáo viên phụ trách') &&
+            rawTeacher.toLowerCase() !== 'gv'
               ? rawTeacher
               : infer12A7TeacherBySubject(subject);
 
           const room = infer12A7RoomBySubject(subject, p.room);
 
           return {
-            period: periodNum,
+            rawPeriod: rawP,
             session,
-            time,
+            rawTime: p.time ? String(p.time).trim() : '',
             subject,
             teacher,
             room,
@@ -855,154 +935,203 @@ const normalizeExtractedTimetable = (rawTimetable: any[]): typeof DEFAULT_12A7_T
         })
         .filter((p: any) => p !== null);
 
-      if (normalizedPeriods.length > 0) {
+      if (parsedDayPeriods.length > 0) {
         const existing = byDay.get(normDay) || [];
-        byDay.set(normDay, [...existing, ...normalizedPeriods]);
+        byDay.set(normDay, [...existing, ...parsedDayPeriods]);
       }
     }
   }
 
-  return dayOrder.map((dayName, idx) => {
-    const foundPeriods = byDay.get(dayName);
-    if (foundPeriods && foundPeriods.length > 0) {
+  return dayOrder.map((dayName) => {
+    const rawList = byDay.get(dayName) || [];
+    const morningList = rawList
+      .filter((p) => p.session === 'morning')
+      .sort((a, b) => a.rawPeriod - b.rawPeriod)
+      .map((p, idx) => {
+        const periodNum = p.rawPeriod >= 1 && p.rawPeriod <= 5 ? p.rawPeriod : idx + 1;
+        return {
+          period: periodNum,
+          session: 'morning' as const,
+          time: OFFICIAL_12A7_MORNING_TIMES[periodNum - 1] || p.rawTime || '07:25 - 08:10',
+          subject: p.subject,
+          teacher: p.teacher,
+          room: p.room,
+        };
+      });
+
+    const afternoonRaw = rawList
+      .filter((p) => p.session === 'afternoon')
+      .sort((a, b) => a.rawPeriod - b.rawPeriod);
+    const hasHighAfternoonNumbers = afternoonRaw.some((p) => p.rawPeriod >= 5);
+    const afternoonList = afternoonRaw.map((p, idx) => {
+      const periodNum = hasHighAfternoonNumbers
+        ? idx + 1
+        : p.rawPeriod >= 1 && p.rawPeriod <= 4
+        ? p.rawPeriod
+        : idx + 1;
       return {
-        day: dayName,
-        periods: foundPeriods,
+        period: periodNum,
+        session: 'afternoon' as const,
+        time: OFFICIAL_12A7_AFTERNOON_TIMES[periodNum - 1] || p.rawTime || '13:15 - 14:00',
+        subject: p.subject,
+        teacher: p.teacher,
+        room: p.room,
       };
-    }
-    return DEFAULT_12A7_TIMETABLE[idx];
+    });
+
+    return {
+      day: dayName,
+      periods: [...morningList, ...afternoonList],
+    };
   });
 };
 
 // 5c. AI Timetable OCR from Image (Thêm mới Thời khóa biểu bằng 1 hoặc nhiều hình ảnh thông qua AI)
 app.post('/api/ai/timetable-ocr', async (req, res) => {
-  const { imageBase64, mimeType = 'image/jpeg', images = [] } = req.body;
+  const { imageBase64, mimeType = 'image/jpeg', images = [] } = req.body || {};
 
   const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
   if (Array.isArray(images) && images.length > 0) {
     for (const img of images) {
-      const rawData = typeof img === 'string' ? img : img?.base64 || img?.imageBase64 || '';
-      if (rawData) {
-        const clean = rawData.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, '');
-        imageParts.push({
-          inlineData: {
-            mimeType: (typeof img === 'object' && img?.mimeType) || mimeType || 'image/jpeg',
-            data: clean,
-          },
-        });
-      }
+      const part = parseImageDataUrlPart(img, mimeType);
+      if (part) imageParts.push(part);
     }
   } else if (imageBase64 && typeof imageBase64 === 'string') {
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9.+]+;base64,/, '');
-    imageParts.push({
-      inlineData: {
-        mimeType: mimeType || 'image/jpeg',
-        data: cleanBase64,
-      },
-    });
+    const part = parseImageDataUrlPart(imageBase64, mimeType);
+    if (part) imageParts.push(part);
   }
 
   if (imageParts.length === 0) {
-    return res.status(400).json({ error: 'Thiếu dữ liệu hình ảnh thời khóa biểu (imageBase64 / images)' });
+    return res.status(400).json({
+      success: false,
+      error: 'Thiếu dữ liệu hình ảnh thời khóa biểu hợp lệ. Vui lòng chọn hoặc dán ảnh TKB.',
+    });
   }
 
-  const aiClient = getAiClient();
-  if (aiClient) {
-    try {
-      const prompt = `Bạn là hệ thống AI nhận diện Thời khóa biểu thông minh của lớp 12A7 trường THPT Vĩnh Lộc B (GVCN: Thầy Trương Xuân Hòa - dạy Hóa học, Phòng P.12A7).
-Hãy quan sát kỹ hình ảnh Thời khóa biểu được tải lên và trích xuất lịch học từ Thứ Hai đến Thứ Sáu thành định dạng JSON hợp lệ.
+  const prompt = `Bạn là hệ thống AI OCR chuyên dụng đọc Thời khóa biểu trường THPT ở Việt Nam (lớp 12A7, Trường THPT Vĩnh Lộc B, GVCN: Thầy Trương Xuân Hòa).
+Hãy quan sát thật kỹ từng ô, từng hàng (tiết học), từng cột (Thứ Hai -> Thứ Sáu) trong ${imageParts.length} hình ảnh Thời khóa biểu được đính kèm và trích xuất CHÍNH XÁC lịch học có trong ảnh.
 
-Khung giờ chuẩn của trường THPT Vĩnh Lộc B:
-- Buổi sáng (session: "morning"):
-  + Tiết 1 (period: 1): "07:25 - 08:10"
-  + Tiết 2 (period: 2): "08:15 - 09:00"
-  + Tiết 3 (period: 3): "09:35 - 10:20"
-  + Tiết 4 (period: 4): "10:25 - 11:10"
-- Buổi chiều (session: "afternoon"):
-  + Tiết 1 (period: 1): "13:15 - 14:00"
-  + Tiết 2 (period: 2): "14:05 - 14:50"
-  + Tiết 3 (period: 3): "15:15 - 16:00"
+Lưu ý quan trọng khi đọc bảng Thời khóa biểu Việt Nam:
+1. Bảng TKB có thể bố trí Thứ 2, Thứ 3, Thứ 4, Thứ 5, Thứ 6 theo CỘT hoặc theo HÀNG, hoặc có 2 ảnh riêng cho Buổi Sáng và Buổi Chiều.
+2. Buổi Sáng ("morning") thường có Tiết 1 đến Tiết 4 (hoặc Tiết 5); Buổi Chiều ("afternoon") thường ghi là Tiết 1, 2, 3 (hoặc Tiết 5, 6, 7 / Tiết 6, 7, 8). Hãy giữ đúng session ("morning" / "afternoon") và số thứ tự tiết trong mỗi buổi (1, 2, 3, 4...).
+3. Nếu ô nào trống, gạch ngang "-", hoặc ghi "Nghỉ" thì KHÔNG thêm tiết đó.
+4. Viết rõ tên môn học đọc được từ ảnh (ví dụ: SHDC, HĐTN, Hóa học, Ngữ văn, GDĐP, Toán học, Tiếng Anh, Tiếng Anh bản ngữ, Vật lý, Lịch sử, GDKT-PL, Tin học, GDTC, GDQP, STEM...). Nếu trên ảnh có môn học viết tắt (như T -> Toán học, V -> Ngữ văn, A / AV -> Tiếng Anh, L -> Vật lý, H -> Hóa học, S -> Lịch sử, KTPL -> GDKT-PL, TD -> GDTC, QP -> GDQP, CC -> SHDC), hãy ghi rõ tên môn dễ hiểu.
+5. Nếu trên ảnh có ghi tên giáo viên thì giữ nguyên; nếu không ghi tên giáo viên, hãy gán đúng Giáo viên bộ môn của lớp 12A7:
+   - Hóa học, HĐTN, SHDC, Chào cờ, Sinh hoạt lớp, STEM -> "Thầy Trương Xuân Hòa"
+   - Toán học -> "Thầy Hồ Quốc Thanh"
+   - Ngữ văn, GDĐP (Giáo dục địa phương) -> "Cô Đinh Thị Đào"
+   - Tiếng Anh bản ngữ -> "Giáo viên Bản ngữ"
+   - Tiếng Anh -> "Cô Ngô Thị Thảo"
+   - Vật lý -> "Thầy Nguyễn Văn Tèo"
+   - Lịch sử -> "Thầy Trịnh Ngọc Thiện"
+   - GDKT-PL (Kinh tế & Pháp luật) -> "Cô Hồ Thị Vân Anh"
+   - GDTC (Thể dục / Thể chất) -> "Thầy Nguyễn Hữu Nhân"
+   - GDQP (Quốc phòng) -> "Cô Đinh Thị Liên"
+   - Tin học -> "Cô Tạ Thị Tình"
 
-Danh sách Giáo viên bộ môn chính thức của lớp 12A7 (nếu trên ảnh không ghi rõ tên GV thì tự động điền đúng tên GV dưới đây):
-- Hóa học / Chuyên đề Hóa / Ôn thi Hóa / HĐTN-HN / Chào cờ / Sinh hoạt lớp: "Thầy Trương Xuân Hòa"
-- Toán / Chuyên đề Toán / Ôn thi Toán: "Thầy Hồ Quốc Thanh"
-- Ngữ văn / Chuyên đề Văn / Ôn thi Văn: "Cô Đinh Thị Đào"
-- Tiếng Anh / Ôn thi Tiếng Anh: "Cô Ngô Thị Thảo"
-- Vật lý / Chuyên đề Lý / Ôn thi Lý: "Thầy Nguyễn Văn Tèo"
-- Lịch sử: "Thầy Trịnh Ngọc Thiện"
-- GDKT & PL (KTPL): "Cô Hồ Thị Vân Anh"
-- Tin học: "Thầy Nguyễn Hữu Nhân"
-- GDĐP (Giáo dục địa phương): "Cô Đinh Thị Liên"
-- GDQP-AN / Thể dục (GDTC): "Cô Tạ Thị Tình"
+Hãy trả về đầy đủ 5 ngày: "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu" theo đúng JSON Schema.`;
 
-Hãy trả về JSON theo đúng cấu trúc sau (chỉ trả về JSON):
-{
-  "title": "Thời khóa biểu lớp 12A7 nhận diện từ ảnh",
-  "note": "Ghi chú nhận diện",
-  "timetable": [
-    {
-      "day": "Thứ Hai",
-      "periods": [
-        { "period": 1, "session": "morning", "time": "07:25 - 08:10", "subject": "HĐTN - HN", "teacher": "Thầy Trương Xuân Hòa", "room": "Sân trường" },
-        { "period": 2, "session": "morning", "time": "08:15 - 09:00", "subject": "Toán", "teacher": "Thầy Hồ Quốc Thanh", "room": "P.12A7" },
-        { "period": 3, "session": "morning", "time": "09:35 - 10:20", "subject": "Vật lý", "teacher": "Thầy Nguyễn Văn Tèo", "room": "P.12A7" },
-        { "period": 4, "session": "morning", "time": "10:25 - 11:10", "subject": "GDĐP", "teacher": "Cô Đinh Thị Liên", "room": "P.12A7" },
-        { "period": 1, "session": "afternoon", "time": "13:15 - 14:00", "subject": "CĐ Hóa học", "teacher": "Thầy Trương Xuân Hòa", "room": "P.12A7" },
-        { "period": 2, "session": "afternoon", "time": "14:05 - 14:50", "subject": "Lịch sử", "teacher": "Thầy Trịnh Ngọc Thiện", "room": "P.12A7" },
-        { "period": 3, "session": "afternoon", "time": "15:15 - 16:00", "subject": "GDTC", "teacher": "Cô Tạ Thị Tình", "room": "Sân tập" }
-      ]
-    }
-  ]
-}
-Đảm bảo có đủ 5 ngày: "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu".`;
-
-      const text = await generateGeminiText({
-        parts: [...imageParts, { text: prompt }],
-      });
-
-      if (text) {
-        const cleanedText = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0]);
-            const rawList = Array.isArray(parsed?.timetable)
-              ? parsed.timetable
-              : Array.isArray(parsed?.days)
-              ? parsed.days
-              : [];
-            if (rawList.length > 0) {
-              const normalizedTimetable = normalizeExtractedTimetable(rawList);
-              return res.json({
-                success: true,
-                data: {
-                  title: parsed.title || 'Thời khóa biểu lớp 12A7 (Trích xuất từ hình ảnh AI)',
-                  note:
-                    parsed.note ||
-                    'Đã nhận diện lịch học 5 ngày (Thứ Hai - Thứ Sáu) và chuẩn hóa khung giờ Sáng 4 tiết, Chiều 3 tiết cùng danh sách GVBM 12A7.',
-                  timetable: normalizedTimetable,
+  const timetableResponseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING, description: 'Tiêu đề TKB đọc được từ ảnh' },
+      note: { type: Type.STRING, description: 'Tóm tắt ngắn số tiết đã nhận diện' },
+      timetable: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            day: {
+              type: Type.STRING,
+              description: 'Phải là một trong: "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu"',
+            },
+            periods: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  period: { type: Type.INTEGER, description: 'Số thứ tự tiết trong buổi (1, 2, 3, 4...)' },
+                  session: { type: Type.STRING, description: '"morning" hoặc "afternoon"' },
+                  subject: { type: Type.STRING, description: 'Tên môn học đọc được từ ảnh' },
+                  teacher: { type: Type.STRING, description: 'Tên giáo viên giảng dạy' },
+                  room: { type: Type.STRING, description: 'Phòng học (VD: P.12A7)' },
                 },
-              });
-            }
-          } catch (parseErr) {
-            console.warn('Timetable OCR JSON parse failed:', parseErr);
-          }
-        }
-      }
-    } catch (err: any) {
-      console.warn('Gemini Timetable OCR failed:', err?.message);
+                required: ['period', 'session', 'subject'],
+              },
+            },
+          },
+          required: ['day', 'periods'],
+        },
+      },
+    },
+    required: ['timetable'],
+  };
+
+  const aiResult = await generateGeminiDetailed(
+    { parts: [...imageParts, { text: prompt }] },
+    undefined,
+    {
+      responseMimeType: 'application/json',
+      responseSchema: timetableResponseSchema,
     }
+  );
+
+  if (!aiResult.text) {
+    return res.status(502).json({
+      success: false,
+      aiUsed: false,
+      error:
+        aiResult.error ||
+        'Không thể kết nối Gemini AI để đọc ảnh Thời khóa biểu. Vui lòng kiểm tra GEMINI_API_KEY trong Settings > Secrets.',
+    });
   }
 
-  // Fallback intelligent timetable extraction with official 12A7 teachers
-  return res.json({
-    success: true,
-    data: {
-      title: 'Thời khóa biểu lớp 12A7 (Trích xuất từ hình ảnh)',
-      note: 'Đã nhận diện 5 ngày học (Thứ Hai - Thứ Sáu) với khung giờ chuẩn sáng 4 tiết, chiều 3 tiết và phân công GVBM lớp 12A7.',
-      timetable: DEFAULT_12A7_TIMETABLE,
-    },
-  });
+  try {
+    const cleanedText = aiResult.text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : cleanedText;
+    const parsed = JSON.parse(jsonStr);
+    const rawList = Array.isArray(parsed?.timetable)
+      ? parsed.timetable
+      : Array.isArray(parsed?.days)
+      ? parsed.days
+      : [];
+
+    const normalizedTimetable = normalizeExtractedTimetable(rawList);
+    const totalExtractedPeriods = normalizedTimetable.reduce(
+      (sum, d) => sum + (Array.isArray(d.periods) ? d.periods.length : 0),
+      0
+    );
+
+    if (totalExtractedPeriods === 0) {
+      return res.status(422).json({
+        success: false,
+        aiUsed: true,
+        error:
+          'AI đã đọc ảnh nhưng không tìm thấy tiết học nào trong bảng Thời khóa biểu. Vui lòng chụp rõ nét hơn hoặc cắt sát phần bảng TKB.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      aiUsed: true,
+      modelUsed: aiResult.modelUsed,
+      data: {
+        title: parsed.title || 'Thời khóa biểu lớp 12A7 (Trích xuất từ hình ảnh AI)',
+        note:
+          parsed.note ||
+          `AI (${aiResult.modelUsed || 'Gemini'}) đã nhận diện ${totalExtractedPeriods} tiết học từ ${imageParts.length} ảnh và chuẩn hóa khung giờ Sáng/Chiều + GVBM 12A7.`,
+        timetable: normalizedTimetable,
+      },
+    });
+  } catch (parseErr: any) {
+    console.warn('Timetable OCR JSON parse failed:', parseErr?.message, aiResult.text?.slice(0, 300));
+    return res.status(422).json({
+      success: false,
+      aiUsed: true,
+      error: 'AI trả về dữ liệu chưa đúng cấu trúc bảng TKB. Vui lòng thử phân tích lại hoặc dùng ảnh rõ hơn.',
+    });
+  }
 });
 
 // 6. AI In-Depth Grade Analysis & Action Plan for Progress (Phân tích điểm & Kế hoạch giúp đỡ học sinh)

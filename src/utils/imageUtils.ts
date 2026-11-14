@@ -9,7 +9,8 @@ export async function compressImageFileToDataUrl(
   quality: number = 0.75
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
+    const hasImageExt = /\.(jpe?g|png|webp|gif|bmp|heic|heif|jfif|avif)$/i.test(file.name || '');
+    if (!file.type.startsWith('image/') && !hasImageExt) {
       reject(new Error('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, WEBP, HEIC...).'));
       return;
     }
@@ -17,10 +18,20 @@ export async function compressImageFileToDataUrl(
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Không thể đọc file ảnh từ thiết bị.'));
     reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
+      let dataUrl = event.target?.result as string;
       if (!dataUrl) {
         reject(new Error('Dữ liệu hình ảnh trống.'));
         return;
+      }
+
+      if (dataUrl.startsWith('data:application/octet-stream;base64,')) {
+        const ext = (file.name || '').toLowerCase();
+        const inferredMime = ext.endsWith('.png')
+          ? 'image/png'
+          : ext.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+        dataUrl = dataUrl.replace('data:application/octet-stream;base64,', `data:${inferredMime};base64,`);
       }
 
       const img = new Image();

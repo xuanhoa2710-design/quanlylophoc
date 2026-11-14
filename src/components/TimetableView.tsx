@@ -296,10 +296,12 @@ export const TimetableView: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showConfirmReset, setShowConfirmReset] = useState(false);
 
-  // AI Timetable OCR from Image state (supports 1 or multiple images + auto OCR)
+  // AI Timetable OCR from Image state (supports 1 or multiple images + drag/drop + Ctrl+V paste)
   const [isAiOcrModalOpen, setIsAiOcrModalOpen] = useState(false);
   const [ocrImages, setOcrImages] = useState<string[]>([]);
   const [isAnalyzingOcr, setIsAnalyzingOcr] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [isDraggingOcr, setIsDraggingOcr] = useState(false);
   const [ocrPreviewTimetable, setOcrPreviewTimetable] = useState<TimetableEntry[] | null>(null);
   const [ocrNote, setOcrNote] = useState<string>('');
   const [ocrActivePreviewDay, setOcrActivePreviewDay] = useState<string>('Thứ Hai');
@@ -307,12 +309,13 @@ export const TimetableView: React.FC = () => {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const runTimetableOcrAnalysis = async (imagesToAnalyze: string[]) => {
     if (!imagesToAnalyze || imagesToAnalyze.length === 0) return;
     setIsAnalyzingOcr(true);
+    setOcrError(null);
     try {
       const res = await fetch('/api/ai/timetable-ocr', {
         method: 'POST',
@@ -320,25 +323,66 @@ export const TimetableView: React.FC = () => {
         body: JSON.stringify({
           images: imagesToAnalyze,
           imageBase64: imagesToAnalyze[0],
-          mimeType: 'image/jpeg',
         }),
       });
-      const json = await res.json();
-      if (json?.success && json?.data && Array.isArray(json.data.timetable)) {
+
+      const rawText = await res.text();
+      let json: any = null;
+      try {
+        json = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        throw new Error(`Máy chủ trả về phản hồi không hợp lệ (HTTP ${res.status}).`);
+      }
+
+      if (!res.ok || !json?.success) {
+        throw new Error(
+          json?.error || `Không thể nhận diện Thời khóa biểu từ ảnh (HTTP ${res.status}).`
+        );
+      }
+
+      if (json?.data && Array.isArray(json.data.timetable)) {
         setOcrPreviewTimetable(json.data.timetable);
         setOcrNote(
           json.data.note ||
-            `AI đã trích xuất thời khóa biểu từ ${imagesToAnalyze.length} hình ảnh (Sáng 4 tiết, Chiều 3 tiết). GVCN có thể chỉnh sửa, thêm hoặc xóa tiết trước khi áp dụng.`
+            `AI đã trích xuất thời khóa biểu từ ${imagesToAnalyze.length} hình ảnh. GVCN có thể kiểm tra, chỉnh sửa trực tiếp trước khi áp dụng.`
         );
-        setOcrActivePreviewDay(json.data.timetable[0]?.day || 'Thứ Hai');
-        showToast('AI đã trích xuất thời khóa biểu thành công! Hãy kiểm tra bảng xem trước bên dưới.');
+        const firstDayWithPeriods =
+          json.data.timetable.find((d: any) => Array.isArray(d.periods) && d.periods.length > 0)
+            ?.day ||
+          json.data.timetable[0]?.day ||
+          'Thứ Hai';
+        setOcrActivePreviewDay(firstDayWithPeriods);
+        showToast('AI đã trích xuất thời khóa biểu từ ảnh thành công!');
       } else {
-        showToast('Không thể phân tích cấu trúc thời khóa biểu từ ảnh.');
+        throw new Error('Dữ liệu thời khóa biểu trích xuất không hợp lệ.');
       }
-    } catch {
-      showToast('Đã xảy ra lỗi kết nối khi phân tích ảnh thời khóa biểu.');
+    } catch (err: any) {
+      const message =
+        err?.message || 'Đã xảy ra lỗi kết nối khi phân tích ảnh thời khóa biểu.';
+      setOcrError(message);
+      showToast(message);
     } finally {
       setIsAnalyzingOcr(false);
+    }
+  };
+
+  const processOcrImageFiles = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    setOcrError(null);
+    try {
+      // Higher resolution (1800px) keeps small text inside timetable grids crisp for Gemini Vision
+      const compressedList = await compressMultipleImageFiles(files, 1800, 0.88);
+      if (compressedList.length > 0) {
+        const nextImages = [...ocrImages, ...compressedList].slice(0, 6);
+        setOcrImages(nextImages);
+        await runTimetableOcrAnalysis(nextImages);
+      } else {
+        setOcrError('Không đọc được tệp ảnh đã chọn. Vui lòng thử ảnh JPG hoặc PNG.');
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể đọc file hình ảnh thời khóa biểu.';
+      setOcrError(msg);
+      showToast(msg);
     }
   };
 
@@ -346,16 +390,35 @@ export const TimetableView: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     try {
-      const compressedList = await compressMultipleImageFiles(files, 1300, 0.82);
-      if (compressedList.length > 0) {
-        const nextImages = [...ocrImages, ...compressedList].slice(0, 6);
-        setOcrImages(nextImages);
-        await runTimetableOcrAnalysis(nextImages);
-      }
-    } catch (err: any) {
-      showToast(err?.message || 'Không thể đọc file hình ảnh thời khóa biểu.');
+      await processOcrImageFiles(files);
     } finally {
       e.target.value = '';
+    }
+  };
+
+  const handleOcrPaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      await processOcrImageFiles(imageFiles);
+    }
+  };
+
+  const handleOcrDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOcr(false);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      await processOcrImageFiles(files);
     }
   };
 
@@ -370,6 +433,7 @@ export const TimetableView: React.FC = () => {
     setIsAiOcrModalOpen(false);
     setOcrImages([]);
     setOcrPreviewTimetable(null);
+    setOcrError(null);
     showToast('Đã cập nhật Thời khóa biểu mới từ hình ảnh AI và đồng bộ cho toàn lớp!');
   };
 
@@ -412,7 +476,7 @@ export const TimetableView: React.FC = () => {
   const handleSaveNewPeriod = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPeriodForm.subject.trim()) {
-      alert('Vui lòng nhập tên môn học!');
+      showToast('Vui lòng nhập tên môn học!');
       return;
     }
 
@@ -2778,7 +2842,10 @@ export const TimetableView: React.FC = () => {
 
       {/* MODAL: ADD / IMPORT NEW TIMETABLE FROM IMAGE VIA AI (Thêm mới TKB bằng hình ảnh qua AI) */}
       {isAiOcrModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/65 backdrop-blur-xs overflow-y-auto">
+        <div
+          onPaste={handleOcrPaste}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/65 backdrop-blur-xs overflow-y-auto"
+        >
           <div className="bg-white rounded-3xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 my-auto max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -2790,7 +2857,7 @@ export const TimetableView: React.FC = () => {
                     Thêm Mới Thời Khóa Biểu Bằng Hình Ảnh Thông Qua AI
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Tải ảnh chụp Thời khóa biểu từ điện thoại hoặc máy tính • AI tự động nhận diện môn học, khung giờ chuẩn và giáo viên giảng dạy 12A7
+                    Chọn ảnh, kéo thả hoặc dán (Ctrl+V) ảnh chụp Thời khóa biểu • AI Gemini tự động đọc môn học, khung giờ chuẩn và giáo viên 12A7
                   </p>
                 </div>
               </div>
@@ -2804,15 +2871,27 @@ export const TimetableView: React.FC = () => {
 
             <div className="overflow-y-auto space-y-4 pr-1 text-xs flex-1">
               {/* Step 1: Select 1 or Multiple Timetable Images */}
-              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 space-y-3">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingOcr(true);
+                }}
+                onDragLeave={() => setIsDraggingOcr(false)}
+                onDrop={handleOcrDrop}
+                className={`p-4 rounded-2xl border-2 transition-all space-y-3 ${
+                  isDraggingOcr
+                    ? 'bg-indigo-100/80 border-indigo-500 border-dashed'
+                    : 'bg-indigo-50/70 border-indigo-200/80'
+                }`}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="font-black text-indigo-950 text-xs sm:text-sm flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-indigo-600" />
-                      Bước 1: Tải lên 1 hoặc nhiều ảnh Thời khóa biểu (Tự động phân tích AI)
+                      Bước 1: Chọn, kéo thả hoặc dán (Ctrl+V) ảnh Thời khóa biểu
                     </div>
                     <p className="text-[11px] text-slate-600 mt-0.5">
-                      Có thể chọn 1 ảnh TKB cả tuần hoặc nhiều ảnh (Buổi sáng + Buổi chiều). Hệ thống tự động khớp khung giờ chuẩn trường THPT Vĩnh Lộc B và giáo viên bộ môn 12A7.
+                      Hỗ trợ ảnh chụp bảng TKB từ điện thoại, Excel, VNEDU/SMAS (chọn 1 ảnh cả tuần hoặc 2 ảnh Sáng + Chiều). AI tự động khớp khung giờ chuẩn THPT Vĩnh Lộc B và GVBM 12A7.
                     </p>
                   </div>
 
@@ -2872,6 +2951,7 @@ export const TimetableView: React.FC = () => {
                         onClick={() => {
                           setOcrImages([]);
                           setOcrPreviewTimetable(null);
+                          setOcrError(null);
                         }}
                         className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1 cursor-pointer"
                       >
@@ -2910,12 +2990,31 @@ export const TimetableView: React.FC = () => {
                     <Loader2 className="w-5 h-5 text-indigo-600 animate-spin shrink-0" />
                     <div>
                       <div className="font-bold text-xs">
-                        AI Gemini đang nhận diện các tiết học Sáng & Chiều từ hình ảnh...
+                        AI Gemini đang phân tích các ô tiết học Sáng & Chiều từ hình ảnh...
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        Tự động điền giáo viên bộ môn lớp 12A7 và khung giờ chuẩn. Vui lòng đợi trong giây lát.
+                        Tự động nhận diện môn học, khớp giáo viên bộ môn lớp 12A7 và khung giờ chuẩn. Vui lòng đợi trong giây lát.
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {ocrError && !isAnalyzingOcr && (
+                  <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-red-900">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <div className="font-bold text-xs">Không thể trích xuất TKB từ ảnh</div>
+                      <div className="text-[11px] text-red-700">{ocrError}</div>
+                    </div>
+                    {ocrImages.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleAnalyzeTimetableImage}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                      >
+                        Thử lại
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
