@@ -670,17 +670,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.ACTIVE_STUDENT, id);
   };
 
-  // Default cadre roles map for 12A7 officers
+  // Default cadre roles map for 12A7 officers (matching INITIAL_STUDENTS)
   const DEFAULT_CADRE_ROLES: Record<string, StudentCadreRole> = {
-    'hs-27': 'Lớp trưởng',       // Huỳnh Thị Ái Ly
-    'hs-1': 'Lớp phó học tập',     // Vũ Trịnh Bảo An
-    'hs-35': 'Lớp phó kỉ luật',    // Đặng Đình Phúc
-    'hs-42': 'Bí thư',            // Nguyễn Ngọc Bích Trâm
-    'hs-21': 'Lớp phó lao động',   // Trần Anh Khoa
-    'hs-20': 'Tổ trưởng',         // Nguyễn Hoàng Khang (Tổ 1)
-    'hs-13': 'Tổ trưởng',         // Lê Quang Hải (Tổ 2)
-    'hs-31': 'Tổ trưởng',         // Phạm Nhật Minh (Tổ 3)
-    'hs-46': 'Tổ trưởng',         // Võ Hoàng Tuấn (Tổ 4)
+    'hs-6': 'Lớp trưởng',            // Lê Gia Bảo
+    'hs-33': 'Lớp phó học tập',      // Nguyễn Ngọc Bảo Như
+    'hs-1': 'Lớp phó kỉ luật',       // Vũ Trịnh Bảo An
+    'hs-35': 'Bí thư',               // Lương Hoàng Phi
+    'hs-17': 'Lớp phó lao động',     // Đặng Nguyễn Kha
+    'hs-11': 'Tổ trưởng',            // Nguyễn Thành Đạt
+    'hs-20': 'Tổ trưởng',            // Phạm Đình Bảo Khánh
+    'hs-32': 'Tổ trưởng',            // Nguyễn Yến Nhi
+    'hs-1792030357853': 'Tổ trưởng', // Đào Xuân Vy
   };
 
   // Students - Hardcoded 50 students from default JSON dataset
@@ -2056,7 +2056,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(announcements));
   }, [announcements]);
 
+  // Chỉ GVCN và Ban Cán Sự Lớp mới có quyền đăng & chỉnh sửa thông báo; các HS khác chỉ được xem
+  const isCurrentUserAllowedToManageAnnouncements = (): boolean => {
+    if (role === 'teacher') return true;
+    if (role === 'student') {
+      const stuRole = (currentStudent?.classRole || '').trim();
+      return Boolean(stuRole && stuRole !== 'Học sinh');
+    }
+    return false;
+  };
+
   const addAnnouncement = (annData: Omit<Announcement, 'id' | 'createdAt'>) => {
+    if (!isCurrentUserAllowedToManageAnnouncements()) {
+      console.warn('Permission denied: Only GVCN and Ban cán sự lớp can post announcements.');
+      return;
+    }
     const newAnn: Announcement = {
       ...annData,
       id: `ann-${Date.now()}`,
@@ -2066,10 +2080,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAnnouncement = (id: string) => {
+    if (!isCurrentUserAllowedToManageAnnouncements()) {
+      console.warn('Permission denied: Only GVCN and Ban cán sự lớp can delete announcements.');
+      return;
+    }
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   };
 
   const updateAnnouncement = (id: string, updatedData: Partial<Announcement>) => {
+    if (!isCurrentUserAllowedToManageAnnouncements()) {
+      console.warn('Permission denied: Only GVCN and Ban cán sự lớp can edit announcements.');
+      return;
+    }
     setAnnouncements((prev) =>
       prev.map((a) =>
         a.id === id

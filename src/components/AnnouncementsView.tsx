@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Announcement } from '../types';
-import { compressImageFileToDataUrl, compressMultipleImageFiles } from '../utils/imageUtils';
+import {
+  compressImageFileToDataUrl,
+  compressMultipleImageFiles,
+  uploadMultipleVideoFiles,
+  getEmbedVideoInfo,
+} from '../utils/imageUtils';
 import {
   Bell,
   Plus,
@@ -24,6 +29,9 @@ import {
   Save,
   Upload,
   Camera,
+  Video,
+  Film,
+  Lock,
   ChevronLeft,
   ChevronRight,
   ZoomIn,
@@ -55,7 +63,12 @@ export const AnnouncementsView: React.FC = () => {
   const [isUploadingCreateImg, setIsUploadingCreateImg] = useState(false);
   const createFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form states for editing announcement (GVCN)
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [customVideoUrlInput, setCustomVideoUrlInput] = useState('');
+  const [isUploadingCreateVideo, setIsUploadingCreateVideo] = useState(false);
+  const createVideoInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states for editing announcement (GVCN & Ban Cán Sự)
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editType, setTypeEdit] = useState<Announcement['type']>('class');
@@ -66,6 +79,11 @@ export const AnnouncementsView: React.FC = () => {
   const [editCustomImageUrlInput, setEditCustomImageUrlInput] = useState('');
   const [isUploadingEditImg, setIsUploadingEditImg] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [editVideoUrls, setEditVideoUrls] = useState<string[]>([]);
+  const [editCustomVideoUrlInput, setEditCustomVideoUrlInput] = useState('');
+  const [isUploadingEditVideo, setIsUploadingEditVideo] = useState(false);
+  const editVideoInputRef = useRef<HTMLInputElement>(null);
 
   // Lightbox viewer for multi-image gallery
   const [lightboxState, setLightboxState] = useState<{
@@ -82,8 +100,18 @@ export const AnnouncementsView: React.FC = () => {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3200);
   };
+
+  // Strict RBAC: Chỉ GVCN và Ban cán sự lớp mới có quyền đăng & chỉnh sửa thông báo; các HS khác chỉ được xem
+  const isCadreMember = Boolean(
+    currentStudent?.classRole &&
+      currentStudent.classRole.trim() !== '' &&
+      currentStudent.classRole.trim() !== 'Học sinh'
+  );
+
+  const isAllowedToPost =
+    role === 'teacher' || (role === 'student' && isCadreMember);
 
   const getAnnouncementImages = (ann: Announcement): string[] => {
     const list: string[] = [];
@@ -94,6 +122,19 @@ export const AnnouncementsView: React.FC = () => {
     }
     if (ann.imageUrl && typeof ann.imageUrl === 'string' && !list.includes(ann.imageUrl)) {
       list.unshift(ann.imageUrl);
+    }
+    return list;
+  };
+
+  const getAnnouncementVideos = (ann: Announcement): string[] => {
+    const list: string[] = [];
+    if (Array.isArray(ann.videoUrls)) {
+      ann.videoUrls.forEach((u) => {
+        if (u && typeof u === 'string' && !list.includes(u)) list.push(u);
+      });
+    }
+    if (ann.videoUrl && typeof ann.videoUrl === 'string' && !list.includes(ann.videoUrl)) {
+      list.unshift(ann.videoUrl);
     }
     return list;
   };
@@ -125,7 +166,40 @@ export const AnnouncementsView: React.FC = () => {
     }
   };
 
+  const handleVideoFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: 'create' | 'edit'
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    try {
+      if (mode === 'create') {
+        setIsUploadingCreateVideo(true);
+        const uploadedList = await uploadMultipleVideoFiles(files, 35);
+        setVideoUrls((prev) => [...prev, ...uploadedList].slice(0, 6));
+        setIsUploadingCreateVideo(false);
+        showToast(`Đã tải lên ${uploadedList.length} video clip thành công!`);
+      } else {
+        setIsUploadingEditVideo(true);
+        const uploadedList = await uploadMultipleVideoFiles(files, 35);
+        setEditVideoUrls((prev) => [...prev, ...uploadedList].slice(0, 6));
+        setIsUploadingEditVideo(false);
+        showToast(`Đã tải lên ${uploadedList.length} video clip thành công!`);
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể tải video clip lên.');
+      setIsUploadingCreateVideo(false);
+      setIsUploadingEditVideo(false);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handleOpenEdit = (ann: Announcement) => {
+    if (!isAllowedToPost) {
+      showToast('Chỉ GVCN và Ban cán sự lớp mới có quyền chỉnh sửa thông báo!');
+      return;
+    }
     setEditingAnnouncement(ann);
     setEditTitle(ann.title);
     setTypeEdit(ann.type);
@@ -134,11 +208,13 @@ export const AnnouncementsView: React.FC = () => {
     setEditIsPinned(!!ann.isPinned);
     setEditImageUrls(getAnnouncementImages(ann));
     setEditCustomImageUrlInput('');
+    setEditVideoUrls(getAnnouncementVideos(ann));
+    setEditCustomVideoUrlInput('');
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingAnnouncement) return;
+    if (!isAllowedToPost || !editingAnnouncement) return;
     if (!editTitle.trim() || !editContent.trim()) {
       showToast('Vui lòng điền đầy đủ tiêu đề và nội dung thông báo!');
       return;
@@ -149,6 +225,11 @@ export const AnnouncementsView: React.FC = () => {
       finalEditImages.push(editCustomImageUrlInput.trim());
     }
 
+    const finalEditVideos = [...editVideoUrls];
+    if (editCustomVideoUrlInput.trim()) {
+      finalEditVideos.push(editCustomVideoUrlInput.trim());
+    }
+
     updateAnnouncement(editingAnnouncement.id, {
       title: editTitle.trim(),
       type: editType,
@@ -157,6 +238,8 @@ export const AnnouncementsView: React.FC = () => {
       isPinned: editIsPinned,
       imageUrl: finalEditImages[0] || undefined,
       imageUrls: finalEditImages.length > 0 ? finalEditImages : undefined,
+      videoUrl: finalEditVideos[0] || undefined,
+      videoUrls: finalEditVideos.length > 0 ? finalEditVideos : undefined,
     });
 
     setEditingAnnouncement(null);
@@ -164,7 +247,7 @@ export const AnnouncementsView: React.FC = () => {
   };
 
   const handleConfirmDelete = () => {
-    if (!deletingAnnouncement) return;
+    if (!isAllowedToPost || !deletingAnnouncement) return;
     deleteAnnouncement(deletingAnnouncement.id);
     showToast(`Đã xóa thông báo "${deletingAnnouncement.title}"!`);
     setDeletingAnnouncement(null);
@@ -246,12 +329,20 @@ export const AnnouncementsView: React.FC = () => {
 
   // Open modal pre-configured for Cadre announcement
   const handleOpenCadreNoticeModal = () => {
+    if (!isAllowedToPost) {
+      showToast('Chỉ GVCN và Ban cán sự lớp mới được phép đăng thông báo!');
+      return;
+    }
     setType('cadre');
     setTargetAudience('cadre');
     setIsPinned(true);
     const tmpl = CADRE_TEMPLATES[0];
     setTitle(tmpl.title);
     setContent(tmpl.content);
+    setImageUrls([]);
+    setCustomImageUrlInput('');
+    setVideoUrls([]);
+    setCustomVideoUrlInput('');
     setShowCreateModal(true);
   };
 
@@ -262,12 +353,16 @@ export const AnnouncementsView: React.FC = () => {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAllowedToPost) {
+      showToast('Chỉ GVCN và Ban cán sự lớp mới có quyền đăng thông báo!');
+      return;
+    }
     if (!title || !content) return;
 
     const authorName =
       role === 'teacher'
         ? 'Thầy Trương Xuân Hòa'
-        : (currentStudent?.name || 'Huỳnh Thị Ái Ly (Lớp trưởng)');
+        : `${currentStudent?.name || 'Ban Cán Sự'} (${currentStudent?.classRole || 'Ban Cán Sự'})`;
     const authorRole =
       role === 'teacher'
         ? 'Giáo viên chủ nhiệm 12A7'
@@ -276,6 +371,11 @@ export const AnnouncementsView: React.FC = () => {
     const finalCreateImages = [...imageUrls];
     if (customImageUrlInput.trim()) {
       finalCreateImages.push(customImageUrlInput.trim());
+    }
+
+    const finalCreateVideos = [...videoUrls];
+    if (customVideoUrlInput.trim()) {
+      finalCreateVideos.push(customVideoUrlInput.trim());
     }
 
     addAnnouncement({
@@ -288,23 +388,20 @@ export const AnnouncementsView: React.FC = () => {
       isPinned: targetAudience === 'cadre' ? true : isPinned,
       imageUrl: finalCreateImages[0] || undefined,
       imageUrls: finalCreateImages.length > 0 ? finalCreateImages : undefined,
+      videoUrl: finalCreateVideos[0] || undefined,
+      videoUrls: finalCreateVideos.length > 0 ? finalCreateVideos : undefined,
     });
 
     setTitle('');
     setContent('');
     setImageUrls([]);
     setCustomImageUrlInput('');
+    setVideoUrls([]);
+    setCustomVideoUrlInput('');
     setTargetAudience('all');
     setShowCreateModal(false);
     showToast('Đã phát hành thông báo mới lên bảng tin 12A7!');
   };
-
-  const isCadreMember = Boolean(
-    currentStudent?.classRole && currentStudent.classRole !== 'Học sinh'
-  );
-
-  const isAllowedToPost =
-    role === 'teacher' || (role === 'student' && isCadreMember);
 
   return (
     <div className="space-y-6">
@@ -320,18 +417,38 @@ export const AnnouncementsView: React.FC = () => {
                 Bảng tin Thông báo & Báo bài 12A7
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Kênh thông tin chính thức giữa Giáo viên chủ nhiệm, Ban cán sự lớp, Học sinh và Phụ huynh
+                Chỉ GVCN và Ban cán sự lớp được đăng & chỉnh sửa thông báo • Hỗ trợ đính kèm nhiều Hình ảnh & Video clip
               </p>
             </div>
           </div>
+
+          {/* Role Permission Status Pill */}
+          <div className="mt-3">
+            {role === 'teacher' ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
+                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                Quyền GVCN: Được phép đăng thông báo mới, tải ảnh/clip, chỉnh sửa & xóa mọi thông báo
+              </span>
+            ) : role === 'student' && isCadreMember ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold">
+                <Crown className="w-4 h-4 text-amber-600 shrink-0" />
+                Quyền Ban Cán Sự Lớp ({currentStudent?.name} • {currentStudent?.classRole}): Được phép đăng & chỉnh sửa thông báo lớp
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold">
+                <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                Chế độ Chỉ xem ({role === 'student' ? `${currentStudent?.name || 'Học sinh'} - Học sinh` : 'Phụ huynh'}): Chỉ GVCN và Ban cán sự lớp mới được đăng & chỉnh sửa thông báo
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Strictly only for GVCN and Ban Cán Sự Lớp */}
         {isAllowedToPost && (
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleOpenCadreNoticeModal}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-black shadow-xs transition-all flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Crown className="w-4 h-4 text-yellow-200" /> Viết thông báo Ban Cán Sự
             </button>
@@ -342,11 +459,15 @@ export const AnnouncementsView: React.FC = () => {
                 setTargetAudience('all');
                 setTitle('');
                 setContent('');
+                setImageUrls([]);
+                setCustomImageUrlInput('');
+                setVideoUrls([]);
+                setCustomVideoUrlInput('');
                 setShowCreateModal(true);
               }}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> Đăng thông báo chung
+              <Plus className="w-4 h-4" /> Đăng thông báo & Tải Ảnh/Clip
             </button>
           </div>
         )}
@@ -481,19 +602,19 @@ export const AnnouncementsView: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  {role === 'teacher' && (
+                  {isAllowedToPost && (
                     <div className="flex items-center gap-1.5 ml-2">
                       <button
                         onClick={() => handleOpenEdit(ann)}
-                        className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all flex items-center gap-1 shadow-2xs"
-                        title="Chỉnh sửa thông báo này (GVCN)"
+                        className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                        title="Chỉnh sửa thông báo này (GVCN & Ban cán sự)"
                       >
                         <Edit2 className="w-3.5 h-3.5 text-blue-600" /> Sửa
                       </button>
                       <button
                         onClick={() => setDeletingAnnouncement(ann)}
-                        className="px-2.5 py-1 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-all flex items-center gap-1 shadow-2xs"
-                        title="Xóa thông báo này (GVCN)"
+                        className="px-2.5 py-1 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                        title="Xóa thông báo này (GVCN & Ban cán sự)"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-red-600" /> Xóa
                       </button>
@@ -565,6 +686,57 @@ export const AnnouncementsView: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Attached Video Clips Section */}
+              {(() => {
+                const annVideos = getAnnouncementVideos(ann);
+                if (annVideos.length === 0) return null;
+                return (
+                  <div className="mt-3.5 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-indigo-700 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Film className="w-3.5 h-3.5 text-indigo-600" />
+                        Đính kèm {annVideos.length} video clip
+                      </span>
+                    </div>
+                    <div
+                      className={`grid gap-3 ${
+                        annVideos.length === 1
+                          ? 'grid-cols-1 max-w-2xl'
+                          : 'grid-cols-1 sm:grid-cols-2'
+                      }`}
+                    >
+                      {annVideos.map((vidSrc, vidIdx) => {
+                        const embedInfo = getEmbedVideoInfo(vidSrc);
+                        return (
+                          <div
+                            key={vidIdx}
+                            className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-950 shadow-xs"
+                          >
+                            {embedInfo.type === 'youtube' || embedInfo.type === 'drive' ? (
+                              <iframe
+                                src={embedInfo.embedUrl}
+                                title={`${ann.title} - clip ${vidIdx + 1}`}
+                                className="w-full aspect-video border-0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            ) : (
+                              <video
+                                src={embedInfo.embedUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full max-h-96 object-contain bg-slate-950"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -865,6 +1037,113 @@ export const AnnouncementsView: React.FC = () => {
                 )}
               </div>
 
+              {/* Upload Multiple Video Clips from Phone or Computer */}
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-200">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-indigo-600" />
+                    Đính kèm Video / Clip từ Máy tính, Điện thoại hoặc Link ({videoUrls.length} clip)
+                  </label>
+                  {videoUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoUrls([])}
+                      className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Xóa tất cả clip
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={createVideoInputRef}
+                  type="file"
+                  accept="video/*,video/mp4,video/webm,video/quicktime"
+                  multiple
+                  onChange={(e) => handleVideoFileSelect(e, 'create')}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => createVideoInputRef.current?.click()}
+                    disabled={isUploadingCreateVideo}
+                    className="px-3 py-2.5 rounded-xl border-2 border-dashed border-indigo-300 bg-white hover:bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Video className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isUploadingCreateVideo
+                        ? 'Đang tải clip lên...'
+                        : '+ Tải clip từ Máy tính / Điện thoại'}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={customVideoUrlInput}
+                      onChange={(e) => setCustomVideoUrlInput(e.target.value)}
+                      placeholder="Hoặc dán link Video / YouTube / Drive..."
+                      className="flex-1 px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customVideoUrlInput.trim()) {
+                          setVideoUrls((prev) => [...prev, customVideoUrlInput.trim()]);
+                          setCustomVideoUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shrink-0 cursor-pointer"
+                    >
+                      Thêm clip
+                    </button>
+                  </div>
+                </div>
+
+                {videoUrls.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {videoUrls.map((vUrl, idx) => {
+                      const info = getEmbedVideoInfo(vUrl);
+                      return (
+                        <div
+                          key={idx}
+                          className="relative rounded-xl overflow-hidden border border-indigo-200 bg-slate-950"
+                        >
+                          {info.type === 'youtube' || info.type === 'drive' ? (
+                            <iframe
+                              src={info.embedUrl}
+                              title={`Clip ${idx + 1}`}
+                              className="w-full h-36 border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <video
+                              src={info.embedUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-36 object-contain bg-slate-950"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVideoUrls((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-black/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Xóa
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-wrap items-center gap-4 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
                   <input
@@ -1098,6 +1377,113 @@ export const AnnouncementsView: React.FC = () => {
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Multiple Video Clips in Edit Modal */}
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-200">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-indigo-600" />
+                    Video / Clip đính kèm ({editVideoUrls.length} clip):
+                  </label>
+                  {editVideoUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditVideoUrls([])}
+                      className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Xóa tất cả clip
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={editVideoInputRef}
+                  type="file"
+                  accept="video/*,video/mp4,video/webm,video/quicktime"
+                  multiple
+                  onChange={(e) => handleVideoFileSelect(e, 'edit')}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => editVideoInputRef.current?.click()}
+                    disabled={isUploadingEditVideo}
+                    className="px-3 py-2.5 rounded-xl border-2 border-dashed border-indigo-300 bg-white hover:bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Video className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isUploadingEditVideo
+                        ? 'Đang tải clip...'
+                        : '+ Tải thêm clip từ Máy / ĐT'}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={editCustomVideoUrlInput}
+                      onChange={(e) => setEditCustomVideoUrlInput(e.target.value)}
+                      placeholder="Hoặc dán link Video / YouTube / Drive..."
+                      className="flex-1 px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editCustomVideoUrlInput.trim()) {
+                          setEditVideoUrls((prev) => [...prev, editCustomVideoUrlInput.trim()]);
+                          setEditCustomVideoUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shrink-0 cursor-pointer"
+                    >
+                      Thêm clip
+                    </button>
+                  </div>
+                </div>
+
+                {editVideoUrls.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {editVideoUrls.map((vUrl, idx) => {
+                      const info = getEmbedVideoInfo(vUrl);
+                      return (
+                        <div
+                          key={idx}
+                          className="relative rounded-xl overflow-hidden border border-indigo-200 bg-slate-950"
+                        >
+                          {info.type === 'youtube' || info.type === 'drive' ? (
+                            <iframe
+                              src={info.embedUrl}
+                              title={`Clip ${idx + 1}`}
+                              className="w-full h-36 border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <video
+                              src={info.embedUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-36 object-contain bg-slate-950"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditVideoUrls((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-black/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Xóa
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

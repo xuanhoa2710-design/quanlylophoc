@@ -4,6 +4,8 @@ import { HappyPost } from '../types';
 import {
   compressImageFileToDataUrl,
   compressMultipleImageFiles,
+  uploadMultipleVideoFiles,
+  getEmbedVideoInfo,
   parseStudentBirthday,
 } from '../utils/imageUtils';
 import {
@@ -31,6 +33,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ZoomIn,
+  Video,
+  Film,
 } from 'lucide-react';
 
 export const HappyCornerView: React.FC = () => {
@@ -65,8 +69,12 @@ export const HappyCornerView: React.FC = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [customImageUrlInput, setCustomImageUrlInput] = useState('');
   const [isUploadingCreateImg, setIsUploadingCreateImg] = useState(false);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [customVideoUrlInput, setCustomVideoUrlInput] = useState('');
+  const [isUploadingCreateVideo, setIsUploadingCreateVideo] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const createFileInputRef = useRef<HTMLInputElement>(null);
+  const createVideoInputRef = useRef<HTMLInputElement>(null);
 
   // Edit Post Modal (GVCN)
   const [editingPost, setEditingPost] = useState<HappyPost | null>(null);
@@ -76,7 +84,11 @@ export const HappyCornerView: React.FC = () => {
   const [editImageUrls, setEditImageUrls] = useState<string[]>([]);
   const [editCustomImageUrlInput, setEditCustomImageUrlInput] = useState('');
   const [isUploadingEditImg, setIsUploadingEditImg] = useState(false);
+  const [editVideoUrls, setEditVideoUrls] = useState<string[]>([]);
+  const [editCustomVideoUrlInput, setEditCustomVideoUrlInput] = useState('');
+  const [isUploadingEditVideo, setIsUploadingEditVideo] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  const editVideoInputRef = useRef<HTMLInputElement>(null);
 
   // Lightbox viewer for multi-image gallery
   const [lightboxState, setLightboxState] = useState<{
@@ -97,6 +109,19 @@ export const HappyCornerView: React.FC = () => {
     }
     if (post.imageUrl && typeof post.imageUrl === 'string' && !list.includes(post.imageUrl)) {
       list.unshift(post.imageUrl);
+    }
+    return list;
+  };
+
+  const getPostVideos = (post: HappyPost): string[] => {
+    const list: string[] = [];
+    if (Array.isArray(post.videoUrls)) {
+      post.videoUrls.forEach((u) => {
+        if (u && typeof u === 'string' && !list.includes(u)) list.push(u);
+      });
+    }
+    if (post.videoUrl && typeof post.videoUrl === 'string' && !list.includes(post.videoUrl)) {
+      list.unshift(post.videoUrl);
     }
     return list;
   };
@@ -148,6 +173,35 @@ export const HappyCornerView: React.FC = () => {
     }
   };
 
+  const handleVideoFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: 'create' | 'edit'
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+
+    try {
+      if (mode === 'create') {
+        setIsUploadingCreateVideo(true);
+        const uploadedList = await uploadMultipleVideoFiles(files, 35);
+        setVideoUrls((prev) => [...prev, ...uploadedList].slice(0, 4));
+        setIsUploadingCreateVideo(false);
+      } else {
+        setIsUploadingEditVideo(true);
+        const uploadedList = await uploadMultipleVideoFiles(files, 35);
+        setEditVideoUrls((prev) => [...prev, ...uploadedList].slice(0, 4));
+        setIsUploadingEditVideo(false);
+      }
+    } catch (err: any) {
+      setUploadError(err?.message || 'Không thể tải video lên. Vui lòng chọn clip ≤ 35MB.');
+      setIsUploadingCreateVideo(false);
+      setIsUploadingEditVideo(false);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handleCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
@@ -164,6 +218,11 @@ export const HappyCornerView: React.FC = () => {
       finalCreateImages.push(customImageUrlInput.trim());
     }
 
+    const finalCreateVideos = [...videoUrls];
+    if (customVideoUrlInput.trim()) {
+      finalCreateVideos.push(customVideoUrlInput.trim());
+    }
+
     addHappyPost({
       category,
       title,
@@ -172,12 +231,16 @@ export const HappyCornerView: React.FC = () => {
       authorRole: role,
       imageUrl: finalCreateImages[0] || undefined,
       imageUrls: finalCreateImages.length > 0 ? finalCreateImages : undefined,
+      videoUrl: finalCreateVideos[0] || undefined,
+      videoUrls: finalCreateVideos.length > 0 ? finalCreateVideos : undefined,
     });
 
     setTitle('');
     setContent('');
     setImageUrls([]);
     setCustomImageUrlInput('');
+    setVideoUrls([]);
+    setCustomVideoUrlInput('');
     setUploadError(null);
     setShowAddModal(false);
   };
@@ -189,6 +252,8 @@ export const HappyCornerView: React.FC = () => {
     setEditContent(post.content);
     setEditImageUrls(getPostImages(post));
     setEditCustomImageUrlInput('');
+    setEditVideoUrls(getPostVideos(post));
+    setEditCustomVideoUrlInput('');
     setUploadError(null);
   };
 
@@ -201,12 +266,19 @@ export const HappyCornerView: React.FC = () => {
       finalEditImages.push(editCustomImageUrlInput.trim());
     }
 
+    const finalEditVideos = [...editVideoUrls];
+    if (editCustomVideoUrlInput.trim()) {
+      finalEditVideos.push(editCustomVideoUrlInput.trim());
+    }
+
     updateHappyPost(editingPost.id, {
       category: editCategory,
       title: editTitle.trim(),
       content: editContent.trim(),
       imageUrl: finalEditImages[0] || undefined,
       imageUrls: finalEditImages.length > 0 ? finalEditImages : undefined,
+      videoUrl: finalEditVideos[0] || undefined,
+      videoUrls: finalEditVideos.length > 0 ? finalEditVideos : undefined,
     });
 
     setEditingPost(null);
@@ -289,7 +361,7 @@ export const HappyCornerView: React.FC = () => {
               Hộp Thư Yêu Thương & Khoảnh Khắc 12A7
             </h1>
             <p className="mt-1.5 text-white/90 text-xs sm:text-sm leading-relaxed">
-              Nơi lưu giữ những kỷ niệm đẹp tuổi 18, tải ảnh trực tiếp từ điện thoại hoặc máy tính, gửi lời cảm ơn thầy cô, bạn bè và tự động chúc mừng sinh nhật các thành viên 12A7 vào đầu mỗi tháng!
+              Nơi lưu giữ những kỷ niệm đẹp tuổi 18, tải ảnh & video clip trực tiếp từ điện thoại hoặc máy tính, gửi lời cảm ơn thầy cô, bạn bè và tự động chúc mừng sinh nhật các thành viên 12A7 vào đầu mỗi tháng!
             </p>
           </div>
 
@@ -298,7 +370,7 @@ export const HappyCornerView: React.FC = () => {
             className="self-start md:self-center px-5 py-3 rounded-2xl bg-white text-rose-600 hover:bg-rose-50 font-extrabold text-xs sm:text-sm shadow-lg transition-all flex items-center gap-2 shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Đăng bài & Tải ảnh lên
+            Đăng bài (Ảnh / Video clip)
           </button>
         </div>
       </div>
@@ -593,6 +665,49 @@ export const HappyCornerView: React.FC = () => {
                     {post.content}
                   </p>
 
+                  {/* Video Clips Attached to Post */}
+                  {(() => {
+                    const postVideos = getPostVideos(post);
+                    if (postVideos.length === 0) return null;
+                    return (
+                      <div className="mt-3 space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
+                          <Film className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Video clip kỷ niệm ({postVideos.length} clip)</span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {postVideos.map((vidUrl, vidIdx) => {
+                            const info = getEmbedVideoInfo(vidUrl);
+                            return (
+                              <div
+                                key={vidIdx}
+                                className="rounded-2xl overflow-hidden border border-slate-200 bg-black shadow-xs"
+                              >
+                                {info.type === 'youtube' || info.type === 'drive' ? (
+                                  <iframe
+                                    src={info.embedUrl}
+                                    title={`${post.title} - video ${vidIdx + 1}`}
+                                    className="w-full aspect-video border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                ) : (
+                                  <video
+                                    src={info.embedUrl}
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    className="w-full max-h-80 object-contain bg-black"
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                     <div className="font-semibold text-slate-700 flex items-center gap-1.5">
                       <Smile className="w-4 h-4 text-amber-500" />
@@ -831,6 +946,117 @@ export const HappyCornerView: React.FC = () => {
                 )}
               </div>
 
+              {/* Upload Multiple Video Clips from Phone or Computer */}
+              <div className="space-y-2.5 p-3 rounded-2xl bg-purple-50/50 border border-purple-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Video className="w-3.5 h-3.5 text-purple-600" />
+                    Đính kèm Video Clip kỷ niệm ({videoUrls.length} clip)
+                  </label>
+                  {videoUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setVideoUrls([])}
+                      className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Xóa tất cả clip
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={createVideoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,video/*"
+                  multiple
+                  onChange={(e) => handleVideoFileSelect(e, 'create')}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => createVideoInputRef.current?.click()}
+                    disabled={isUploadingCreateVideo}
+                    className="px-3.5 py-2.5 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/70 hover:bg-purple-100/80 text-purple-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Video className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isUploadingCreateVideo
+                        ? 'Đang tải clip lên...'
+                        : '+ Tải clip từ Máy tính / Điện thoại'}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={customVideoUrlInput}
+                      onChange={(e) => setCustomVideoUrlInput(e.target.value)}
+                      placeholder="Hoặc dán link Video / YouTube / Drive..."
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customVideoUrlInput.trim()) {
+                          setVideoUrls((prev) => [...prev, customVideoUrlInput.trim()]);
+                          setCustomVideoUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shrink-0"
+                    >
+                      Thêm
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500">
+                  Hỗ trợ tải trực tiếp tệp video (.mp4, .mov, .webm tối đa 35MB/clip) hoặc dán link YouTube, Google Drive.
+                </p>
+
+                {videoUrls.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2.5 pt-1">
+                    {videoUrls.map((vidUrl, idx) => {
+                      const info = getEmbedVideoInfo(vidUrl);
+                      return (
+                        <div
+                          key={idx}
+                          className="relative rounded-2xl overflow-hidden border border-purple-200 bg-black"
+                        >
+                          {info.type === 'youtube' || info.type === 'drive' ? (
+                            <iframe
+                              src={info.embedUrl}
+                              title={`Xem trước video ${idx + 1}`}
+                              className="w-full aspect-video border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <video
+                              src={info.embedUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="w-full max-h-52 object-contain bg-black"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setVideoUrls((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Xóa clip
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -841,7 +1067,7 @@ export const HappyCornerView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploadingCreateImg}
+                  disabled={isUploadingCreateImg || isUploadingCreateVideo}
                   className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
                 >
                   Đăng lên Góc Hạnh Phúc
@@ -1003,6 +1229,113 @@ export const HappyCornerView: React.FC = () => {
                 )}
               </div>
 
+              {/* Edit Video Clips Section */}
+              <div className="space-y-2.5 p-3 rounded-2xl bg-purple-50/50 border border-purple-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Video className="w-3.5 h-3.5 text-purple-600" />
+                    Video Clip đính kèm ({editVideoUrls.length} clip)
+                  </label>
+                  {editVideoUrls.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditVideoUrls([])}
+                      className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Xóa tất cả clip
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={editVideoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,video/*"
+                  multiple
+                  onChange={(e) => handleVideoFileSelect(e, 'edit')}
+                  className="hidden"
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => editVideoInputRef.current?.click()}
+                    disabled={isUploadingEditVideo}
+                    className="px-3.5 py-2.5 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/70 hover:bg-purple-100/80 text-purple-700 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Video className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isUploadingEditVideo
+                        ? 'Đang tải clip...'
+                        : '+ Thêm clip từ Máy tính / ĐT'}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={editCustomVideoUrlInput}
+                      onChange={(e) => setEditCustomVideoUrlInput(e.target.value)}
+                      placeholder="Hoặc dán link Video / YouTube / Drive..."
+                      className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editCustomVideoUrlInput.trim()) {
+                          setEditVideoUrls((prev) => [...prev, editCustomVideoUrlInput.trim()]);
+                          setEditCustomVideoUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shrink-0"
+                    >
+                      Thêm
+                    </button>
+                  </div>
+                </div>
+
+                {editVideoUrls.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2.5 pt-1">
+                    {editVideoUrls.map((vidUrl, idx) => {
+                      const info = getEmbedVideoInfo(vidUrl);
+                      return (
+                        <div
+                          key={idx}
+                          className="relative rounded-2xl overflow-hidden border border-purple-200 bg-black"
+                        >
+                          {info.type === 'youtube' || info.type === 'drive' ? (
+                            <iframe
+                              src={info.embedUrl}
+                              title={`Xem trước video ${idx + 1}`}
+                              className="w-full aspect-video border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <video
+                              src={info.embedUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="w-full max-h-52 object-contain bg-black"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditVideoUrls((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Xóa clip
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -1013,6 +1346,7 @@ export const HappyCornerView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={isUploadingEditImg || isUploadingEditVideo}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all"
                 >
                   Lưu thay đổi

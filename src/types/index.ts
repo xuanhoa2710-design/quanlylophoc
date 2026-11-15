@@ -199,6 +199,8 @@ export interface Announcement {
   isPinned?: boolean;
   imageUrl?: string;
   imageUrls?: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
 }
 
 export interface ClassAppConfig {
@@ -259,6 +261,8 @@ export interface HappyPost {
   }[];
   imageUrl?: string;
   imageUrls?: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
   createdAt: string;
   updatedAt?: string;
   isAutoBirthday?: boolean;

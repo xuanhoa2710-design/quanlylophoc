@@ -131,3 +131,118 @@ export async function compressMultipleImageFiles(
   return results;
 }
 
+/**
+ * Upload a single video clip from phone or computer to the backend media server
+ * and return its streamable URL (/api/media/videos/...).
+ */
+export async function uploadVideoFileToServer(
+  file: File,
+  maxSizeMB: number = 35
+): Promise<string> {
+  const hasVideoExt = /\.(mp4|mov|webm|m4v|ogg|ogv|3gp|avi|mkv)$/i.test(file.name || '');
+  if (!file.type.startsWith('video/') && !hasVideoExt) {
+    throw new Error('Vui lòng chọn file video/clip hợp lệ (MP4, MOV, WEBM, 3GP...).');
+  }
+
+  const maxBytes = maxSizeMB * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error(`Dung lượng clip vượt quá giới hạn ${maxSizeMB}MB. Vui lòng chọn clip ngắn hơn hoặc dán link video.`);
+  }
+
+  const base64Data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Không thể đọc file video từ thiết bị.'));
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      if (!result) {
+        reject(new Error('Dữ liệu video trống.'));
+        return;
+      }
+      resolve(result);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const response = await fetch('/api/media/upload-video', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: file.name || 'clip.mp4',
+      mimeType: file.type || 'video/mp4',
+      base64Data,
+    }),
+  });
+
+  if (!response.ok) {
+    let errMsg = 'Không thể tải video lên máy chủ.';
+    try {
+      const errData = await response.json();
+      if (errData?.error) errMsg = errData.error;
+    } catch {
+      // ignore
+    }
+    throw new Error(errMsg);
+  }
+
+  const data = await response.json();
+  if (!data?.url) {
+    throw new Error('Máy chủ không trả về đường dẫn video.');
+  }
+  return data.url;
+}
+
+/**
+ * Upload multiple video clip files sequentially and return their streamable URLs.
+ */
+export async function uploadMultipleVideoFiles(
+  files: FileList | File[],
+  maxSizeMB: number = 35
+): Promise<string[]> {
+  const fileArray = Array.from(files || []);
+  if (fileArray.length === 0) return [];
+  const uploadedUrls: string[] = [];
+  for (const file of fileArray) {
+    const url = await uploadVideoFileToServer(file, maxSizeMB);
+    if (url) uploadedUrls.push(url);
+  }
+  return uploadedUrls;
+}
+
+/**
+ * Parses a video URL to support direct HTML5 <video> playback as well as YouTube and Google Drive embeds.
+ */
+export function getEmbedVideoInfo(rawUrl: string): {
+  type: 'youtube' | 'drive' | 'direct';
+  embedUrl: string;
+  originalUrl: string;
+} {
+  const url = (rawUrl || '').trim();
+  // YouTube watch / youtu.be / shorts / embed
+  const ytMatch = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
+  if (ytMatch && ytMatch[1]) {
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}`,
+      originalUrl: url,
+    };
+  }
+
+  // Google Drive file preview
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return {
+      type: 'drive',
+      embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`,
+      originalUrl: url,
+    };
+  }
+
+  return {
+    type: 'direct',
+    embedUrl: url,
+    originalUrl: url,
+  };
+}
+

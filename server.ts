@@ -1282,6 +1282,116 @@ Hãy giải đáp trực tiếp, đầy đủ và chi tiết từng bước:`;
   });
 });
 
+// 7b. Video Clip Upload & Streaming API (For Announcements & Happy Corner)
+const VIDEOS_UPLOAD_DIR = path.resolve(__dirname, 'public/uploads/videos');
+try {
+  fs.mkdirSync(VIDEOS_UPLOAD_DIR, { recursive: true });
+} catch (err) {
+  console.warn('Could not create videos upload dir:', err);
+}
+
+const inferVideoMimeType = (fileName = '', fallbackMime = 'video/mp4'): string => {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith('.webm')) return 'video/webm';
+  if (lower.endsWith('.mov')) return 'video/quicktime';
+  if (lower.endsWith('.ogg') || lower.endsWith('.ogv')) return 'video/ogg';
+  if (lower.endsWith('.m4v')) return 'video/x-m4v';
+  if (lower.endsWith('.3gp')) return 'video/3gpp';
+  if (fallbackMime && fallbackMime.startsWith('video/')) return fallbackMime;
+  return 'video/mp4';
+};
+
+const inferVideoExtension = (fileName = '', mimeType = ''): string => {
+  const extMatch = fileName.toLowerCase().match(/\.(mp4|webm|mov|m4v|ogg|ogv|3gp)$/);
+  if (extMatch) return `.${extMatch[1]}`;
+  const lowerMime = mimeType.toLowerCase();
+  if (lowerMime.includes('webm')) return '.webm';
+  if (lowerMime.includes('quicktime') || lowerMime.includes('mov')) return '.mov';
+  if (lowerMime.includes('ogg')) return '.ogg';
+  if (lowerMime.includes('3gp')) return '.3gp';
+  return '.mp4';
+};
+
+app.post('/api/media/upload-video', (req, res) => {
+  try {
+    const { fileName, mimeType, base64Data } = req.body || {};
+    if (!base64Data || typeof base64Data !== 'string') {
+      return res.status(400).json({ error: 'Thiếu dữ liệu video tải lên.' });
+    }
+
+    const stripped = base64Data.replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(stripped, 'base64');
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: 'File video rỗng hoặc không hợp lệ.' });
+    }
+
+    const ext = inferVideoExtension(fileName, mimeType);
+    const safeId = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const filePath = path.join(VIDEOS_UPLOAD_DIR, safeId);
+
+    fs.writeFileSync(filePath, buffer);
+
+    return res.json({
+      success: true,
+      url: `/api/media/videos/${safeId}`,
+      fileName: safeId,
+      mimeType: inferVideoMimeType(safeId, mimeType),
+      size: buffer.length,
+    });
+  } catch (err: any) {
+    console.error('Upload video error:', err);
+    return res.status(500).json({
+      error: err?.message || 'Lỗi máy chủ khi lưu video.',
+    });
+  }
+});
+
+app.get('/api/media/videos/:filename', (req, res) => {
+  try {
+    const safeName = path.basename(req.params.filename || '');
+    const filePath = path.join(VIDEOS_UPLOAD_DIR, safeName);
+    if (!safeName || !fs.existsSync(filePath)) {
+      return res.status(404).send('Video not found');
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const contentType = inferVideoMimeType(safeName);
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      if (isNaN(start) || isNaN(end) || start >= fileSize || end >= fileSize) {
+        res.status(416).setHeader('Content-Range', `bytes */${fileSize}`);
+        return res.end();
+      }
+      const chunksize = end - start + 1;
+      const fileStream = fs.createReadStream(filePath, { start, end });
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000',
+      });
+      fileStream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'public, max-age=31536000',
+      });
+      fs.createReadStream(filePath).pipe(res);
+    }
+  } catch (err) {
+    console.error('Stream video error:', err);
+    res.status(500).send('Error streaming video');
+  }
+});
+
 // 8. Shared Classroom State Persistence API (Synchronizes updates across all devices & users in real-time)
 const SHARED_STATE_FILE = path.resolve(__dirname, 'shared_classroom_state.json');
 
