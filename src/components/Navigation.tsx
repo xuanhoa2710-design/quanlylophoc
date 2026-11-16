@@ -113,10 +113,15 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab 
     },
     {
       id: 'evaluations',
-      label: role === 'teacher' ? 'Nhận xét học sinh' : 'Nhận xét từ Thầy Hòa',
-      shortLabel: 'Nhận xét GVCN',
+      label:
+        role === 'teacher'
+          ? 'Nhận xét HS & Gửi PH'
+          : role === 'student'
+          ? 'Nhận xét của Thầy Hòa'
+          : 'Nhận xét từ Thầy Hòa',
+      shortLabel: 'Nhận xét Thầy Hòa',
       icon: MessageSquareText,
-      roles: ['teacher', 'parent'],
+      roles: ['teacher', 'student', 'parent'],
     },
     {
       id: 'leaderboard',

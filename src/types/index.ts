@@ -183,7 +183,16 @@ export interface EvaluationComment {
   strengths: string;
   improvements: string;
   teacherNote: string;
+  parentNote?: string;
+  sentToParent?: boolean;
+  sentToParentAt?: string;
+  parentReply?: string;
+  parentRepliedAt?: string;
+  weeklyEmulationScore?: number;
+  gpaSnapshot?: number;
+  attendanceRateSnapshot?: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Announcement {

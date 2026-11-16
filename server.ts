@@ -92,35 +92,64 @@ async function generateGeminiText(
   return res.text;
 }
 
-// 1. AI Student Evaluation
+// 1. AI Student Evaluation (Nhận xét học sinh & Thông điệp gửi Phụ huynh - GVCN: Thầy Trương Xuân Hòa)
 app.post('/api/ai/comment', async (req, res) => {
-  const { studentName, gpa, conduct, strengths, weaknesses, aspiration, period } = req.body;
+  const {
+    studentName,
+    parentName,
+    gpa,
+    conduct,
+    weeklyScore,
+    attendanceRate,
+    strengths,
+    weaknesses,
+    aspiration,
+    examSubjects,
+    period,
+  } = req.body;
 
-  const prompt = `Bạn là thầy giáo Trương Xuân Hòa, giáo viên chủ nhiệm lớp 12A7 trường THPT Vĩnh Lộc B (lớp học hạnh phúc với khẩu hiệu "Đoàn kết - Yêu thương - Cùng tiến bộ", slogan "Dream Big And Dare To Fail").
-Hãy viết một bản nhận xét học sinh định kỳ (${period || 'Tuần / Tháng'}) thật tâm huyết, sâu sắc, giàu tính sư phạm và truyền cảm hứng tích cực cho học sinh sau:
-- Tên học sinh: ${studentName || 'Học sinh'}
-- Điểm trung bình: ${gpa || 'Khá giỏi'}
+  const prompt = `Bạn là Thầy Trương Xuân Hòa (Nam giáo viên dạy Hóa học), Giáo viên chủ nhiệm lớp 12A7 trường THPT Vĩnh Lộc B (lớp học hạnh phúc với khẩu hiệu "Đoàn kết - Yêu thương - Cùng tiến bộ", slogan "Dream Big And Dare To Fail").
+QUY TẮC XƯNG HÔ BẮT BUỘC:
+- GVCN là THẦY GIÁO (Thầy Trương Xuân Hòa). Tuyệt đối xưng "Thầy" (hoặc "Thầy Hòa" / "Thầy chủ nhiệm"), TUYỆT ĐỐI KHÔNG xưng "Cô" ở bất kỳ câu nào.
+- Với học sinh: xưng "Thầy" - gọi "em" (hoặc tên học sinh).
+- Với phụ huynh: xưng "Thầy" (hoặc "Thầy Hòa") - gọi "Quý Phụ huynh" / "Gia đình".
+
+Hãy viết bản nhận xét định kỳ (${period || 'Tuần / Tháng'}) tâm huyết, sâu sắc, chuẩn sư phạm cho học sinh:
+- Họ tên học sinh: ${studentName || 'Học sinh'}
+- Họ tên Phụ huynh: ${parentName || 'Quý Phụ huynh'}
+- Điểm trung bình hiện tại: ${gpa || 'Khá giỏi'} | Điểm thi đua tuần: ${weeklyScore ?? 100}/100đ | Chuyên cần: ${attendanceRate ?? 100}%
 - Xếp loại rèn luyện: ${conduct || 'Tốt'}
+- Môn thi TN tự chọn: ${examSubjects || 'Vật lý - Hóa học'}
 - Điểm mạnh: ${strengths || 'Ngoan, có tinh thần cầu tiến'}
-- Điểm cần cải thiện: ${weaknesses || 'Cần chủ động và tự tin hơn trước tập thể'}
-- Nguyện vọng / ước mơ thi TN & ĐH: ${aspiration || 'Quyết tâm đỗ đại học nguyện vọng 1'}
+- Điểm cần cải thiện: ${weaknesses || 'Cần chủ động và tự tin hơn khi giải đề nâng cao'}
+- Nguyện vọng / Ước mơ ĐH: ${aspiration || 'Quyết tâm đỗ đại học nguyện vọng 1'}
 
-Bản nhận xét cần bao gồm 4 phần rõ ràng:
-1. Đánh giá học tập & ý thức (ngắn gọn, chính xác)
-2. Điểm mạnh và sự tiến bộ đáng khen
-3. Góp ý chân thành, cụ thể để em bứt phá
-4. Lời chúc và thông điệp truyền cảm hứng cuối cấp 12`;
+Hãy trình bày rõ ràng gồm:
+1. 📚 Nhận xét Học tập & Kỹ năng
+2. 🌱 Nhận xét Ý thức, Chuyên cần & Thái độ
+3. 💌 Lời nhắn tâm huyết của Thầy Trương Xuân Hòa gửi em ${studentName || 'học sinh'} (xưng Thầy - em)
+4. 🤝 Thông điệp của Thầy Trương Xuân Hòa gửi Quý Phụ huynh ${parentName ? `(${parentName})` : ''} (xưng Thầy - Quý Phụ huynh)`;
 
   const generated = await generateGeminiText(prompt);
   if (generated) {
-    return res.json({ text: generated });
+    // Sanitize any accidental "cô" self-reference
+    const cleanedText = generated
+      .replace(/\bcô rất kỳ vọng\b/gi, 'thầy rất kỳ vọng')
+      .replace(/\bhỗ trợ cô\b/gi, 'hỗ trợ thầy')
+      .replace(/\bCô ghi nhận\b/g, 'Thầy ghi nhận')
+      .replace(/\bcô ghi nhận\b/gi, 'thầy ghi nhận')
+      .replace(/\bcô tin tưởng\b/gi, 'thầy tin tưởng')
+      .replace(/\bcô tự hào\b/gi, 'thầy tự hào')
+      .replace(/\bcô mong\b/gi, 'thầy mong')
+      .replace(/\bcô chúc\b/gi, 'thầy chúc');
+    return res.json({ text: cleanedText });
   }
 
   // Fallback if AI key is unavailable or fails
-  const fallbackComment = `Em ${studentName || 'học sinh'} trong giai đoạn ${period || 'vừa qua'} luôn thể hiện tinh thần học tập nghiêm túc, rèn luyện tốt và chấp hành tốt nội quy lớp 12A7.
-- Học tập & Kỹ năng: Điểm số duy trì ổn định (${gpa || 'tốt'}), nắm vững kiến thức trọng tâm. Phát huy điểm mạnh: ${strengths || 'tự giác, chăm chỉ'}.
-- Điểm cần phát huy: ${weaknesses ? `Cần chú ý khắc phục "${weaknesses}" bằng cách chủ động trao đổi với thầy cô và bạn bè tổ nhóm.` : 'Cần duy trì phong độ và rèn luyện kỹ năng giải đề thi THPT Quốc gia.'}
-- Lời nhắn gửi từ GVCN: Năm lớp 12 là bước ngoặt quan trọng, thầy tin tưởng với nỗ lực và sự kiên trì, em sẽ chạm tới ước mơ (${aspiration || 'Đỗ nguyện vọng mơ ước'})! 12A7 luôn tự hào về em!`;
+  const fallbackComment = `📚 Học tập & Kỹ năng: Em ${studentName || 'học sinh'} trong giai đoạn ${period || 'vừa qua'} duy trì điểm trung bình ${gpa || 8.2}đ, nắm vững kiến thức trọng tâm và định hướng ôn thi ${examSubjects || 'Tốt nghiệp THPT 2027'} rõ ràng.
+🌱 Ý thức & Nề nếp: Chuyên cần đạt ${attendanceRate ?? 100}%, điểm thi đua đạt ${weeklyScore ?? 100}/100đ, lễ phép với thầy cô và đoàn kết với bạn bè tổ nhóm.
+💌 Lời nhắn của Thầy Trương Xuân Hòa gửi em: Năm lớp 12 là bước ngoặt quan trọng, thầy rất ghi nhận sự nỗ lực của em. Hãy phát huy điểm mạnh (${strengths || 'chăm chỉ, tự giác'}) và khắc phục "${weaknesses || 'rèn tốc độ giải đề'}" để chinh phục mục tiêu "${aspiration || 'Đỗ nguyện vọng 1'}" nhé! Thầy và lớp 12A7 luôn tự hào về em!
+🤝 Thông điệp Thầy Hòa gửi Quý Phụ huynh (${parentName || 'Gia đình'}): Kính gửi Quý Phụ huynh em ${studentName || 'học sinh'}, trên lớp em chấp hành tốt nội quy và học tập tích cực. Thầy Hòa rất mong gia đình tiếp tục đồng hành, động viên và nhắc nhở em giữ gìn sức khỏe, ôn tập đều đặn các môn thi tốt nghiệp tại nhà.`;
 
   res.json({ text: fallbackComment });
 });
@@ -129,7 +158,7 @@ Bản nhận xét cần bao gồm 4 phần rõ ràng:
 app.post('/api/ai/announcement', async (req, res) => {
   const { title, type, audience, keyPoints } = req.body;
 
-  const prompt = `Bạn là thầy Trương Xuân Hòa, GVCN lớp 12A7 THPT Vĩnh Lộc B. Hãy soạn một thông báo chuyên nghiệp, ấm áp, rõ ràng theo thông tin sau:
+  const prompt = `Bạn là Thầy Trương Xuân Hòa (Nam giáo viên), GVCN lớp 12A7 THPT Vĩnh Lộc B. Tuyệt đối xưng "Thầy" (không xưng "Cô"). Hãy soạn một thông báo chuyên nghiệp, ấm áp, rõ ràng theo thông tin sau:
 - Tiêu đề thông báo: ${title}
 - Thể loại: ${type} (ví dụ: Thông báo lớp, Báo bài hàng ngày, Lịch thi, Họp phụ huynh, Khẩn)
 - Đối tượng: ${audience || 'Học sinh và Phụ huynh lớp 12A7'}
@@ -146,10 +175,10 @@ Yêu cầu: Viết giọng văn trang trọng nhưng gần gũi, nêu rõ thời
 📌 **Về việc:** ${title}
 Kính gửi: Quý Phụ huynh và các em Học sinh lớp 12A7,
 
-Giáo viên chủ nhiệm xin thông báo nội dung quan trọng sau:
+Thầy Trương Xuân Hòa - Giáo viên chủ nhiệm xin thông báo nội dung quan trọng sau:
 ${keyPoints || '- Đề nghị các em học sinh nắm vững kế hoạch và thực hiện đúng thời hạn quy định.\n- Phụ huynh phối hợp nhắc nhở con chuẩn bị đầy đủ bài vở và dụng cụ học tập.'}
 
-Mọi ý kiến thắc mắc xin vui lòng liên hệ trực tiếp với GVCN qua mục tin nhắn ứng dụng hoặc hotline lớp.
+Mọi ý kiến thắc mắc xin vui lòng liên hệ trực tiếp với Thầy Hòa (GVCN) qua mục tin nhắn ứng dụng hoặc Zalo lớp.
 Chúc tập thể 12A7 một tuần học tập tràn đầy năng lượng và hiệu quả!
 Trân trọng,
 *Thầy Trương Xuân Hòa - GVCN 12A7*`;
@@ -161,7 +190,7 @@ Trân trọng,
 app.post('/api/ai/analysis', async (req, res) => {
   const { classSummary, atRiskStudents, subjectAverages } = req.body;
 
-  const prompt = `Bạn là chuyên gia cố vấn giáo dục THPT và GVCN lớp 12A7 THPT Vĩnh Lộc B (Thầy Trương Xuân Hòa). Dưới đây là dữ liệu tổng hợp kết quả học tập và chuyên cần của lớp:
+  const prompt = `Bạn là chuyên gia cố vấn giáo dục THPT và GVCN lớp 12A7 THPT Vĩnh Lộc B (Thầy Trương Xuân Hòa - Nam giáo viên, xưng "Thầy"). Dưới đây là dữ liệu tổng hợp kết quả học tập và chuyên cần của lớp:
 - Tổng số học sinh: 50 em
 - Tóm tắt học lực: ${classSummary || 'Tốt: 14 em (28%), Khá: 32 em (64%), Đạt: 4 em (8%)'}
 - Học sinh cần lưu ý / sa sút / điểm cần nâng cao: ${JSON.stringify(atRiskStudents || [])}
@@ -171,7 +200,7 @@ Hãy đưa ra bản phân tích chuyên sâu gồm:
 1. Đánh giá tổng quan mặt bằng chung lớp 12A7.
 2. Nhận diện các môn học có nguy cơ (ví dụ: Toán, Hóa, Ngoại ngữ theo nguyện vọng thi tốt nghiệp).
 3. Dự báo nguy cơ học sinh sa sút và nhóm cần bồi dưỡng cấp tốc.
-4. Kế hoạch hành động cụ thể cho GVCN (đôi bạn cùng tiến, chia tổ học tập, trao đổi với gia đình, tâm lý học đường).`;
+4. Kế hoạch hành động cụ thể cho GVCN Thầy Trương Xuân Hòa (đôi bạn cùng tiến, chia tổ học tập, trao đổi với gia đình, tâm lý học đường).`;
 
   const generated = await generateGeminiText(prompt);
   if (generated) {
@@ -200,11 +229,12 @@ Hãy đưa ra bản phân tích chuyên sâu gồm:
 app.post('/api/ai/parent-letter', async (req, res) => {
   const { studentName, parentName, reason, meetingTime } = req.body;
 
-  const prompt = `Soạn một bức thư mời hoặc thư trao đổi thân tình gửi đến phụ huynh học sinh lớp 12A7:
+  const prompt = `Bạn là Thầy Trương Xuân Hòa (Nam giáo viên), Giáo viên chủ nhiệm lớp 12A7 trường THPT Vĩnh Lộc B. Tuyệt đối xưng "Thầy" (hoặc "Thầy Hòa"), KHÔNG xưng "Cô".
+Hãy soạn một bức thư trao đổi hoặc thông báo nhận xét thân tình gửi đến phụ huynh học sinh lớp 12A7:
 - Tên phụ huynh: ${parentName || 'Quý phụ huynh'}
 - Tên học sinh: ${studentName || 'em học sinh'}
-- Lý do trao đổi: ${reason || 'Trao đổi về tình hình học tập và định hướng ôn thi tốt nghiệp'}
-- Thời gian dự kiến: ${meetingTime || 'Cuối tuần này'}
+- Nội dung trao đổi: ${reason || 'Thông báo tình hình học tập, rèn luyện và định hướng ôn thi tốt nghiệp'}
+- Thời gian dự kiến: ${meetingTime || 'Trong tuần này'}
 - Người gửi: Thầy Trương Xuân Hòa - GVCN 12A7, Trường THPT Vĩnh Lộc B.
 Hãy viết thư văn minh, tôn trọng, chân thành, thể hiện sự đồng hành vì tương lai của học sinh.`;
 
@@ -215,11 +245,11 @@ Hãy viết thư văn minh, tôn trọng, chân thành, thể hiện sự đồn
 
   const fallback = `Kính gửi: ${parentName || 'Quý Phụ huynh'} em ${studentName || 'học sinh'},
 
-Tôi là Trương Xuân Hòa, giáo viên chủ nhiệm lớp 12A7, trường THPT Vĩnh Lộc B.
-Năm học 2026 - 2027 là năm học cuối cấp vô cùng ý nghĩa đối với các em. Nhằm tạo điều kiện tốt nhất để đồng hành cùng em trong học tập và định hướng nghề nghiệp, tôi trân trọng kính mời Quý phụ huynh dành chút thời gian gặp mặt trao đổi:
-- Nội dung: ${reason || 'Bàn về kế hoạch học tập và các giải pháp hỗ trợ em trong giai đoạn nước rút'}
-- Thời gian đề xuất: ${meetingTime || 'Sau giờ học hoặc buổi họp định kỳ'}
-- Địa điểm: Phòng học 12A7 hoặc trực tuyến qua mục Liên lạc trên hệ thống.
+Thầy là Trương Xuân Hòa, Giáo viên chủ nhiệm lớp 12A7, trường THPT Vĩnh Lộc B.
+Năm học 2026 - 2027 là năm học cuối cấp vô cùng ý nghĩa đối với các em. Nhằm tạo điều kiện tốt nhất để đồng hành cùng em trong học tập và định hướng nghề nghiệp, thầy trân trọng gửi tới Quý phụ huynh nội dung trao đổi:
+- Nội dung: ${reason || 'Thông báo tình hình học tập, chuyên cần và kế hoạch hỗ trợ em trong giai đoạn nước rút'}
+- Thời gian phối hợp: ${meetingTime || 'Thường xuyên trong tuần học hoặc qua Sổ liên lạc điện tử 12A7'}
+- Kênh liên hệ trực tiếp: Phòng học 12A7 hoặc qua Zalo / Điện thoại của Thầy Hòa.
 
 Sự đồng hành của gia đình là nguồn động viên quý giá nhất cho em. Rất mong sớm nhận được phản hồi từ Quý phụ huynh.
 Kính chúc Quý gia đình nhiều sức khỏe và hạnh phúc!

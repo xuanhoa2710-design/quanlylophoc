@@ -381,7 +381,7 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     "title": "Họp Phụ huynh định kỳ đầu năm học và tư vấn hướng nghiệp 12",
     "type": "parent_meeting",
     "content": "Trân trọng kính mời Quý phụ huynh học sinh lớp 12A7 đến tham dự buổi họp phụ huynh đầu năm:\n- Thời gian: 08:00 sáng Chủ Nhật ngày 18/10/2026.\n- Địa điểm: Phòng học lớp 12A7 (Lầu 2, Dãy B, Trường THPT Vĩnh Lộc B).\n- Nội dung chính:\n  + Báo cáo định hướng chuyên môn năm học cuối cấp 2026-2027.\n  + Thống nhất kế hoạch ôn thi TN THPT & ĐH 100%.\n  + Bầu Ban đại diện Cha mẹ học sinh lớp.\n  + Trao đổi riêng về từng học sinh.\nSự hiện diện đầy đủ của Quý phụ huynh là niềm động viên lớn cho các em!",
-    "author": "Cô Tạ Thị Tình",
+    "author": "Thầy Trương Xuân Hòa (GVCN)",
     "role": "Giáo viên chủ nhiệm 12A7",
     "createdAt": "2026-10-02 09:00",
     "isPinned": false
@@ -490,14 +490,20 @@ export const INITIAL_EVALUATIONS: EvaluationComment[] = [
     "studentId": "hs-43",
     "studentName": "Lê Phú Trình",
     "period": "Tháng",
-    "periodLabel": "Tháng 9/2026",
+    "periodLabel": "Tháng 10/2026",
     "academic": "Thành tích học tập xuất sắc toàn diện, dẫn đầu lớp về điểm Toán, Hóa, Lý và Anh.",
     "awareness": "Ý thức tự giác học tập rất cao, là tấm gương sáng cho cả lớp noi theo.",
     "skills": "Kỹ năng giải quyết bài toán phức tạp và tư duy logic nổi bật.",
     "attitude": "Khiêm tốn, hòa nhã với bạn bè, tích cực giúp đỡ các bạn trong tổ.",
     "strengths": "Khả năng tự học đỉnh cao, tư duy nghiên cứu khoa học sắc bén.",
     "improvements": "Cần chú ý ăn uống đầy đủ và nghỉ ngơi hợp lý, tránh thức quá khuya ảnh hưởng sức khỏe.",
-    "teacherNote": "Học sinh tiêu biểu của 12A7, cô rất kỳ vọng em sẽ đạt thủ khoa kỳ thi đại học!",
+    "teacherNote": "Học sinh tiêu biểu của 12A7, thầy rất kỳ vọng em sẽ đạt thủ khoa kỳ thi Tốt nghiệp THPT & Đại học 2027!",
+    "parentNote": "Kính gửi Quý Phụ huynh em Lê Phú Trình, thầy Trương Xuân Hòa (GVCN 12A7) rất tự hào thông báo em Trình luôn duy trì phong độ học tập xuất sắc và nề nếp gương mẫu trên lớp. Mong gia đình cùng thầy động viên và chăm sóc sức khỏe để em bứt phá trong kỳ thi Đại học sắp tới.",
+    "sentToParent": true,
+    "sentToParentAt": "2026-10-01 17:00",
+    "weeklyEmulationScore": 100,
+    "gpaSnapshot": 9.3,
+    "attendanceRateSnapshot": 100,
     "createdAt": "2026-10-01"
   },
   {
@@ -505,14 +511,20 @@ export const INITIAL_EVALUATIONS: EvaluationComment[] = [
     "studentId": "hs-27",
     "studentName": "Huỳnh Thị Ái Ly",
     "period": "Tháng",
-    "periodLabel": "Tháng 9/2026",
-    "academic": "Học lực giỏi, nổi bật môn Ngữ văn và các môn Tự nhiên.",
-    "awareness": "Nghiêm túc chấp hành nội quy, gương mẫu trong vai trò Lớp phó Học tập.",
-    "skills": "Kỹ năng tổ chức học nhóm và điều phối lớp học rất hiệu quả.",
+    "periodLabel": "Tháng 10/2026",
+    "academic": "Học lực giỏi, nổi bật môn Ngữ văn, Hóa học và các môn Tự nhiên.",
+    "awareness": "Nghiêm túc chấp hành nội quy, tích cực xây dựng phong trào tự học của Tổ 3 và tập thể 12A7.",
+    "skills": "Kỹ năng tổ chức học nhóm và giải bài tập trắc nghiệm rất hiệu quả.",
     "attitude": "Tâm huyết, trách nhiệm, luôn quan tâm đến sự tiến bộ của bạn bè.",
-    "strengths": "Chăm chỉ, chu đáo, khả năng viết và truyền cảm hứng tốt.",
-    "improvements": "Giữ tâm lý thoải mái, tự tin vào bản thân hơn nữa.",
-    "teacherNote": "Cảm ơn em đã luôn là cánh tay đắc lực hỗ trợ cô quản lý và động viên lớp!",
+    "strengths": "Chăm chỉ, chu đáo, khả năng tự học và truyền cảm hứng tốt.",
+    "improvements": "Giữ tâm lý thoải mái, tự tin vào bản thân hơn nữa trước các kỳ thi thử.",
+    "teacherNote": "Thầy đánh giá rất cao sự nỗ lực, chăm chỉ và tinh thần cầu tiến của Ái Ly. Em hãy tiếp tục phát huy để chinh phục nguyện vọng Đại học mơ ước nhé!",
+    "parentNote": "Kính gửi Quý Phụ huynh em Huỳnh Thị Ái Ly, trên lớp em Ly rất ngoan ngoãn, chăm chỉ và đạt kết quả học tập tốt ở các môn thi tốt nghiệp. Thầy Hòa cảm ơn gia đình đã luôn đồng hành sát sao cùng nhà trường và lớp 12A7.",
+    "sentToParent": true,
+    "sentToParentAt": "2026-10-01 17:15",
+    "weeklyEmulationScore": 100,
+    "gpaSnapshot": 8.9,
+    "attendanceRateSnapshot": 100,
     "createdAt": "2026-10-01"
   },
   {
@@ -520,14 +532,20 @@ export const INITIAL_EVALUATIONS: EvaluationComment[] = [
     "studentId": "hs-8",
     "studentName": "Nguyễn Quốc Cường",
     "period": "Tháng",
-    "periodLabel": "Tháng 9/2026",
+    "periodLabel": "Tháng 10/2026",
     "academic": "Có sự tiến bộ rõ rệt ở môn Hóa và Tin học, tiếp thu bài nhanh.",
     "awareness": "Chuyên cần đã có chuyển biến tích cực, đi học đúng giờ hơn so với năm lớp 11.",
     "skills": "Thực hành thao tác kỹ thuật nhanh nhẹn.",
     "attitude": "Lễ phép với thầy cô, nhiệt tình giúp đỡ bạn bè trong các hoạt động.",
     "strengths": "Năng động, thật thà, yêu thích máy móc kỹ thuật.",
     "improvements": "Cần củng cố thêm môn Toán và Tiếng Anh để đảm bảo mục tiêu tốt nghiệp.",
-    "teacherNote": "Cô ghi nhận nỗ lực cố gắng của Cường trong tháng vừa qua, em hãy giữ vững tinh thần này nhé!",
+    "teacherNote": "Thầy ghi nhận nỗ lực cố gắng của Cường trong tháng vừa qua, em hãy giữ vững tinh thần này và chủ động hỏi bài thầy cùng các bạn nhé!",
+    "parentNote": "Kính gửi Quý Phụ huynh em Nguyễn Quốc Cường, tháng này em Cường đã có nhiều tiến bộ về chuyên cần và thái độ học tập trên lớp. Nhờ gia đình nhắc nhở em dành thêm 1 tiếng mỗi tối ôn luyện môn Toán và Tiếng Anh theo đề cương thầy giao.",
+    "sentToParent": true,
+    "sentToParentAt": "2026-10-01 17:30",
+    "weeklyEmulationScore": 100,
+    "gpaSnapshot": 7.6,
+    "attendanceRateSnapshot": 98,
     "createdAt": "2026-10-01"
   }
 ];
@@ -538,7 +556,7 @@ export const INITIAL_HAPPY_POSTS: HappyPost[] = [
     "category": "good_deed",
     "title": "Đôi bạn cùng tiến: Bạn Trình và bạn Minh kèm Toán Lý cho nhóm bạn Tổ 2",
     "content": "Chiều nay sau giờ tan học, bạn Phú Trình và Tam Minh đã chủ động ở lại lớp 45 phút để hướng dẫn lại phần công thức giải nhanh con lắc và bài toán Este cho các bạn còn vướng mắc. Tinh thần tương thân tương ái của 12A7 thật đáng trân trọng! \"Đoàn kết - Yêu thương - Cùng tiến bộ\"!",
-    "authorName": "Cô Tạ Thị Tình",
+    "authorName": "Thầy Trương Xuân Hòa (GVCN)",
     "authorRole": "teacher",
     "likes": 38,
     "likedBy": [
@@ -571,8 +589,8 @@ export const INITIAL_HAPPY_POSTS: HappyPost[] = [
   {
     "id": "post-2",
     "category": "gratitude",
-    "title": "Lời cảm ơn từ bạn Huỳnh Thị Ái Ly gửi cô chủ nhiệm",
-    "content": "Em muốn gửi lời cảm ơn sâu sắc nhất đến Cô Tình. Ngày đầu năm 12 chúng em ai cũng mang theo nhiều áp lực về kỳ thi tốt nghiệp và chọn trường, nhưng sự ấm áp, nụ cười và những ly trà sữa cô mời sau giờ kiểm tra đã tiếp thêm cho chúng em rất nhiều động lực. Chúng em hứa sẽ cố gắng 100% để cô tự hào!",
+    "title": "Lời cảm ơn từ bạn Huỳnh Thị Ái Ly gửi thầy chủ nhiệm",
+    "content": "Em muốn gửi lời cảm ơn sâu sắc nhất đến Thầy Trương Xuân Hòa. Ngày đầu năm 12 chúng em ai cũng mang theo nhiều áp lực về kỳ thi tốt nghiệp và chọn trường, nhưng sự ấm áp, tận tâm và những lời động viên của thầy sau giờ kiểm tra đã tiếp thêm cho chúng em rất nhiều động lực. Chúng em hứa sẽ cố gắng 100% để thầy tự hào!",
     "authorName": "Huỳnh Thị Ái Ly",
     "authorRole": "student",
     "likes": 45,
@@ -588,8 +606,8 @@ export const INITIAL_HAPPY_POSTS: HappyPost[] = [
     "comments": [
       {
         "id": "c-3",
-        "author": "Cô Tạ Thị Tình",
-        "text": "Yêu thương các em nhiều, các con chính là niềm hạnh phúc lớn nhất của cô!",
+        "author": "Thầy Trương Xuân Hòa (GVCN)",
+        "text": "Thương các em nhiều, sự trưởng thành và đỗ đạt của các em chính là niềm tự hào lớn nhất của thầy!",
         "time": "20:10"
       }
     ],
@@ -614,7 +632,7 @@ export const INITIAL_HAPPY_POSTS: HappyPost[] = [
       {
         "id": "c-4",
         "author": "Trịnh Thu Hiền",
-        "text": "Cảm ơn cả lớp và cô rất nhiều ạ! ❤️",
+        "text": "Cảm ơn cả lớp và thầy rất nhiều ạ! ❤️",
         "time": "09:00"
       }
     ],
@@ -726,7 +744,7 @@ export const INITIAL_ATTENDANCE: DailyAttendance = {
     "hs-1792030357853": "present"
   },
   "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-  "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+  "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
 };
 
 export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
@@ -787,7 +805,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   },
   "2026-10-09": {
     "date": "2026-10-09",
@@ -904,7 +922,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   },
   "2026-10-22": {
     "date": "2026-10-22",
@@ -963,7 +981,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   },
   "2026-10-21": {
     "date": "2026-10-21",
@@ -1022,7 +1040,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   },
   "2026-10-20": {
     "date": "2026-10-20",
@@ -1081,7 +1099,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   },
   "2026-10-19": {
     "date": "2026-10-19",
@@ -1140,7 +1158,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   },
   "2026-10-16": {
     "date": "2026-10-16",
@@ -1199,7 +1217,7 @@ export const INITIAL_ALL_ATTENDANCE_DAYS: Record<string, DailyAttendance> = {
       "hs-1792030357853": "present"
     },
     "note": "Lớp học nghiêm túc, bạn Trà My có phép do cảm cúm, 2 bạn Khoa và Kỳ trễ 5 phút đầu giờ.",
-    "checkedBy": "Cô Tạ Thị Tình (GVCN)"
+    "checkedBy": "Thầy Trương Xuân Hòa (GVCN)"
   }
 };
 

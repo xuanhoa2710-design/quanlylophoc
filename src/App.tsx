@@ -32,7 +32,7 @@ const AppContent: React.FC = () => {
       ['happy_corner', 'student_ai', 'duty_schedule', 'profile', 'students', 'ai_assistant', 'grades', 'leaderboard'].includes(activeTab)
     ) {
       setActiveTab('overview');
-    } else if (role === 'student' && ['students', 'ai_assistant', 'evaluations', 'grades'].includes(activeTab)) {
+    } else if (role === 'student' && ['students', 'ai_assistant', 'grades'].includes(activeTab)) {
       setActiveTab('overview');
     }
   }, [role, activeTab]);
@@ -116,18 +116,8 @@ const AppContent: React.FC = () => {
           )
         )}
 
-        {/* Nhận xét học sinh: GVCN & Phụ huynh (Học sinh xem trong Dashboard/Bảng điểm cá nhân) */}
-        {activeTab === 'evaluations' && (
-          role === 'student' ? (
-            <AccessGuard
-              requiredRole="parent"
-              pageTitle="Nhận xét từ GVCN & Sổ Liên Lạc"
-              onGoBack={() => setActiveTab('overview')}
-            />
-          ) : (
-            <EvaluationsView />
-          )
-        )}
+        {/* Nhận xét của GVCN (Thầy Trương Xuân Hòa) với Học sinh & gửi Phụ huynh */}
+        {activeTab === 'evaluations' && <EvaluationsView />}
 
         {/* Bảng xếp hạng Top 10: Dành cho GVCN & Học sinh */}
         {activeTab === 'leaderboard' && (

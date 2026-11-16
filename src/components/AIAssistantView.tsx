@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, sanitizeLegacyTeacherText } from '../context/AppContext';
 import {
   Bot,
   Sparkles,
@@ -18,10 +18,20 @@ import { AccessGuard } from './AccessGuard';
 import { generateAITextWithFallback } from '../utils/aiClient';
 
 export const AIAssistantView: React.FC = () => {
-  const { role, isTeacherAuthenticated, students, announcements, addAnnouncement } = useApp();
+  const {
+    role,
+    isTeacherAuthenticated,
+    students,
+    announcements,
+    addAnnouncement,
+    addEvaluation,
+    currentWeek,
+    getStudentWeeklyScore,
+  } = useApp();
 
   const [activeTab, setActiveTab] = useState<'comment' | 'announcement' | 'risk_analysis'>('risk_analysis');
   const [copied, setCopied] = useState(false);
+  const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiResult, setAiResult] = useState<string>('');
 
@@ -48,27 +58,32 @@ export const AIAssistantView: React.FC = () => {
     if (!selectedStudent) return;
     setLoading(true);
     setAiResult('');
+    const weeklyInfo = getStudentWeeklyScore(selectedStudent.id, currentWeek);
     try {
-      const fallbackComment = `Em ${selectedStudent.name || 'học sinh'} trong giai đoạn ${commentPeriod || 'vừa qua'} luôn thể hiện tinh thần học tập nghiêm túc, rèn luyện tốt và chấp hành tốt nội quy lớp 12A7.
-- Học tập & Kỹ năng: Điểm số duy trì ổn định (${selectedStudent.currentGpa || 8.0}đ), nắm vững kiến thức trọng tâm. Phát huy điểm mạnh: ${selectedStudent.strengths || 'tự giác, chăm chỉ'}.
-- Điểm cần phát huy: ${selectedStudent.weaknesses ? `Cần chú ý khắc phục "${selectedStudent.weaknesses}" bằng cách chủ động trao đổi với thầy cô và bạn bè tổ nhóm.` : 'Cần duy trì phong độ và rèn luyện kỹ năng giải đề thi THPT Quốc gia.'}
-- Lời nhắn gửi từ GVCN: Năm lớp 12 là bước ngoặt quan trọng, thầy tin tưởng với nỗ lực và sự kiên trì, em sẽ chạm tới ước mơ (${selectedStudent.dreamCareer || 'Đỗ nguyện vọng mơ ước'})! 12A7 luôn tự hào về em!`;
+      const fallbackComment = `📚 Học tập & Kỹ năng: Em ${selectedStudent.name || 'học sinh'} trong giai đoạn ${commentPeriod || 'vừa qua'} duy trì điểm trung bình ổn định (${selectedStudent.currentGpa || 8.0}đ), nắm vững kiến thức trọng tâm. Phát huy điểm mạnh: ${selectedStudent.strengths || 'tự giác, chăm chỉ'}.
+🌱 Ý thức & Nề nếp: Chuyên cần đạt ${selectedStudent.attendanceStats?.rate ?? 100}%, điểm thi đua đạt ${weeklyInfo.total}/100đ, lễ phép với thầy cô và đoàn kết với bạn bè.
+💌 Lời nhắn của Thầy Trương Xuân Hòa gửi em: Năm lớp 12 là bước ngoặt quan trọng, thầy tin tưởng với nỗ lực và sự kiên trì, em sẽ chạm tới ước mơ (${selectedStudent.dreamCareer || 'Đỗ nguyện vọng mơ ước'})! Thầy và lớp 12A7 luôn tự hào về em!
+🤝 Thông điệp Thầy Hòa gửi Quý Phụ huynh (${selectedStudent.primaryParentName || 'Gia đình'}): Kính gửi Quý Phụ huynh em ${selectedStudent.name}, trên lớp em học tập nghiêm túc và chấp hành tốt nội quy. Thầy Hòa rất mong gia đình tiếp tục đồng hành, động viên em ôn thi Tốt nghiệp THPT & Đại học 2027 đạt kết quả cao nhất.`;
 
       const text = await generateAITextWithFallback({
         endpoint: '/api/ai/comment',
         payload: {
           studentName: selectedStudent.name,
+          parentName: selectedStudent.primaryParentName,
           gpa: selectedStudent.currentGpa,
           conduct: selectedStudent.currentConduct,
+          weeklyScore: weeklyInfo.total,
+          attendanceRate: selectedStudent.attendanceStats?.rate ?? 100,
           strengths: selectedStudent.strengths,
           weaknesses: selectedStudent.weaknesses,
           aspiration: selectedStudent.dreamCareer,
+          examSubjects: `${selectedStudent.examSubject1 || 'Vật lý'} - ${selectedStudent.examSubject2 || 'Hóa học'}`,
           period: commentPeriod,
         },
-        clientPrompt: `Bạn là thầy giáo Trương Xuân Hòa, GVCN lớp 12A7 trường THPT Vĩnh Lộc B. Hãy viết nhận xét học sinh định kỳ (${commentPeriod}) tâm huyết, truyền cảm hứng cho em ${selectedStudent.name} (ĐTB: ${selectedStudent.currentGpa}, Rèn luyện: ${selectedStudent.currentConduct}, Điểm mạnh: ${selectedStudent.strengths || 'Ngoan, cầu tiến'}, Cần cải thiện: ${selectedStudent.weaknesses || 'Tự tin hơn'}, Nguyện vọng: ${selectedStudent.dreamCareer || 'Đỗ ĐH'}).`,
+        clientPrompt: `Bạn là Thầy Trương Xuân Hòa (Nam giáo viên), GVCN lớp 12A7 trường THPT Vĩnh Lộc B. Tuyệt đối xưng "Thầy" (không xưng "Cô"). Hãy viết nhận xét học sinh định kỳ (${commentPeriod}) tâm huyết gửi em ${selectedStudent.name} (ĐTB: ${selectedStudent.currentGpa}, Thi đua tuần: ${weeklyInfo.total}/100đ, Điểm mạnh: ${selectedStudent.strengths || 'Ngoan, cầu tiến'}, Nguyện vọng: ${selectedStudent.dreamCareer || 'Đỗ ĐH'}) và thông điệp gửi Quý Phụ huynh (${selectedStudent.primaryParentName || 'Gia đình'}).`,
         fallbackText: fallbackComment,
       });
-      setAiResult(text);
+      setAiResult(sanitizeLegacyTeacherText(text));
     } catch (e) {
       console.error(e);
       setAiResult('Đã tạo nhận xét mẫu cho học sinh.');
@@ -192,11 +207,37 @@ Trân trọng,
       title: annTitle || 'Thông báo từ GVCN 12A7',
       type: 'class',
       content: aiResult,
-      author: 'Thầy Trương Xuân Hòa',
+      author: 'Thầy Trương Xuân Hòa (GVCN)',
       role: 'Giáo viên chủ nhiệm 12A7',
       isPinned: true,
     });
-    alert('Đã phát hành thông báo lên Bảng tin lớp 12A7 thành công!');
+    setSavedNotice('Đã phát hành thông báo lên Bảng tin lớp 12A7 thành công!');
+    setTimeout(() => setSavedNotice(null), 3500);
+  };
+
+  const handleSaveAsEvaluationAndSendParent = () => {
+    if (!aiResult || !selectedStudent) return;
+    const weeklyInfo = getStudentWeeklyScore(selectedStudent.id, currentWeek);
+    addEvaluation({
+      studentId: selectedStudent.id,
+      studentName: selectedStudent.name,
+      period: 'Tháng',
+      periodLabel: commentPeriod || 'Tháng 10/2026',
+      academic: `Duy trì ĐTB ${selectedStudent.currentGpa ?? 8.2}đ, định hướng ôn thi ${selectedStudent.examSubject1 || 'Vật lý'} - ${selectedStudent.examSubject2 || 'Hóa học'} rõ ràng.`,
+      awareness: `Chuyên cần đạt ${selectedStudent.attendanceStats?.rate ?? 100}%, điểm thi đua tuần đạt ${weeklyInfo.total}/100đ.`,
+      skills: 'Kỹ năng giải đề và tự học tiến bộ.',
+      attitude: 'Lễ phép với thầy cô, đoàn kết cùng bạn bè.',
+      strengths: selectedStudent.strengths || 'Chăm ngoan, cầu tiến.',
+      improvements: selectedStudent.weaknesses || 'Cần rèn thêm tốc độ giải đề nâng cao.',
+      teacherNote: sanitizeLegacyTeacherText(aiResult),
+      parentNote: `Kính gửi Quý Phụ huynh (${selectedStudent.primaryParentName || 'Gia đình'}) em ${selectedStudent.name}, Thầy Trương Xuân Hòa (GVCN 12A7) trân trọng gửi phiếu nhận xét định kỳ (${commentPeriod}) của em. Mong gia đình tiếp tục đồng hành cùng thầy động viên em ôn thi Tốt nghiệp THPT & Đại học 2027 đạt kết quả tốt nhất.`,
+      sentToParent: true,
+      weeklyEmulationScore: weeklyInfo.total,
+      gpaSnapshot: selectedStudent.currentGpa,
+      attendanceRateSnapshot: selectedStudent.attendanceStats?.rate ?? 100,
+    });
+    setSavedNotice(`Đã lưu nhận xét của Thầy Hòa cho em ${selectedStudent.name} và gửi tới Sổ liên lạc Phụ huynh!`);
+    setTimeout(() => setSavedNotice(null), 4000);
   };
 
   return (
@@ -465,10 +506,19 @@ Trân trọng,
                     )}
                   </button>
 
+                  {activeTab === 'comment' && (
+                    <button
+                      onClick={handleSaveAsEvaluationAndSendParent}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" /> Lưu & Gửi Phụ huynh
+                    </button>
+                  )}
+
                   {activeTab === 'announcement' && (
                     <button
                       onClick={handlePublishAsAnnouncement}
-                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" /> Đăng bảng tin
                     </button>
@@ -476,6 +526,13 @@ Trân trọng,
                 </div>
               )}
             </div>
+
+            {savedNotice && (
+              <div className="mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{savedNotice}</span>
+              </div>
+            )}
 
             {loading ? (
               <div className="py-20 flex flex-col items-center justify-center text-center">

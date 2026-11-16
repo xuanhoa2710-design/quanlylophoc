@@ -30,10 +30,38 @@ export {
 export type { SchoolWeekRange };
 
 export const formatTeacherDisplayName = (rawName?: string): string => {
-  const cleaned = (rawName || '').trim().replace(/^(Thầy\s+)+/i, '').trim();
-  if (!cleaned) return 'Thầy Trương Xuân Hòa';
-  if (/^(Cô|Thầy)\s+/i.test(cleaned)) return cleaned;
+  const cleaned = (rawName || '')
+    .trim()
+    .replace(/^(Thầy|Cô)\s+/gi, '')
+    .trim();
+  if (!cleaned || /Tạ Thị Tình/i.test(cleaned)) return 'Thầy Trương Xuân Hòa';
   return `Thầy ${cleaned}`;
+};
+
+export const sanitizeLegacyTeacherText = (rawText?: string): string => {
+  if (!rawText || typeof rawText !== 'string') return '';
+  return rawText
+    .replace(/Cô Tạ Thị Tình\s*\(GVCN\)/gi, 'Thầy Trương Xuân Hòa (GVCN)')
+    .replace(/\bCô Tạ Thị Tình\b/gi, 'Thầy Trương Xuân Hòa (GVCN)')
+    .replace(/\bCô Tình\b/gi, 'Thầy Trương Xuân Hòa')
+    .replace(/gửi cô chủ nhiệm/gi, 'gửi thầy chủ nhiệm')
+    .replace(/cô rất kỳ vọng/gi, 'thầy rất kỳ vọng')
+    .replace(/hỗ trợ cô quản lý/gi, 'hỗ trợ thầy quản lý')
+    .replace(/hỗ trợ cô\b/gi, 'hỗ trợ thầy')
+    .replace(/\bCô ghi nhận/g, 'Thầy ghi nhận')
+    .replace(/\bcô ghi nhận/g, 'thầy ghi nhận')
+    .replace(/những ly trà sữa cô mời/gi, 'những lời động viên của thầy')
+    .replace(/để cô tự hào/gi, 'để thầy tự hào')
+    .replace(/hạnh phúc lớn nhất của cô/gi, 'niềm tự hào lớn nhất của thầy')
+    .replace(/cả lớp và cô rất nhiều/gi, 'cả lớp và thầy rất nhiều')
+    .replace(/\bcô tin tưởng/gi, 'thầy tin tưởng')
+    .replace(/\bCô tin tưởng/g, 'Thầy tin tưởng')
+    .replace(/\bcô rất tự hào/gi, 'thầy rất tự hào')
+    .replace(/\bCô rất tự hào/g, 'Thầy rất tự hào')
+    .replace(/\bcô mong rằng/gi, 'thầy mong rằng')
+    .replace(/\bCô mong rằng/g, 'Thầy mong rằng')
+    .replace(/\bcô chúc em/gi, 'thầy chúc em')
+    .replace(/\bCô chúc em/g, 'Thầy chúc em');
 };
 import {
   Student,
@@ -328,8 +356,11 @@ interface AppContextType {
 
   // Evaluations
   evaluations: EvaluationComment[];
-  addEvaluation: (evaluation: Omit<EvaluationComment, 'id' | 'createdAt'>) => void;
+  addEvaluation: (evaluation: Omit<EvaluationComment, 'id' | 'createdAt'>) => EvaluationComment;
   updateEvaluation: (evaluation: EvaluationComment) => void;
+  deleteEvaluation: (id: string) => void;
+  sendEvaluationToParent: (id: string, parentNote?: string) => void;
+  replyToEvaluationByParent: (id: string, replyText: string) => void;
 
   // Announcements (GVCN có thể thêm, sửa, xóa)
   announcements: Announcement[];
@@ -2007,35 +2038,150 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const sanitizeEvaluationsList = useCallback((rawList: any[]): EvaluationComment[] => {
+    if (!Array.isArray(rawList)) return INITIAL_EVALUATIONS;
+    return rawList.map((ev: any) => {
+      const defMatch = INITIAL_EVALUATIONS.find((d) => d.id === ev?.id);
+      const cleanedTeacherNote = sanitizeLegacyTeacherText(ev?.teacherNote || defMatch?.teacherNote || '');
+      const rawParentNote = ev?.parentNote || defMatch?.parentNote || '';
+      const cleanedParentNote =
+        sanitizeLegacyTeacherText(rawParentNote) ||
+        `Kính gửi Quý Phụ huynh em ${ev?.studentName || 'học sinh'}, Thầy Trương Xuân Hòa (GVCN 12A7) trân trọng thông báo tình hình học tập và rèn luyện định kỳ (${ev?.periodLabel || 'Tháng'}) của em trên lớp. Rất mong gia đình tiếp tục đồng hành, động viên em giữ vững quyết tâm ôn thi Tốt nghiệp THPT & Đại học 2027.`;
+      return {
+        ...ev,
+        periodLabel: ev?.periodLabel === 'Tháng 9/2026' ? 'Tháng 10/2026' : (ev?.periodLabel || 'Tháng 10/2026'),
+        academic: sanitizeLegacyTeacherText(ev?.academic || defMatch?.academic || ''),
+        awareness: sanitizeLegacyTeacherText(ev?.awareness || defMatch?.awareness || ''),
+        skills: sanitizeLegacyTeacherText(ev?.skills || defMatch?.skills || ''),
+        attitude: sanitizeLegacyTeacherText(ev?.attitude || defMatch?.attitude || ''),
+        strengths: sanitizeLegacyTeacherText(ev?.strengths || defMatch?.strengths || ''),
+        improvements: sanitizeLegacyTeacherText(ev?.improvements || defMatch?.improvements || ''),
+        teacherNote: cleanedTeacherNote,
+        parentNote: cleanedParentNote,
+        sentToParent: ev?.sentToParent !== undefined ? Boolean(ev.sentToParent) : true,
+        sentToParentAt: ev?.sentToParentAt || defMatch?.sentToParentAt || ev?.createdAt || '2026-10-01 17:00',
+      };
+    });
+  }, []);
+
+  const sanitizeAnnouncementsList = useCallback((rawList: any[]): Announcement[] => {
+    if (!Array.isArray(rawList)) return INITIAL_ANNOUNCEMENTS;
+    return rawList.map((ann: any) => ({
+      ...ann,
+      author:
+        !ann?.author || /Cô Tạ Thị Tình/i.test(ann.author)
+          ? 'Thầy Trương Xuân Hòa (GVCN)'
+          : sanitizeLegacyTeacherText(ann.author),
+      content: sanitizeLegacyTeacherText(ann?.content || ''),
+    }));
+  }, []);
+
+  const sanitizeHappyPostsList = useCallback((rawList: any[]): HappyPost[] => {
+    if (!Array.isArray(rawList)) return INITIAL_HAPPY_POSTS;
+    return rawList.map((p: any) => ({
+      ...p,
+      title: sanitizeLegacyTeacherText(p?.title || ''),
+      content: sanitizeLegacyTeacherText(p?.content || ''),
+      authorName:
+        /Cô Tạ Thị Tình/i.test(p?.authorName || '')
+          ? 'Thầy Trương Xuân Hòa (GVCN)'
+          : sanitizeLegacyTeacherText(p?.authorName || ''),
+      likedBy: Array.isArray(p?.likedBy) ? p.likedBy : [],
+      comments: (Array.isArray(p?.comments) ? p.comments : []).map((c: any) => ({
+        ...c,
+        author:
+          /Cô Tạ Thị Tình/i.test(c?.author || '')
+            ? 'Thầy Trương Xuân Hòa (GVCN)'
+            : sanitizeLegacyTeacherText(c?.author || ''),
+        text: sanitizeLegacyTeacherText(c?.text || ''),
+      })),
+    }));
+  }, []);
+
   // Evaluations
   const [evaluations, setEvaluations] = useState<EvaluationComment[]>(() => {
     const saved = safeGetLocal(STORAGE_KEYS.EVALUATIONS);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return sanitizeEvaluationsList(parsed);
       } catch (e) {
         console.error(e);
       }
     }
-    return INITIAL_EVALUATIONS;
+    return sanitizeEvaluationsList(INITIAL_EVALUATIONS);
   });
 
   useEffect(() => {
     safeSetLocal(STORAGE_KEYS.EVALUATIONS, JSON.stringify(evaluations));
   }, [evaluations]);
 
-  const addEvaluation = (evalData: Omit<EvaluationComment, 'id' | 'createdAt'>) => {
+  const addEvaluation = (evalData: Omit<EvaluationComment, 'id' | 'createdAt'>): EvaluationComment => {
+    const nowDate = new Date().toISOString().split('T')[0];
+    const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
     const newEval: EvaluationComment = {
       ...evalData,
+      teacherNote: sanitizeLegacyTeacherText(evalData.teacherNote),
+      parentNote: sanitizeLegacyTeacherText(evalData.parentNote),
+      sentToParent: evalData.sentToParent !== undefined ? evalData.sentToParent : true,
+      sentToParentAt: evalData.sentToParent !== false ? (evalData.sentToParentAt || nowDateTime) : undefined,
       id: `ev-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: nowDate,
     };
     setEvaluations((prev) => [newEval, ...prev]);
+    return newEval;
   };
 
   const updateEvaluation = (updated: EvaluationComment) => {
-    setEvaluations((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+    const cleaned: EvaluationComment = {
+      ...updated,
+      teacherNote: sanitizeLegacyTeacherText(updated.teacherNote),
+      parentNote: sanitizeLegacyTeacherText(updated.parentNote),
+      updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    };
+    setEvaluations((prev) => prev.map((e) => (e.id === cleaned.id ? cleaned : e)));
+  };
+
+  const deleteEvaluation = (id: string) => {
+    setEvaluations((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const sendEvaluationToParent = (id: string, parentNoteOverride?: string) => {
+    const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    setEvaluations((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== id) return ev;
+        const nextParentNote =
+          parentNoteOverride !== undefined
+            ? sanitizeLegacyTeacherText(parentNoteOverride)
+            : ev.parentNote ||
+              `Kính gửi Quý Phụ huynh em ${ev.studentName}, Thầy Trương Xuân Hòa (GVCN 12A7) trân trọng gửi phiếu nhận xét định kỳ (${ev.periodLabel}) của em. Mong gia đình phối hợp động viên em phát huy điểm mạnh và ôn thi tốt nghiệp hiệu quả.`;
+        return {
+          ...ev,
+          parentNote: nextParentNote,
+          sentToParent: true,
+          sentToParentAt: nowDateTime,
+          updatedAt: nowDateTime,
+        };
+      })
+    );
+  };
+
+  const replyToEvaluationByParent = (id: string, replyText: string) => {
+    const trimmed = (replyText || '').trim();
+    if (!trimmed) return;
+    const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    setEvaluations((prev) =>
+      prev.map((ev) =>
+        ev.id === id
+          ? {
+              ...ev,
+              parentReply: trimmed,
+              parentRepliedAt: nowDateTime,
+            }
+          : ev
+      )
+    );
   };
 
   // Announcements
@@ -2044,12 +2190,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return sanitizeAnnouncementsList(parsed);
       } catch (e) {
         console.error(e);
       }
     }
-    return INITIAL_ANNOUNCEMENTS;
+    return sanitizeAnnouncementsList(INITIAL_ANNOUNCEMENTS);
   });
 
   useEffect(() => {
@@ -2186,21 +2332,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((p: any) => ({
-            ...p,
-            likedBy: Array.isArray(p?.likedBy) ? p.likedBy : [],
-            comments: Array.isArray(p?.comments) ? p.comments : [],
-          }));
+          return sanitizeHappyPostsList(parsed);
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return (INITIAL_HAPPY_POSTS || []).map((p: any) => ({
-      ...p,
-      likedBy: Array.isArray(p?.likedBy) ? p.likedBy : [],
-      comments: Array.isArray(p?.comments) ? p.comments : [],
-    }));
+    return sanitizeHappyPostsList(INITIAL_HAPPY_POSTS || []);
   });
 
   useEffect(() => {
@@ -3488,9 +3626,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setBonusEntries(nextBonus);
         setEmulationScoreAdjustments(nextAdj);
       } else if (sectionId === 'activities') {
-        const nextEvals = Array.isArray(rawPayload.evaluations) ? rawPayload.evaluations : [];
-        const nextAnn = Array.isArray(rawPayload.announcements) ? rawPayload.announcements : [];
-        const nextHappy = Array.isArray(rawPayload.happyPosts) ? rawPayload.happyPosts : [];
+        const rawEvals = Array.isArray(rawPayload.evaluations) ? rawPayload.evaluations : [];
+        const nextEvals = sanitizeEvaluationsList(rawEvals);
+        const rawAnn = Array.isArray(rawPayload.announcements) ? rawPayload.announcements : [];
+        const nextAnn = sanitizeAnnouncementsList(rawAnn);
+        const rawHappy = Array.isArray(rawPayload.happyPosts) ? rawPayload.happyPosts : [];
+        const nextHappy = sanitizeHappyPostsList(rawHappy);
         const nextAss = Array.isArray(rawPayload.assignments) ? rawPayload.assignments : [];
         const nextMsgs =
           rawPayload.messages && typeof rawPayload.messages === 'object'
@@ -3834,6 +3975,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         evaluations,
         addEvaluation,
         updateEvaluation,
+        deleteEvaluation,
+        sendEvaluationToParent,
+        replyToEvaluationByParent,
         announcements,
         addAnnouncement,
         updateAnnouncement,

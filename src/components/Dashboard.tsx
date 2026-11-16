@@ -217,6 +217,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                     <Users className="w-3.5 h-3.5" /> Quản lý {totalStudents} HS
                   </button>
                   <button
+                    onClick={() => setActiveTab('evaluations')}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Nhận xét HS & Gửi PH
+                  </button>
+                  <button
                     onClick={() => setIsJsonModalOpen(true)}
                     className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
                   >
@@ -236,6 +242,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                     className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 hover:opacity-95 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-purple-900/40 animate-pulse"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Gia Sư & Cố Vấn AI 12A7
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('evaluations')}
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Nhận xét của Thầy Hòa
                   </button>
                   <button
                     onClick={() => setActiveTab('discipline')}
@@ -293,7 +305,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                     onClick={() => setActiveTab('evaluations')}
                     className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
                   >
-                    <FileText className="w-3.5 h-3.5" /> Nhận xét GVCN
+                    <FileText className="w-3.5 h-3.5" /> Nhận xét từ Thầy Hòa
                   </button>
                 </>
               )}
