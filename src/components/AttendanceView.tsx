@@ -10,6 +10,12 @@ import {
 import { AttendanceStatus } from '../types';
 import { VIOLATIONS_CATALOG } from '../data/violationsCatalog';
 import {
+  getVietnamDateIso,
+  formatDateVN,
+  formatDateWithWeekdayVN,
+  formatDateTimeVN,
+} from '../utils/timeUtils';
+import {
   CalendarCheck,
   QrCode,
   CheckCircle2,
@@ -31,6 +37,8 @@ import {
   ShieldAlert,
   Link2,
   Phone,
+  Clock,
+  X,
 } from 'lucide-react';
 import { AccessGuard } from './AccessGuard';
 import { getCadreRoleBadge } from './StudentManagement';
@@ -116,6 +124,7 @@ export const AttendanceView: React.FC = () => {
   const [noteText, setNoteText] = useState(currentDateAttendance.note || '');
   const [weekendWarning, setWeekendWarning] = useState<string | null>(null);
   const [resetToastMsg, setResetToastMsg] = useState<string | null>(null);
+  const [absenceHistoryStudentId, setAbsenceHistoryStudentId] = useState<string | null>(null);
 
   const selectedDayInfo = normalizeToSchoolDay(selectedAttendanceDate);
   const weekSchoolDays = getWeekSchoolDays(selectedAttendanceDate);
@@ -167,6 +176,67 @@ export const AttendanceView: React.FC = () => {
     });
     return map;
   }, [disciplineEntries, selectedAttendanceDate]);
+
+  // Map exact absence & late dates (ngày tháng nghỉ học / đi trễ) per student across all recorded dates
+  const studentAttendanceHistoryMap = useMemo(() => {
+    const byStudent: Record<
+      string,
+      Record<string, { date: string; status: AttendanceStatus; reason?: string }>
+    > = {};
+
+    const ensureEntry = (stuId: string, dt: string, status: AttendanceStatus, reason?: string) => {
+      if (!stuId || !dt || status === 'present') return;
+      if (!byStudent[stuId]) byStudent[stuId] = {};
+      const existing = byStudent[stuId][dt];
+      byStudent[stuId][dt] = {
+        date: dt,
+        status,
+        reason: reason || existing?.reason,
+      };
+    };
+
+    Object.entries(allAttendanceDays || {}).forEach(([dateKey, dayObj]) => {
+      if (!dayObj || !dayObj.records) return;
+      const dayDate = dayObj.date || dateKey;
+      Object.entries(dayObj.records).forEach(([stuId, st]) => {
+        if (st === 'excused' || st === 'unexcused' || st === 'late') {
+          ensureEntry(stuId, dayDate, st, dayObj.note ? dayObj.note : undefined);
+        }
+      });
+    });
+
+    (supplementaryAttendanceList || []).forEach((item) => {
+      if (item.newStatus === 'present') {
+        if (byStudent[item.studentId]?.[item.date]) {
+          delete byStudent[item.studentId][item.date];
+        }
+      } else {
+        ensureEntry(
+          item.studentId,
+          item.date,
+          item.newStatus,
+          `${item.reason}${item.note ? ` (${item.note})` : ''}`
+        );
+      }
+    });
+
+    (disciplineEntries || []).forEach((d) => {
+      if (d.ruleNumber === 1 || d.ruleNumber === 8 || d.ruleNumber === 9) {
+        const mappedStatus: AttendanceStatus =
+          d.ruleNumber === 1 ? 'late' : d.ruleNumber === 8 ? 'excused' : 'unexcused';
+        ensureEntry(d.studentId, d.date, mappedStatus, d.note || d.violationText);
+      }
+    });
+
+    const result: Record<
+      string,
+      Array<{ date: string; status: AttendanceStatus; reason?: string }>
+    > = {};
+    Object.entries(byStudent).forEach(([stuId, dateMap]) => {
+      result[stuId] = Object.values(dateMap).sort((a, b) => b.date.localeCompare(a.date));
+    });
+    return result;
+  }, [allAttendanceDays, supplementaryAttendanceList, disciplineEntries]);
 
   // Daily Stats calculation for selected date
   const totalStudents = students.length;
@@ -485,7 +555,7 @@ export const AttendanceView: React.FC = () => {
     link.setAttribute('href', encodedUri);
     link.setAttribute(
       'download',
-      `So_diem_danh_bo_sung_12A7_${new Date().toISOString().split('T')[0]}.csv`
+      `So_diem_danh_bo_sung_12A7_${getVietnamDateIso()}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -991,6 +1061,55 @@ export const AttendanceView: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Exact Absence & Late Dates List for Student/Parent */}
+              {(() => {
+                const myHistory = studentAttendanceHistoryMap[currentStudent.id] || [];
+                return (
+                  <div className="pt-2 border-t border-blue-200/70">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-blue-600" />
+                        Chi tiết Ngày tháng Nghỉ học & Đi trễ của {currentStudent.name} ({myHistory.length} ngày):
+                      </span>
+                    </div>
+                    {myHistory.length === 0 ? (
+                      <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Chuyên cần xuất sắc! Chưa ghi nhận ngày nghỉ học hay đi trễ nào.</span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {myHistory.map((item) => (
+                          <div
+                            key={`${item.date}-${item.status}`}
+                            onClick={() => handleDateChange(item.date)}
+                            className="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 cursor-pointer transition-all flex items-start justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-xs font-extrabold text-slate-900">
+                                {formatDateWithWeekdayVN(item.date)}
+                              </div>
+                              {item.reason && (
+                                <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">
+                                  {item.reason}
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${getStatusBadgeClass(
+                                item.status
+                              )}`}
+                            >
+                              {getStatusLabel(item.status)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )
         )}
@@ -1284,11 +1403,63 @@ export const AttendanceView: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Student Exact Absence / Late Dates History (Mobile) */}
+                  {(() => {
+                    const stuHistory = studentAttendanceHistoryMap[stu.id] || [];
+                    if (stuHistory.length === 0) return null;
+                    return (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-600">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-blue-600" />
+                            Ngày tháng nghỉ học / đi trễ ({stuHistory.length} ngày):
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setAbsenceHistoryStudentId(stu.id)}
+                            className="text-blue-600 underline font-bold"
+                          >
+                            Xem tất cả
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {stuHistory.slice(0, 4).map((h) => (
+                            <span
+                              key={`${h.date}-${h.status}`}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${getStatusBadgeClass(
+                                h.status
+                              )}`}
+                            >
+                              <span>{formatDateVN(h.date)}</span>
+                              <span>•</span>
+                              <span>
+                                {h.status === 'unexcused'
+                                  ? 'Vắng KP'
+                                  : h.status === 'excused'
+                                  ? 'Có phép'
+                                  : 'Đi trễ'}
+                              </span>
+                            </span>
+                          ))}
+                          {stuHistory.length > 4 && (
+                            <button
+                              type="button"
+                              onClick={() => setAbsenceHistoryStudentId(stu.id)}
+                              className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold"
+                            >
+                              +{stuHistory.length - 4} ngày khác
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Linked Discipline Violations on Selected Date */}
                   {dayViolations.length > 0 && (
                     <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1">
                       <div className="text-[10px] font-bold text-rose-700 flex items-center gap-1">
-                        <Link2 className="w-3 h-3" /> Lỗi vi phạm liên kết trong ngày:
+                        <Link2 className="w-3 h-3" /> Lỗi vi phạm liên kết trong ngày ({formatDateVN(selectedAttendanceDate)}):
                       </div>
                       {dayViolations.map((v) => (
                         <div
@@ -1359,6 +1530,7 @@ export const AttendanceView: React.FC = () => {
                     <th className="py-3 px-3">Họ và tên</th>
                     <th className="py-3 px-2 text-center">Tổ</th>
                     <th className="py-3 px-3">Trạng thái Điểm danh</th>
+                    <th className="py-3 px-3">Ngày tháng nghỉ học / Đi trễ</th>
                     <th className="py-3 px-3">Lỗi vi phạm liên kết ({selectedDayInfo.dayLabel})</th>
                     <th className="py-3 px-3 text-center">Điểm tuần</th>
                     {canEditAttendance && <th className="py-3 px-3 text-center">Thao tác</th>}
@@ -1370,6 +1542,7 @@ export const AttendanceView: React.FC = () => {
                     const isSelectedStudent = stu.id === currentStudent?.id;
                     const dayViolations = violationsOnSelectedDateByStudent[stu.id] || [];
                     const weeklyScoreObj = getStudentWeeklyScore(stu.id, currentWeek);
+                    const stuHistory = studentAttendanceHistoryMap[stu.id] || [];
 
                     return (
                       <tr
@@ -1472,6 +1645,50 @@ export const AttendanceView: React.FC = () => {
                               )}`}
                             >
                               {getStatusLabel(status)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 max-w-[230px]">
+                          {stuHistory.length > 0 ? (
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap gap-1">
+                                {stuHistory.slice(0, 3).map((h) => (
+                                  <button
+                                    type="button"
+                                    key={`${h.date}-${h.status}`}
+                                    onClick={() => handleDateChange(h.date)}
+                                    title={`${formatDateWithWeekdayVN(h.date)}: ${getStatusLabel(h.status)}${
+                                      h.reason ? ` • ${h.reason}` : ''
+                                    }`}
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold border hover:opacity-85 transition-opacity ${getStatusBadgeClass(
+                                      h.status
+                                    )}`}
+                                  >
+                                    <span>{formatDateVN(h.date)}</span>
+                                    <span>
+                                      (
+                                      {h.status === 'unexcused'
+                                        ? 'KP'
+                                        : h.status === 'excused'
+                                        ? 'CP'
+                                        : 'Trễ'}
+                                      )
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setAbsenceHistoryStudentId(stu.id)}
+                                className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                <Calendar className="w-3 h-3" />
+                                Xem chi tiết ({stuHistory.length} ngày)
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-emerald-600 font-medium">
+                              ✓ Chưa nghỉ buổi nào
                             </span>
                           )}
                         </td>
@@ -1668,7 +1885,7 @@ export const AttendanceView: React.FC = () => {
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <div className="font-bold text-slate-800">{item.date}</div>
+                            <div className="font-bold text-slate-800">{formatDateVN(item.date)}</div>
                             <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-slate-100 text-slate-600 font-semibold">
                               {sessionLabel}
                             </span>
@@ -1711,7 +1928,7 @@ export const AttendanceView: React.FC = () => {
                               {item.recordedBy}
                             </div>
                             <div className="text-[10px] text-slate-400 font-mono">
-                              {item.createdAt}
+                              {formatDateTimeVN(item.createdAt)}
                             </div>
                           </td>
                           {canEditAttendance && (
@@ -2093,6 +2310,92 @@ export const AttendanceView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* MODAL 4: CHI TIẾT NGÀY THÁNG NGHỈ HỌC & ĐI TRỄ CỦA HỌC SINH */}
+      {absenceHistoryStudentId && (() => {
+        const stu = students.find((s) => s.id === absenceHistoryStudentId);
+        if (!stu) return null;
+        const history = studentAttendanceHistoryMap[stu.id] || [];
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto space-y-4">
+              <button
+                onClick={() => setAbsenceHistoryStudentId(null)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <img
+                  src={stu.avatar}
+                  alt={stu.name}
+                  className="w-12 h-12 rounded-2xl object-cover ring-2 ring-blue-500"
+                />
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Lịch sử Ngày tháng Nghỉ học & Đi trễ
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {stu.name} ({stu.code} • Tổ {stu.group})
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
+                  <div className="text-[10px] font-bold text-blue-700 uppercase">Vắng có phép</div>
+                  <div className="text-base font-black text-blue-900">
+                    {history.filter((h) => h.status === 'excused').length} ngày
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-red-50 border border-red-200">
+                  <div className="text-[10px] font-bold text-red-700 uppercase">Vắng K.Phép</div>
+                  <div className="text-base font-black text-red-900">
+                    {history.filter((h) => h.status === 'unexcused').length} ngày
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                  <div className="text-[10px] font-bold text-amber-700 uppercase">Đi trễ</div>
+                  <div className="text-base font-black text-amber-900">
+                    {history.filter((h) => h.status === 'late').length} ngày
+                  </div>
+                </div>
+              </div>
+
+              {history.length === 0 ? (
+                <div className="p-6 text-center rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                  Học sinh đi học đầy đủ 100%, chưa ghi nhận ngày nghỉ hay đi trễ nào!
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((item) => (
+                    <div
+                      key={`${item.date}-${item.status}`}
+                      className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-3 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-slate-900">
+                          {formatDateWithWeekdayVN(item.date)}
+                        </div>
+                        {item.reason && (
+                          <div className="text-[11px] text-slate-600 mt-0.5">{item.reason}</div>
+                        )}
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border shrink-0 ${getStatusBadgeClass(
+                          item.status
+                        )}`}
+                      >
+                        {getStatusLabel(item.status)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

@@ -19,6 +19,13 @@ import {
   isDateInWeek,
   getAllSchoolWeeks,
 } from '../utils/weekUtils';
+import {
+  getVietnamDateParts,
+  getVietnamDateIso,
+  getVietnamDateTimeStr,
+  getVietnamTimeStr,
+  getVietnamDateVN,
+} from '../utils/timeUtils';
 
 export {
   getWeekRangeByIndex,
@@ -158,11 +165,14 @@ export const normalizeToSchoolDay = (dateStr: string): {
   dayLabel: string;
   dayIndex: number; // 1 = Mon .. 5 = Fri
 } => {
-  const parts = dateStr.split('-').map(Number);
-  const dt =
-    parts.length === 3 && !isNaN(parts[0])
-      ? new Date(parts[0], parts[1] - 1, parts[2])
-      : new Date();
+  const parts = dateStr ? dateStr.split('-').map(Number) : [];
+  let dt: Date;
+  if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+    dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  } else {
+    const vn = getVietnamDateParts();
+    dt = new Date(vn.year, vn.month - 1, vn.day);
+  }
   const rawDay = dt.getDay(); // 0 = Sun, 6 = Sat
   let wasWeekend = false;
   if (rawDay === 6) {
@@ -737,8 +747,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Current student object
   const currentStudent = students.find((s) => s.id === activeStudentId) || students[0];
 
-  // Attendance by dates (Strictly Monday - Friday, no Saturday/Sunday)
-  const rawTodayStr = new Date().toISOString().split('T')[0];
+  // Attendance by dates (Strictly Monday - Friday, theo giờ Việt Nam GMT+7)
+  const rawTodayStr = getVietnamDateIso();
   const todayStr = normalizeToSchoolDay(rawTodayStr).date;
   const realCalendarWeek = getWeekIndexFromDate(todayStr);
 
@@ -925,7 +935,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Live watcher: Automatically reset attendance when the clock crosses into a new school day
   useEffect(() => {
     const checkDayTransition = () => {
-      const currentRaw = new Date().toISOString().split('T')[0];
+      const currentRaw = getVietnamDateIso();
       const currentNormDate = normalizeToSchoolDay(currentRaw).date;
       const lastReset = safeGetLocal(STORAGE_KEYS.LAST_ATTENDANCE_DATE);
       if (lastReset !== currentNormDate) {
@@ -1053,7 +1063,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pointsDeducted: points,
       note: opts?.note || defaultNote,
       recordedBy: recorder,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
 
     setDisciplineEntries((prev) => {
@@ -1205,7 +1215,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...entryData,
       date: normDate,
       id: `supp-${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
 
     setSupplementaryAttendanceList((prev) => [newEntry, ...prev]);
@@ -1476,7 +1486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newAssignment: Assignment = {
       ...assignmentData,
       id: `asg-${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
       submissions: {},
     };
     setAssignments((prev) => [newAssignment, ...prev]);
@@ -1493,7 +1503,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           subs[studentId] = {
             studentId,
             studentName: stu.name,
-            submittedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+            submittedAt: getVietnamDateTimeStr(),
             content,
             attachments: attachments || ['bai_nop_' + stu.code + '.pdf'],
             status: 'submitted',
@@ -1830,7 +1840,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (b.id !== activeGradeBatchId) return b;
         return {
           ...b,
-          updatedAt: new Date().toISOString().split('T')[0],
+          updatedAt: getVietnamDateIso(),
           records: buildBatchRecordsFromStudents(students, 1),
         };
       });
@@ -1916,9 +1926,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newBatch: GradeBatch = {
       id: `batch-${Date.now()}`,
-      name: name.trim() || `Đợt nhập điểm mới (${new Date().toLocaleDateString('vi-VN')})`,
+      name: name.trim() || `Đợt nhập điểm mới (${getVietnamDateVN()})`,
       semester,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: getVietnamDateIso(),
       note: note || (copyFromCurrent ? 'Sao chép từ đợt điểm trước' : 'Bảng điểm mới khởi tạo'),
       records: buildBatchRecordsFromStudents(blankStudents, 1),
     };
@@ -2117,8 +2127,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [evaluations]);
 
   const addEvaluation = (evalData: Omit<EvaluationComment, 'id' | 'createdAt'>): EvaluationComment => {
-    const nowDate = new Date().toISOString().split('T')[0];
-    const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const nowDate = getVietnamDateIso();
+    const nowDateTime = getVietnamDateTimeStr();
     const newEval: EvaluationComment = {
       ...evalData,
       teacherNote: sanitizeLegacyTeacherText(evalData.teacherNote),
@@ -2137,7 +2147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...updated,
       teacherNote: sanitizeLegacyTeacherText(updated.teacherNote),
       parentNote: sanitizeLegacyTeacherText(updated.parentNote),
-      updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      updatedAt: getVietnamDateTimeStr(),
     };
     setEvaluations((prev) => prev.map((e) => (e.id === cleaned.id ? cleaned : e)));
   };
@@ -2147,7 +2157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const sendEvaluationToParent = (id: string, parentNoteOverride?: string) => {
-    const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const nowDateTime = getVietnamDateTimeStr();
     setEvaluations((prev) =>
       prev.map((ev) => {
         if (ev.id !== id) return ev;
@@ -2170,7 +2180,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const replyToEvaluationByParent = (id: string, replyText: string) => {
     const trimmed = (replyText || '').trim();
     if (!trimmed) return;
-    const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const nowDateTime = getVietnamDateTimeStr();
     setEvaluations((prev) =>
       prev.map((ev) =>
         ev.id === id
@@ -2220,7 +2230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newAnn: Announcement = {
       ...annData,
       id: `ann-${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
     setAnnouncements((prev) => [newAnn, ...prev]);
   };
@@ -2244,7 +2254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? {
               ...a,
               ...updatedData,
-              updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+              updatedAt: getVietnamDateTimeStr(),
             }
           : a
       )
@@ -2284,7 +2294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       senderName,
       text,
       fileName,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getVietnamTimeStr(),
     };
 
     setMessages((prev) => ({
@@ -2316,7 +2326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...aptData,
       id: `apt-${Date.now()}`,
       status: 'pending',
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: getVietnamDateIso(),
     };
     setAppointments((prev) => [newApt, ...prev]);
   };
@@ -2352,7 +2362,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likes: 1,
       likedBy: [activeStudentId],
       comments: [],
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
     setHappyPosts((prev) => [newPost, ...prev]);
   };
@@ -2383,7 +2393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: `c-${Date.now()}`,
             author,
             text,
-            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            time: getVietnamTimeStr(),
           };
           const existingComments = Array.isArray(p.comments) ? p.comments : [];
           return {
@@ -2403,7 +2413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? {
               ...p,
               ...updatedData,
-              updatedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+              updatedAt: getVietnamDateTimeStr(),
             }
           : p
       )
@@ -2433,9 +2443,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetMonth?: number,
       force: boolean = false
     ): { posted: boolean; count: number; month: number; message: string } => {
-      const now = new Date();
-      const monthToUse = targetMonth && targetMonth >= 1 && targetMonth <= 12 ? targetMonth : now.getMonth() + 1;
-      const yearToUse = now.getFullYear();
+      const vnNow = getVietnamDateParts();
+      const monthToUse = targetMonth && targetMonth >= 1 && targetMonth <= 12 ? targetMonth : vnNow.month;
+      const yearToUse = vnNow.year;
       const monthKey = `${yearToUse}-${String(monthToUse).padStart(2, '0')}`;
 
       const birthdayStudents = students
@@ -2534,7 +2544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (hasCheckedBirthdayRef.current || students.length === 0) return;
     hasCheckedBirthdayRef.current = true;
-    const currentMonth = new Date().getMonth() + 1;
+    const currentMonth = getVietnamDateParts().month;
     postMonthlyBirthdayWishes(currentMonth, false);
   }, [students, postMonthlyBirthdayWishes]);
 
@@ -2880,7 +2890,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: normDate,
       weekNumber: computedWeek,
       id: `disc-${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
     setDisciplineEntries((prev) => [newEntry, ...prev]);
 
@@ -2950,7 +2960,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       date: normDate,
       weekNumber: computedWeek,
       id: `bon-${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
     setBonusEntries((prev) => [newBonus, ...prev]);
   };
@@ -2983,7 +2993,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newEntry: EmulationScoreAdjustment = {
       ...adjustmentData,
       id: `adj-${Date.now()}`,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      createdAt: getVietnamDateTimeStr(),
     };
     setEmulationScoreAdjustments((prev) => {
       const filtered = prev.filter(
@@ -3087,16 +3097,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fridayIso = weekRange.fridayDate;
     const dateRangeLabel = weekRange.rangeLabel; // "Từ ngày 26/10 đến 30/10"
 
-    // Check if current date is after Friday or if Friday attendance is already logged
-    const now = new Date();
-    const todayDayOfWeek = now.getDay(); // 0 = Sun, 6 = Sat
-    const [fy, fm, fd] = fridayIso.split('-').map(Number);
-    const weekFriday = new Date(fy, fm - 1, fd, 23, 59, 59);
+    // Check if current Vietnam date is after Friday or if Friday attendance is already logged
+    const vnNow = getVietnamDateParts();
+    const todayIsoVN = getVietnamDateIso();
+    const todayDayOfWeek = vnNow.dayOfWeek; // 0 = Sun, 6 = Sat
     const isWeekendOrPastFriday =
       targetWeek < currentWeek ||
       todayDayOfWeek === 6 ||
       todayDayOfWeek === 0 ||
-      now > weekFriday ||
+      todayIsoVN > fridayIso ||
       !!allAttendanceDays[fridayIso];
 
     const allScores = students.map((stu) => ({
@@ -3210,7 +3219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getExportJsonPayload = (
     scope: 'all' | 'students' | 'attendance_discipline' = 'all'
   ): Record<string, any> => {
-    const exportedAt = new Date().toISOString();
+    const exportedAt = `${getVietnamDateTimeStr()} (GMT+7)`;
     const weeklySummary = getWeeklyEmulationSummary(currentWeek);
 
     if (scope === 'students') {
@@ -3288,7 +3297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
 
-    const dateTag = new Date().toISOString().split('T')[0];
+    const dateTag = getVietnamDateIso();
     const fileName =
       scope === 'students'
         ? `Ho_So_Bang_Diem_50HS_12A7_${dateTag}.json`
@@ -3423,9 +3432,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // CLOUD & MULTI-USER REAL-TIME SYNCHRONIZATION (Firestore + Shared Server API)
   // ============================================================================
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
-  const [lastSyncedAt, setLastSyncedAt] = useState<string>(() =>
-    new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-  );
+  const [lastSyncedAt, setLastSyncedAt] = useState<string>(() => getVietnamTimeStr());
   const [firebaseUserEmail, setFirebaseUserEmail] = useState<string | null>(null);
   const [firebaseUserName, setFirebaseUserName] = useState<string | null>(null);
   const [isFirebaseAuthReady, setIsFirebaseAuthReady] = useState<boolean>(false);
@@ -3674,9 +3681,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDutySchedule(nextDuty);
       }
 
-      setLastSyncedAt(
-        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-      );
+      setLastSyncedAt(getVietnamTimeStr());
       setCloudSyncStatus('synced');
     },
     [normalizeTimetablePeriodTimes, realCalendarWeek, sanitizeAttendanceDaysMap, todayStr, buildFreshWeeklyDutySchedule]
@@ -3694,9 +3699,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastServerTimestampRef.current = serverTs;
         }
       }
-      setLastSyncedAt(
-        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-      );
+      setLastSyncedAt(getVietnamTimeStr());
       setCloudSyncStatus('synced');
     } catch (err) {
       console.warn('Manual cloud sync error:', err);
@@ -3882,9 +3885,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (serverTs > lastServerTimestampRef.current) {
               lastServerTimestampRef.current = serverTs;
             }
-            setLastSyncedAt(
-              new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-            );
+            setLastSyncedAt(getVietnamTimeStr());
             setCloudSyncStatus('synced');
           } catch (err) {
             console.warn(`Error syncing section ${secId}:`, err);

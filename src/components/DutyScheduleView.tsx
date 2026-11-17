@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp, getWeekRangeByIndex } from '../context/AppContext';
+import { getVietnamDateIso } from '../utils/timeUtils';
 import { DutyScheduleItem } from '../types';
 import {
   ShieldCheck,
@@ -472,7 +473,7 @@ export const DutyScheduleView: React.FC = () => {
     if (syncBonusEmulation && totalScore >= 9.5) {
       addBonusPointEntry({
         weekNumber: selectedWeek,
-        date: new Date().toISOString().split('T')[0],
+        date: getVietnamDateIso(),
         reason: `Trực nhật vệ sinh xuất sắc (${evaluatingDuty.group}) đạt ${totalScore}/10 điểm`,
         pointsAdded: 2,
         recordedBy: `${laborCadreStudent?.name || 'Đặng Nguyễn Kha'} (Lớp phó Lao động)`,

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { HappyPost } from '../types';
+import { getVietnamDateParts, formatDateTimeVN } from '../utils/timeUtils';
 import {
   compressImageFileToDataUrl,
   compressMultipleImageFiles,
@@ -57,8 +58,8 @@ export const HappyCornerView: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
-  // Month selector for Birthday Wishes (defaults to current month 1..12)
-  const currentSystemMonth = new Date().getMonth() + 1;
+  // Month selector for Birthday Wishes (defaults to current month 1..12 theo giờ VN)
+  const currentSystemMonth = getVietnamDateParts().month;
   const [selectedBirthdayMonth, setSelectedBirthdayMonth] = useState<number>(currentSystemMonth);
   const [birthdayBannerToast, setBirthdayBannerToast] = useState<string | null>(null);
 
@@ -611,7 +612,7 @@ export const HappyCornerView: React.FC = () => {
                     </span>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-slate-400">{post.createdAt}</span>
+                      <span className="text-[11px] text-slate-400">{formatDateTimeVN(post.createdAt)}</span>
 
                       {/* GVCN Edit & Delete Controls */}
                       {role === 'teacher' && (

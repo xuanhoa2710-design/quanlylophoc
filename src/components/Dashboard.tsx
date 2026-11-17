@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp, getWeekRangeByIndex, formatTeacherDisplayName } from '../context/AppContext';
+import { getVietnamTimetableDayName } from '../utils/timeUtils';
 import {
   Users,
   CalendarCheck,
@@ -90,8 +91,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     })
     .slice(0, 5);
 
-  // Today's schedule & duty
-  const todayDayName = 'Thứ Ba'; // Fallback or computed
+  // Today's schedule & duty (theo giờ Việt Nam GMT+7)
+  const todayDayName = getVietnamTimetableDayName();
   const todaySchedule = (timetable || []).find((t) => t?.day === todayDayName) || timetable?.[0] || { day: todayDayName, periods: [] };
   const todayDuty =
     (dutySchedule || []).find((d) => (d?.day || '').toLowerCase().includes(todayDayName.toLowerCase())) ||

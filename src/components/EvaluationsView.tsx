@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp, getWeekRangeByIndex, sanitizeLegacyTeacherText } from '../context/AppContext';
+import { getVietnamDateTimeStr, formatDateTimeVN } from '../utils/timeUtils';
 import { EvaluationComment, Student } from '../types';
 import {
   MessageSquare,
@@ -317,7 +318,7 @@ export const EvaluationsView: React.FC = () => {
       `Kính gửi Quý Phụ huynh (${stu.primaryParentName || 'Gia đình'}) em ${stu.name}, Thầy Trương Xuân Hòa (GVCN 12A7) trân trọng gửi phiếu nhận xét định kỳ (${periodLabel}) của em. Mong gia đình tiếp tục phối hợp cùng thầy động viên em học tập tốt.`;
 
     if (editingEval) {
-      const nowDateTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const nowDateTime = getVietnamDateTimeStr();
       updateEvaluation({
         ...editingEval,
         studentId: stu.id,
@@ -836,7 +837,7 @@ Thầy Trương Xuân Hòa - GVCN Lớp 12A7`;
                         </strong>
                         {ev.sentToParentAt && (
                           <span className="text-[10px] text-amber-700 font-semibold shrink-0">
-                            Gửi lúc: {ev.sentToParentAt}
+                            Gửi lúc: {formatDateTimeVN(ev.sentToParentAt)}
                           </span>
                         )}
                       </div>
@@ -858,7 +859,7 @@ Thầy Trương Xuân Hòa - GVCN Lớp 12A7`;
                           </span>
                         </strong>
                         {ev.parentRepliedAt && (
-                          <span className="text-[10px] text-emerald-700">{ev.parentRepliedAt}</span>
+                          <span className="text-[10px] text-emerald-700">{formatDateTimeVN(ev.parentRepliedAt)}</span>
                         )}
                       </div>
                       <p className="text-xs text-emerald-900 whitespace-pre-line">{ev.parentReply}</p>

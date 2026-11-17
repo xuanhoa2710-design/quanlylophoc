@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { getVietnamTimeStr } from '../utils/timeUtils';
 import { Student } from '../types';
 import {
   Bot,
@@ -90,7 +91,7 @@ Năm học 2026 - 2027 là năm học cuối cấp bản lề. Thầy ở đây 
 - 🎓 **Tư vấn chọn ngành & trường Đại học** tại TP.HCM phù hợp với ước mơ **"${stu?.dreamCareer || 'Đại học'}"**.
 
 Em hãy chọn môn học bên dưới, đính kèm ảnh đề bài hoặc gõ câu hỏi để bắt đầu nhé!`,
-    timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    timestamp: getVietnamTimeStr(),
   });
 
   const sanitizeSavedMessages = (rawMessages: ChatMessage[], stu?: Student): ChatMessage[] => {
@@ -235,7 +236,7 @@ Em hãy chọn môn học bên dưới, đính kèm ảnh đề bài hoặc gõ 
       id: `user-${Date.now()}`,
       sender: 'user',
       text: effectiveQuestion,
-      timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getVietnamTimeStr(),
       imageUrl: currentImage || undefined,
       subjectTag: selectedSubject !== 'Tất cả môn' ? selectedSubject : undefined,
     };
@@ -282,7 +283,7 @@ Em hãy chọn môn học bên dưới, đính kèm ảnh đề bài hoặc gõ 
         id: `ai-${Date.now()}`,
         sender: 'ai',
         text: aiText,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getVietnamTimeStr(),
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -292,7 +293,7 @@ Em hãy chọn môn học bên dưới, đính kèm ảnh đề bài hoặc gõ 
         id: `ai-${Date.now()}`,
         sender: 'ai',
         text: buildDetailedLocalTutorFallback(effectiveQuestion, selectedSubject),
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getVietnamTimeStr(),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
     } finally {

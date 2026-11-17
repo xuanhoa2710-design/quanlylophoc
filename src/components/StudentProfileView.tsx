@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
-import { useApp, getWeekRangeByIndex } from '../context/AppContext';
+import React, { useState, useMemo } from 'react';
+import { useApp, getWeekRangeByIndex, getWeekRangeFromDate } from '../context/AppContext';
 import { StudentProfileModal } from './StudentProfileModal';
+import { AttendanceStatus } from '../types';
+import {
+  formatDateVN,
+  formatDateWithWeekdayVN,
+  formatDateTimeVN,
+} from '../utils/timeUtils';
 import {
   User,
   Camera,
@@ -22,14 +28,82 @@ import {
   KeyRound,
   FileText,
   MessageSquare,
+  AlertTriangle,
+  CalendarX2,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 import { StudentPrivacyGuard } from './StudentPrivacyGuard';
 import { StudentPasswordModal } from './StudentPasswordModal';
 
 export const StudentProfileView: React.FC = () => {
-  const { currentStudent, currentWeek, getStudentWeeklyScore, isStudentUnlocked, lockStudent, evaluations } = useApp();
+  const {
+    currentStudent,
+    currentWeek,
+    getStudentWeeklyScore,
+    isStudentUnlocked,
+    lockStudent,
+    evaluations,
+    allAttendanceDays,
+    supplementaryAttendanceList,
+    disciplineEntries,
+  } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+  const studentId = currentStudent?.id || '';
+
+  const absenceHistory = useMemo(() => {
+    if (!studentId) return [];
+    const byDate: Record<string, { date: string; status: AttendanceStatus; reason?: string }> = {};
+    const upsert = (dt: string, status: AttendanceStatus, reason?: string) => {
+      if (!dt || status === 'present') return;
+      byDate[dt] = {
+        date: dt,
+        status,
+        reason: reason || byDate[dt]?.reason,
+      };
+    };
+
+    Object.entries(allAttendanceDays || {}).forEach(([dateKey, dayObj]) => {
+      if (!dayObj || !dayObj.records) return;
+      const st = dayObj.records[studentId];
+      if (st === 'excused' || st === 'unexcused' || st === 'late') {
+        upsert(dayObj.date || dateKey, st, dayObj.note || undefined);
+      }
+    });
+
+    (supplementaryAttendanceList || []).forEach((item) => {
+      if (item.studentId !== studentId) return;
+      if (item.newStatus === 'present') {
+        delete byDate[item.date];
+      } else {
+        upsert(
+          item.date,
+          item.newStatus,
+          `${item.reason}${item.note ? ` (${item.note})` : ''}`
+        );
+      }
+    });
+
+    (disciplineEntries || []).forEach((d) => {
+      if (d.studentId !== studentId) return;
+      if (d.ruleNumber === 1 || d.ruleNumber === 8 || d.ruleNumber === 9) {
+        const mappedStatus: AttendanceStatus =
+          d.ruleNumber === 1 ? 'late' : d.ruleNumber === 8 ? 'excused' : 'unexcused';
+        upsert(d.date, mappedStatus, d.note || d.violationText);
+      }
+    });
+
+    return Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
+  }, [studentId, allAttendanceDays, supplementaryAttendanceList, disciplineEntries]);
+
+  const violationHistory = useMemo(() => {
+    if (!studentId) return [];
+    return (disciplineEntries || [])
+      .filter((v) => v.studentId === studentId)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [studentId, disciplineEntries]);
 
   if (!currentStudent) return null;
 
@@ -355,6 +429,115 @@ export const StudentProfileView: React.FC = () => {
             </div>
           </div>
 
+          {/* Exact Absence Dates & Violation Dates Card */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-rose-600" />
+                <h3 className="text-base font-bold text-slate-800">
+                  Lịch sử Ngày tháng Nghỉ học & Ngày tháng Vi phạm
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500">
+                {absenceHistory.length} buổi nghỉ/trễ • {violationHistory.length} vi phạm
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Absence & Late Dates */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <CalendarX2 className="w-4 h-4 text-amber-600" />
+                    Ngày tháng nghỉ học / đi trễ
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-600">
+                    {absenceHistory.length} ngày
+                  </span>
+                </div>
+
+                {absenceHistory.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    Đi học chuyên cần đầy đủ, chưa ghi nhận ngày nghỉ hay đi trễ!
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {absenceHistory.map((item) => {
+                      const badge =
+                        item.status === 'unexcused'
+                          ? { label: 'Vắng không phép', cls: 'bg-rose-100 text-rose-800 border-rose-200' }
+                          : item.status === 'excused'
+                          ? { label: 'Vắng có phép', cls: 'bg-amber-100 text-amber-800 border-amber-200' }
+                          : { label: 'Đi trễ', cls: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+                      return (
+                        <div
+                          key={`${item.date}-${item.status}`}
+                          className={`p-2.5 rounded-xl border ${badge.cls} space-y-0.5`}
+                        >
+                          <div className="flex items-center justify-between gap-2 font-bold">
+                            <span>📅 {formatDateWithWeekdayVN(item.date)}</span>
+                            <span className="text-[10px] uppercase">{badge.label}</span>
+                          </div>
+                          {item.reason && (
+                            <div className="text-[11px] opacity-90">{item.reason}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Violation Dates */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    Ngày tháng vi phạm thi đua
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-600">
+                    {violationHistory.length} lỗi
+                  </span>
+                </div>
+
+                {violationHistory.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    Chấp hành nội quy tốt, chưa ghi nhận ngày vi phạm nào!
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {violationHistory.map((v) => (
+                      <div
+                        key={v.id}
+                        className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 space-y-0.5 text-rose-950"
+                      >
+                        <div className="flex items-center justify-between gap-2 font-bold">
+                          <span className="text-rose-800">
+                            📅 {formatDateWithWeekdayVN(v.date)}
+                          </span>
+                          <span className="font-black text-rose-600 shrink-0">
+                            -{v.pointsDeducted}đ
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-semibold">
+                          [Điều {v.ruleNumber}] {v.violationText}
+                        </div>
+                        {v.note && (
+                          <div className="text-[10px] text-slate-600">{v.note}</div>
+                        )}
+                        <div className="text-[10px] text-slate-400">
+                          Tuần {getWeekRangeFromDate(v.date).shortRangeLabel} • {formatDateVN(v.date)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Evaluations from Thầy Trương Xuân Hòa */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -382,7 +565,7 @@ export const StudentProfileView: React.FC = () => {
                   >
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-bold text-blue-800">{ev.period}</span>
-                      <span className="text-slate-500">{ev.createdAt}</span>
+                      <span className="text-slate-500">{formatDateTimeVN(ev.createdAt)}</span>
                     </div>
                     <p className="text-xs text-slate-800 leading-relaxed">{ev.teacherNote}</p>
                     {ev.parentNote && (

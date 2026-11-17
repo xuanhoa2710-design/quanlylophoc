@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import { useApp, getWeekRangeByIndex, formatTeacherDisplayName } from '../context/AppContext';
+import { getVietnamTimeStr, getVietnamDateVN } from '../utils/timeUtils';
 import { Role } from '../types';
 import {
   Bell,
@@ -61,6 +62,14 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
   const [showDisplayModal, setShowDisplayModal] = useState(false);
   const [showStudentPicker, setShowStudentPicker] = useState(false);
   const [isResetPinModalOpen, setIsResetPinModalOpen] = useState(false);
+  const [vnClock, setVnClock] = useState<string>(() => `${getVietnamTimeStr()} • ${getVietnamDateVN()}`);
+
+  useEffect(() => {
+    const updateClock = () => setVnClock(`${getVietnamTimeStr()} • ${getVietnamDateVN()}`);
+    updateClock();
+    const timer = window.setInterval(updateClock, 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const currentWeekRange = getWeekRangeByIndex(currentWeek);
   const teacherDisplayName = formatTeacherDisplayName(appConfig.teacherName);
@@ -108,8 +117,6 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
         ['happy_corner', 'student_ai', 'duty_schedule', 'profile'].includes(activeTab)
       ) {
         setActiveTab('overview');
-      } else if (targetRole === 'student' && activeTab === 'evaluations') {
-        setActiveTab('overview');
       }
     }
   };
@@ -134,6 +141,12 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 text-white/90 text-[10px] sm:text-[11px] shrink-0">
+            <span
+              className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-amber-200 font-bold"
+              title="Giờ chuẩn Việt Nam (GMT+7)"
+            >
+              🕒 {vnClock}
+            </span>
             <button
               onClick={() => (firebaseUserEmail ? syncAllToCloudNow() : syncAllToCloudNow())}
               onDoubleClick={() => loginWithGoogleCloud()}

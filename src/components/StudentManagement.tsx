@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Student, StudentCadreRole } from '../types';
+import { Student, StudentCadreRole, AttendanceStatus } from '../types';
+import { formatDateVN, formatDateWithWeekdayVN } from '../utils/timeUtils';
 import {
   Search,
   UserPlus,
@@ -30,6 +31,8 @@ import {
   LayoutGrid,
   Plus,
   Tags,
+  Calendar,
+  AlertTriangle,
 } from 'lucide-react';
 import { StudentPasswordModal } from './StudentPasswordModal';
 
@@ -158,7 +161,77 @@ export const StudentManagement: React.FC = () => {
     removeCustomCadreRole,
     resetAllStudentPinsByTeacher,
     setIsJsonModalOpen,
+    allAttendanceDays,
+    supplementaryAttendanceList,
+    disciplineEntries,
   } = useApp();
+
+  const absenceHistoryByStudent = useMemo(() => {
+    const byStudent: Record<
+      string,
+      Record<string, { date: string; status: AttendanceStatus; reason?: string }>
+    > = {};
+    const upsert = (stuId: string, dt: string, status: AttendanceStatus, reason?: string) => {
+      if (!stuId || !dt || status === 'present') return;
+      if (!byStudent[stuId]) byStudent[stuId] = {};
+      byStudent[stuId][dt] = {
+        date: dt,
+        status,
+        reason: reason || byStudent[stuId][dt]?.reason,
+      };
+    };
+
+    Object.entries(allAttendanceDays || {}).forEach(([dateKey, dayObj]) => {
+      if (!dayObj || !dayObj.records) return;
+      const dayDate = dayObj.date || dateKey;
+      Object.entries(dayObj.records).forEach(([stuId, st]) => {
+        if (st === 'excused' || st === 'unexcused' || st === 'late') {
+          upsert(stuId, dayDate, st, dayObj.note || undefined);
+        }
+      });
+    });
+
+    (supplementaryAttendanceList || []).forEach((item) => {
+      if (item.newStatus === 'present') {
+        if (byStudent[item.studentId]?.[item.date]) {
+          delete byStudent[item.studentId][item.date];
+        }
+      } else {
+        upsert(
+          item.studentId,
+          item.date,
+          item.newStatus,
+          `${item.reason}${item.note ? ` (${item.note})` : ''}`
+        );
+      }
+    });
+
+    (disciplineEntries || []).forEach((d) => {
+      if (d.ruleNumber === 1 || d.ruleNumber === 8 || d.ruleNumber === 9) {
+        const mappedStatus: AttendanceStatus =
+          d.ruleNumber === 1 ? 'late' : d.ruleNumber === 8 ? 'excused' : 'unexcused';
+        upsert(d.studentId, d.date, mappedStatus, d.note || d.violationText);
+      }
+    });
+
+    const result: Record<string, Array<{ date: string; status: AttendanceStatus; reason?: string }>> = {};
+    Object.entries(byStudent).forEach(([stuId, dateMap]) => {
+      result[stuId] = Object.values(dateMap).sort((a, b) => b.date.localeCompare(a.date));
+    });
+    return result;
+  }, [allAttendanceDays, supplementaryAttendanceList, disciplineEntries]);
+
+  const violationHistoryByStudent = useMemo(() => {
+    const map: Record<string, typeof disciplineEntries> = {};
+    (disciplineEntries || []).forEach((v) => {
+      if (!map[v.studentId]) map[v.studentId] = [];
+      map[v.studentId].push(v);
+    });
+    Object.keys(map).forEach((stuId) => {
+      map[stuId].sort((a, b) => b.date.localeCompare(a.date));
+    });
+    return map;
+  }, [disciplineEntries]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [groupFilter, setGroupFilter] = useState<string>('all');
@@ -1072,6 +1145,102 @@ export const StudentManagement: React.FC = () => {
                   <p><strong>Khen thưởng:</strong> {(selectedStudentForDetail.awards || []).join(', ')}</p>
                 </div>
               </div>
+
+              {/* Exact Absence Dates & Violation Dates in Detail Modal */}
+              {(() => {
+                const absences = absenceHistoryByStudent[selectedStudentForDetail.id] || [];
+                const violations = violationHistoryByStudent[selectedStudentForDetail.id] || [];
+                return (
+                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200/80 space-y-2">
+                      <h4 className="font-bold text-amber-950 uppercase tracking-wider text-[11px] flex items-center justify-between gap-1.5">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-amber-600" /> Ngày tháng Nghỉ học / Đi trễ
+                        </span>
+                        <span className="text-[10px] font-black text-amber-700">{absences.length} ngày</span>
+                      </h4>
+                      {absences.length === 0 ? (
+                        <p className="text-[11px] text-emerald-700 font-semibold">
+                          ✓ Chưa ghi nhận ngày nghỉ hoặc đi trễ.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {absences.map((ab) => {
+                            const statusLabel =
+                              ab.status === 'unexcused'
+                                ? 'Vắng KP'
+                                : ab.status === 'excused'
+                                ? 'Vắng CP'
+                                : 'Đi trễ';
+                            return (
+                              <div
+                                key={`${ab.date}-${ab.status}`}
+                                className="p-2 rounded-xl bg-white border border-amber-200 text-[11px]"
+                              >
+                                <div className="flex items-center justify-between font-bold text-amber-950">
+                                  <span>📅 {formatDateWithWeekdayVN(ab.date)}</span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[10px] ${
+                                      ab.status === 'unexcused'
+                                        ? 'bg-rose-100 text-rose-700'
+                                        : ab.status === 'excused'
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                    }`}
+                                  >
+                                    {statusLabel}
+                                  </span>
+                                </div>
+                                {ab.reason && (
+                                  <div className="text-[10px] text-slate-600 mt-0.5 truncate" title={ab.reason}>
+                                    {ab.reason}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-rose-50/60 p-3.5 rounded-2xl border border-rose-200/80 space-y-2">
+                      <h4 className="font-bold text-rose-950 uppercase tracking-wider text-[11px] flex items-center justify-between gap-1.5">
+                        <span className="flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> Ngày tháng Vi phạm Thi đua
+                        </span>
+                        <span className="text-[10px] font-black text-rose-700">{violations.length} lỗi</span>
+                      </h4>
+                      {violations.length === 0 ? (
+                        <p className="text-[11px] text-emerald-700 font-semibold">
+                          ✓ Chưa ghi nhận lỗi vi phạm nào.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {violations.map((v) => (
+                            <div
+                              key={v.id}
+                              className="p-2 rounded-xl bg-white border border-rose-200 text-[11px]"
+                            >
+                              <div className="flex items-center justify-between font-bold text-rose-950">
+                                <span>📅 {formatDateVN(v.date)} • [Đ{v.ruleNumber}]</span>
+                                <span className="text-rose-600 font-black">-{v.pointsDeducted}đ</span>
+                              </div>
+                              <div className="text-[10px] text-slate-700 mt-0.5 truncate" title={v.violationText}>
+                                {v.violationText}
+                              </div>
+                              {v.note && (
+                                <div className="text-[10px] text-slate-500 truncate" title={v.note}>
+                                  {v.note}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

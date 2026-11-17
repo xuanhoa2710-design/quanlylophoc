@@ -10,6 +10,11 @@ import {
 import { StudentDisciplineEntry, BonusPointEntry } from '../types';
 import { VIOLATIONS_CATALOG, BONUS_PRESETS, ViolationRule } from '../data/violationsCatalog';
 import {
+  formatDateVN,
+  formatDateWithWeekdayVN,
+  formatDateTimeVN,
+} from '../utils/timeUtils';
+import {
   Scale,
   Award,
   AlertTriangle,
@@ -90,6 +95,25 @@ export const DisciplineView: React.FC = () => {
   const [showAddBonusModal, setShowAddBonusModal] = useState(false);
   const [showRulesCatalogModal, setShowRulesCatalogModal] = useState(false);
   const [selectedStudentHistory, setSelectedStudentHistory] = useState<string | null>(null);
+  const [historyScope, setHistoryScope] = useState<'week' | 'all'>('week');
+
+  const openStudentHistory = (studentId: string, scope: 'week' | 'all' = 'week') => {
+    setHistoryScope(scope);
+    setSelectedStudentHistory(studentId);
+  };
+
+  // Map all violations across all weeks per student (sorted newest first)
+  const allViolationsByStudent = useMemo(() => {
+    const map: Record<string, StudentDisciplineEntry[]> = {};
+    (disciplineEntries || []).forEach((v) => {
+      if (!map[v.studentId]) map[v.studentId] = [];
+      map[v.studentId].push(v);
+    });
+    Object.keys(map).forEach((stuId) => {
+      map[stuId].sort((a, b) => b.date.localeCompare(a.date));
+    });
+    return map;
+  }, [disciplineEntries]);
 
   // Form states for Add Violation
   const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id || 'hs-1');
@@ -389,8 +413,8 @@ export const DisciplineView: React.FC = () => {
       ...allWeeklyData.map((item) => {
         const stu = item.student;
         const details = [
-          ...item.violations.map((v) => `-${v.pointsDeducted}đ: ${v.violationText} (${v.date})`),
-          ...item.bonuses.map((b) => `+${b.pointsAdded}đ: ${b.reason} (${b.date})`),
+          ...item.violations.map((v) => `-${v.pointsDeducted}đ: ${v.violationText} (${formatDateVN(v.date)})`),
+          ...item.bonuses.map((b) => `+${b.pointsAdded}đ: ${b.reason} (${formatDateVN(b.date)})`),
         ].join('; ');
         return [
           stu.stt,
@@ -783,71 +807,114 @@ export const DisciplineView: React.FC = () => {
           {/* Violations List for Current Student */}
           {(() => {
             const myScore = getStudentWeeklyScore(currentStudent.id, currentWeek);
+            const myAllViolations = allViolationsByStudent[currentStudent.id] || [];
             return (
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Chi tiết vi phạm & điểm cộng ({currentWeekRange.rangeLabel})
-                </h4>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Chi tiết vi phạm & điểm cộng ({currentWeekRange.rangeLabel})
+                  </h4>
 
-                {myScore.violations.length === 0 && myScore.bonuses.length === 0 ? (
-                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Chúc mừng bạn! Trong tuần ({currentWeekRange.rangeLabel}) bạn chưa có lỗi vi phạm nào, giữ trọn 100 điểm thi đua!
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {myScore.violations.map((v) => (
-                      <div
-                        key={v.id}
-                        className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs flex items-start justify-between gap-3"
-                      >
-                        <div>
-                          <div className="font-bold text-rose-950 flex items-center gap-2">
-                            <span className="px-1.5 py-0.5 rounded-md bg-rose-200 text-rose-900 text-[10px] font-black">
-                              Điều {v.ruleNumber}
-                            </span>
-                            <span>{v.violationText}</span>
-                          </div>
-                          {v.note && (
-                            <div className="text-[11px] text-slate-600 mt-1">
-                              <strong>Ghi chú:</strong> {v.note}
+                  {myScore.violations.length === 0 && myScore.bonuses.length === 0 ? (
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      Chúc mừng bạn! Trong tuần ({currentWeekRange.rangeLabel}) bạn chưa có lỗi vi phạm nào, giữ trọn 100 điểm thi đua!
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {myScore.violations.map((v) => (
+                        <div
+                          key={v.id}
+                          className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs flex items-start justify-between gap-3"
+                        >
+                          <div>
+                            <div className="font-bold text-rose-950 flex items-center gap-2 flex-wrap">
+                              <span className="px-1.5 py-0.5 rounded-md bg-rose-200 text-rose-900 text-[10px] font-black">
+                                Điều {v.ruleNumber}
+                              </span>
+                              <span>{v.violationText}</span>
                             </div>
-                          )}
-                          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-3">
-                            <span>Ngày: {v.date}</span>
-                            <span>•</span>
-                            <span>Người ghi nhận: {v.recordedBy}</span>
+                            {v.note && (
+                              <div className="text-[11px] text-slate-600 mt-1">
+                                <strong>Ghi chú:</strong> {v.note}
+                              </div>
+                            )}
+                            <div className="text-[11px] text-rose-700 font-semibold mt-1 flex items-center gap-2 flex-wrap">
+                              <span>📅 Ngày vi phạm: {formatDateWithWeekdayVN(v.date)}</span>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-slate-500 font-normal">Người ghi nhận: {v.recordedBy}</span>
+                            </div>
                           </div>
+                          <span className="text-sm font-black text-rose-600 shrink-0">
+                            -{v.pointsDeducted}đ
+                          </span>
                         </div>
-                        <span className="text-sm font-black text-rose-600 shrink-0">
-                          -{v.pointsDeducted}đ
-                        </span>
-                      </div>
-                    ))}
+                      ))}
 
-                    {myScore.bonuses.map((b) => (
-                      <div
-                        key={b.id}
-                        className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs flex items-start justify-between gap-3"
-                      >
-                        <div>
-                          <div className="font-bold text-emerald-950 flex items-center gap-2">
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>{b.reason}</span>
+                      {myScore.bonuses.map((b) => (
+                        <div
+                          key={b.id}
+                          className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs flex items-start justify-between gap-3"
+                        >
+                          <div>
+                            <div className="font-bold text-emerald-950 flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>{b.reason}</span>
+                            </div>
+                            <div className="text-[11px] text-emerald-700 font-semibold mt-1 flex items-center gap-2 flex-wrap">
+                              <span>📅 Ngày: {formatDateWithWeekdayVN(b.date)}</span>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-slate-500 font-normal">Người ghi nhận: {b.recordedBy}</span>
+                            </div>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-3">
-                            <span>Ngày: {b.date}</span>
-                            <span>•</span>
-                            <span>Người ghi nhận: {b.recordedBy}</span>
-                          </div>
+                          <span className="text-sm font-black text-emerald-600 shrink-0">
+                            +{b.pointsAdded}đ
+                          </span>
                         </div>
-                        <span className="text-sm font-black text-emerald-600 shrink-0">
-                          +{b.pointsAdded}đ
-                        </span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* All-Year Violation Dates Summary for Student/Parent */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-rose-500" />
+                      Tổng hợp Ngày tháng Vi phạm trong năm ({myAllViolations.length} lượt)
+                    </h4>
                   </div>
-                )}
+                  {myAllViolations.length === 0 ? (
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium">
+                      Trong năm học chưa ghi nhận lỗi vi phạm nào.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {myAllViolations.map((v) => (
+                        <div
+                          key={v.id}
+                          className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-200/80 text-xs flex items-start justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-bold text-rose-900 flex items-center gap-1.5 flex-wrap">
+                              <span>📅 {formatDateWithWeekdayVN(v.date)}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-white border border-rose-200 text-[10px] text-rose-700 font-bold">
+                                Tuần {getWeekRangeFromDate(v.date).shortRangeLabel}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-700 font-medium mt-0.5 truncate">
+                              [Đ{v.ruleNumber}] {v.violationText}
+                            </div>
+                            {v.note && (
+                              <div className="text-[10px] text-slate-500 truncate">{v.note}</div>
+                            )}
+                          </div>
+                          <span className="font-black text-rose-600 shrink-0">-{v.pointsDeducted}đ</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })()}
@@ -957,6 +1024,8 @@ export const DisciplineView: React.FC = () => {
         <div className="md:hidden divide-y divide-slate-100">
           {sortedStudents.map((item, index) => {
             const s = item.student;
+            const stuAllViolations = allViolationsByStudent[s.id] || [];
+            const otherWeekCount = Math.max(0, stuAllViolations.length - item.violations.length);
             return (
               <div
                 key={s.id}
@@ -975,7 +1044,7 @@ export const DisciplineView: React.FC = () => {
                     <div className="min-w-0">
                       <div
                         className="font-bold text-slate-900 text-sm truncate cursor-pointer"
-                        onClick={() => setSelectedStudentHistory(s.id)}
+                        onClick={() => openStudentHistory(s.id, 'week')}
                       >
                         {s.name}
                       </div>
@@ -1003,8 +1072,8 @@ export const DisciplineView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Violations / Bonuses inline preview */}
-                {(item.violations.length > 0 || item.bonuses.length > 0) && (
+                {/* Violations / Bonuses inline preview with exact dates */}
+                {(item.violations.length > 0 || item.bonuses.length > 0 || otherWeekCount > 0) && (
                   <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
                     {item.violations.map((v) => (
                       <div
@@ -1012,7 +1081,7 @@ export const DisciplineView: React.FC = () => {
                         className="text-[11px] text-rose-800 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 flex items-center justify-between gap-2"
                       >
                         <span className="truncate">
-                          <strong>[Đ{v.ruleNumber}]</strong> {v.violationText} ({v.date})
+                          <strong className="text-rose-900">{formatDateVN(v.date)}</strong> • <strong>[Đ{v.ruleNumber}]</strong> {v.violationText}
                         </span>
                         <span className="font-black text-rose-600 shrink-0">-{v.pointsDeducted}đ</span>
                       </div>
@@ -1022,10 +1091,23 @@ export const DisciplineView: React.FC = () => {
                         key={b.id}
                         className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center justify-between gap-2"
                       >
-                        <span className="truncate">{b.reason}</span>
+                        <span className="truncate">
+                          <strong>{formatDateVN(b.date)}</strong> • {b.reason}
+                        </span>
                         <span className="font-black text-emerald-600 shrink-0">+{b.pointsAdded}đ</span>
                       </div>
                     ))}
+                    {otherWeekCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => openStudentHistory(s.id, 'all')}
+                        className="text-[10px] font-bold text-rose-700 bg-rose-50/70 hover:bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200 inline-flex items-center gap-1"
+                      >
+                        <Calendar className="w-3 h-3" />
+                        Cả năm: {stuAllViolations.length} ngày vi phạm ({stuAllViolations.slice(0, 2).map((x) => formatDateVN(x.date)).join(', ')}
+                        {stuAllViolations.length > 2 ? '...' : ''})
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1049,7 +1131,7 @@ export const DisciplineView: React.FC = () => {
                       </button>
                     )}
                     <button
-                      onClick={() => setSelectedStudentHistory(s.id)}
+                      onClick={() => openStudentHistory(s.id, 'week')}
                       className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-[11px]"
                     >
                       Chi tiết
@@ -1073,6 +1155,7 @@ export const DisciplineView: React.FC = () => {
                 <th className="py-3 px-3 text-center">Khởi điểm</th>
                 <th className="py-3 px-3 text-center text-rose-600">Điểm trừ (-)</th>
                 <th className="py-3 px-3 text-center text-emerald-600">Điểm cộng (+)</th>
+                <th className="py-3 px-3 min-w-[230px]">Chi tiết & Ngày tháng vi phạm</th>
                 <th className="py-3 px-4 text-center">Tổng Điểm</th>
                 <th className="py-3 px-4 text-center">Xếp loại</th>
                 <th className="py-3 px-4 text-center w-36">Thao tác</th>
@@ -1082,6 +1165,8 @@ export const DisciplineView: React.FC = () => {
               {sortedStudents.map((item, index) => {
                 const s = item.student;
                 const isTop1 = index === 0 && item.total >= 100;
+                const stuAllViolations = allViolationsByStudent[s.id] || [];
+                const otherWeekViolationsCount = Math.max(0, stuAllViolations.length - item.violations.length);
                 return (
                   <tr
                     key={s.id}
@@ -1107,7 +1192,10 @@ export const DisciplineView: React.FC = () => {
                           className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200 shrink-0"
                         />
                         <div>
-                          <div className="font-bold text-slate-900 hover:text-blue-600 cursor-pointer" onClick={() => setSelectedStudentHistory(s.id)}>
+                          <div
+                            className="font-bold text-slate-900 hover:text-blue-600 cursor-pointer"
+                            onClick={() => openStudentHistory(s.id, 'week')}
+                          >
                             {s.name}
                           </div>
                           <div className="text-[10px] text-slate-400">{s.code}</div>
@@ -1153,6 +1241,43 @@ export const DisciplineView: React.FC = () => {
                       )}
                     </td>
 
+                    <td className="py-3 px-3">
+                      <div className="space-y-1 max-w-[270px]">
+                        {item.violations.length === 0 ? (
+                          <span className="text-[11px] text-emerald-600 font-semibold">
+                            ✓ Không vi phạm tuần này
+                          </span>
+                        ) : (
+                          item.violations.map((v) => (
+                            <div
+                              key={v.id}
+                              className="px-2 py-1 rounded-lg bg-rose-50 border border-rose-200 text-[10px] text-rose-900 leading-snug"
+                            >
+                              <div className="flex items-center justify-between gap-1.5 font-bold">
+                                <span>📅 {formatDateVN(v.date)} • [Đ{v.ruleNumber}]</span>
+                                <span className="text-rose-600 font-black">-{v.pointsDeducted}đ</span>
+                              </div>
+                              <div className="text-[10px] text-rose-800 truncate" title={v.violationText}>
+                                {v.violationText}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                        {otherWeekViolationsCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openStudentHistory(s.id, 'all')}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold transition-colors"
+                            title="Xem tất cả các ngày vi phạm trong năm học"
+                          >
+                            <Calendar className="w-3 h-3 text-amber-600" />
+                            Tuần khác: +{otherWeekViolationsCount} lỗi ({stuAllViolations.slice(0, 2).map((x) => formatDateVN(x.date)).join(', ')}
+                            {stuAllViolations.length > 2 ? '...' : ''})
+                          </button>
+                        )}
+                      </div>
+                    </td>
+
                     <td className="py-3 px-4 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-sm font-black text-slate-900">
@@ -1193,7 +1318,7 @@ export const DisciplineView: React.FC = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => setSelectedStudentHistory(s.id)}
+                          onClick={() => openStudentHistory(s.id, 'week')}
                           className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 text-[11px] font-bold transition-colors"
                           title="Xem chi tiết lịch sử thi đua"
                         >
@@ -1650,10 +1775,11 @@ export const DisciplineView: React.FC = () => {
               const student = students.find((s) => s.id === selectedStudentHistory);
               if (!student) return null;
               const score = getStudentWeeklyScore(student.id, currentWeek);
+              const allStuViolations = allViolationsByStudent[student.id] || [];
 
               return (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-100 pr-8">
                     <div className="flex items-center gap-3">
                       <img
                         src={student.avatar}
@@ -1680,167 +1806,270 @@ export const DisciplineView: React.FC = () => {
                     )}
                   </div>
 
-                  {score.isAdjustedByTeacher && (
-                    <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 flex items-start justify-between gap-3 text-xs">
-                      <div className="flex items-start gap-2.5">
-                        <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  {/* Scope Toggle: Selected Week vs All-Year Violation Dates */}
+                  <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setHistoryScope('week')}
+                      className={`flex-1 py-2 px-3 rounded-lg transition-all ${
+                        historyScope === 'week'
+                          ? 'bg-white text-blue-700 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Tuần đang chọn ({currentWeekRange.shortRangeLabel})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHistoryScope('all')}
+                      className={`flex-1 py-2 px-3 rounded-lg transition-all ${
+                        historyScope === 'all'
+                          ? 'bg-white text-rose-700 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Toàn bộ Ngày tháng vi phạm ({allStuViolations.length} lỗi)
+                    </button>
+                  </div>
+
+                  {historyScope === 'week' ? (
+                    <>
+                      {score.isAdjustedByTeacher && (
+                        <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 flex items-start justify-between gap-3 text-xs">
+                          <div className="flex items-start gap-2.5">
+                            <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <div className="font-black text-amber-950">
+                                Điểm thi đua ({currentWeekRange.rangeLabel}) đã được GVCN điều chỉnh thành {score.total}đ
+                                <span className="font-normal text-amber-800 ml-1.5">
+                                  (Điểm tự động gốc: {score.autoScore}đ)
+                                </span>
+                              </div>
+                              <div className="text-slate-600 text-[11px] mt-0.5">
+                                <strong>Lý do:</strong> {score.adjustment?.reason}
+                              </div>
+                              <div className="text-slate-400 text-[10px] mt-0.5">
+                                Người duyệt: {score.adjustment?.adjustedBy} • {formatDateTimeVN(score.adjustment?.createdAt)}
+                              </div>
+                            </div>
+                          </div>
+                          {role === 'teacher' && (
+                            <button
+                              onClick={() => removeEmulationScoreAdjustment(student.id, currentWeek)}
+                              className="px-2.5 py-1 rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 font-bold text-[11px] transition-colors shrink-0"
+                            >
+                              Khôi phục điểm gốc
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-4 gap-2 text-center bg-slate-50 p-3 rounded-2xl border border-slate-200">
                         <div>
-                         <div className="font-black text-amber-950">
-                            Điểm thi đua ({currentWeekRange.rangeLabel}) đã được GVCN điều chỉnh thành {score.total}đ
-                            <span className="font-normal text-amber-800 ml-1.5">
-                              (Điểm tự động gốc: {score.autoScore}đ)
-                            </span>
-                          </div>
-                          <div className="text-slate-600 text-[11px] mt-0.5">
-                            <strong>Lý do:</strong> {score.adjustment?.reason}
-                          </div>
-                          <div className="text-slate-400 text-[10px] mt-0.5">
-                            Người duyệt: {score.adjustment?.adjustedBy} • {score.adjustment?.createdAt}
-                          </div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase">Khởi điểm</div>
+                          <div className="text-base font-black text-slate-700">100đ</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold text-rose-600 uppercase">Điểm trừ</div>
+                          <div className="text-base font-black text-rose-600">-{score.deducted}đ</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold text-emerald-600 uppercase">Điểm cộng</div>
+                          <div className="text-base font-black text-emerald-600">+{score.bonus}đ</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold text-blue-600 uppercase">Tổng điểm</div>
+                          <div className="text-base font-black text-blue-700">{score.total}đ</div>
                         </div>
                       </div>
-                      {role === 'teacher' && (
-                        <button
-                          onClick={() => removeEmulationScoreAdjustment(student.id, currentWeek)}
-                          className="px-2.5 py-1 rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 font-bold text-[11px] transition-colors shrink-0"
-                        >
-                          Khôi phục điểm gốc
-                        </button>
+
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                          Lịch sử vi phạm nề nếp ({currentWeekRange.rangeLabel})
+                        </h4>
+                        {score.violations.length === 0 ? (
+                          <div className="text-center py-6 text-xs text-emerald-600 font-bold bg-emerald-50 rounded-2xl">
+                            Không có lỗi vi phạm nào ({currentWeekRange.rangeLabel})!
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {score.violations.map((v) => (
+                              <div
+                                key={v.id}
+                                className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs flex items-start justify-between gap-3"
+                              >
+                                <div>
+                                  <div className="font-bold text-rose-950 flex items-center gap-2 flex-wrap">
+                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-200 text-rose-900 text-[10px] font-black">
+                                      Điều {v.ruleNumber}
+                                    </span>
+                                    <span>{v.violationText}</span>
+                                  </div>
+                                  {v.note && (
+                                    <div className="text-[11px] text-slate-600 mt-1">
+                                      <strong>Ghi chú:</strong> {v.note}
+                                    </div>
+                                  )}
+                                  <div className="text-[11px] text-rose-700 font-semibold mt-1 flex items-center gap-2 flex-wrap">
+                                    <span>📅 Ngày vi phạm: {formatDateWithWeekdayVN(v.date)}</span>
+                                    <span className="text-slate-400">•</span>
+                                    <span className="text-slate-500 font-normal">Người ghi nhận: {v.recordedBy}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="font-black text-rose-600 text-sm">
+                                    -{v.pointsDeducted}đ
+                                  </span>
+                                  {role === 'teacher' && (
+                                    <>
+                                      <button
+                                        onClick={() => handleStartEditViolation(v)}
+                                        className="p-1 rounded-lg hover:bg-rose-200 text-rose-700 transition-colors"
+                                        title="Chỉnh sửa lỗi vi phạm này"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteDisciplineEntry(v.id)}
+                                        className="p-1 rounded-lg hover:bg-rose-200 text-rose-600 transition-colors"
+                                        title="Xóa lỗi vi phạm này"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                          Khen thưởng & Điểm cộng ({currentWeekRange.rangeLabel})
+                        </h4>
+                        {score.bonuses.length === 0 ? (
+                          <div className="text-center py-4 text-xs text-slate-400 bg-slate-50 rounded-2xl">
+                            Chưa có lượt cộng điểm khen thưởng nào ({currentWeekRange.rangeLabel})
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {score.bonuses.map((b) => (
+                              <div
+                                key={b.id}
+                                className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs flex items-start justify-between gap-3"
+                              >
+                                <div>
+                                  <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>{b.reason}</span>
+                                  </div>
+                                  <div className="text-[11px] text-emerald-700 font-semibold mt-1">
+                                    📅 Ngày: {formatDateWithWeekdayVN(b.date)} <span className="text-slate-400 font-normal">• Người ghi nhận: {b.recordedBy}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="font-black text-emerald-600 text-sm">
+                                    +{b.pointsAdded}đ
+                                  </span>
+                                  {role === 'teacher' && (
+                                    <>
+                                      <button
+                                        onClick={() => handleStartEditBonus(b)}
+                                        className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-700 transition-colors"
+                                        title="Chỉnh sửa điểm cộng này"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteBonusPointEntry(b.id)}
+                                        className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-600 transition-colors"
+                                        title="Xóa lượt cộng điểm này"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Tất cả Ngày tháng Vi phạm trong năm học ({allStuViolations.length} lượt)
+                        </h4>
+                      </div>
+                      {allStuViolations.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-emerald-600 font-bold bg-emerald-50 rounded-2xl border border-emerald-200">
+                          Chúc mừng! Học sinh này chưa có bất kỳ lỗi vi phạm nào trong cả năm học.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {allStuViolations.map((v) => {
+                            const wkRange = getWeekRangeFromDate(v.date);
+                            return (
+                              <div
+                                key={v.id}
+                                className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs flex items-start justify-between gap-3"
+                              >
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black">
+                                      📅 {formatDateWithWeekdayVN(v.date)}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-md bg-white border border-rose-200 text-rose-800 text-[10px] font-bold">
+                                      {wkRange.rangeLabel}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-200 text-rose-900 text-[10px] font-black">
+                                      Điều {v.ruleNumber}
+                                    </span>
+                                  </div>
+                                  <div className="font-bold text-rose-950">{v.violationText}</div>
+                                  {v.note && (
+                                    <div className="text-[11px] text-slate-600 mt-1">
+                                      <strong>Ghi chú:</strong> {v.note}
+                                    </div>
+                                  )}
+                                  <div className="text-[10px] text-slate-500 mt-1">
+                                    Người ghi nhận: {v.recordedBy}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="font-black text-rose-600 text-sm">
+                                    -{v.pointsDeducted}đ
+                                  </span>
+                                  {role === 'teacher' && (
+                                    <>
+                                      <button
+                                        onClick={() => handleStartEditViolation(v)}
+                                        className="p-1 rounded-lg hover:bg-rose-200 text-rose-700 transition-colors"
+                                        title="Chỉnh sửa lỗi vi phạm này"
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteDisciplineEntry(v.id)}
+                                        className="p-1 rounded-lg hover:bg-rose-200 text-rose-600 transition-colors"
+                                        title="Xóa lỗi vi phạm này"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                   )}
-
-                  <div className="grid grid-cols-4 gap-2 text-center bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                    <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Khởi điểm</div>
-                      <div className="text-base font-black text-slate-700">100đ</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-bold text-rose-600 uppercase">Điểm trừ</div>
-                      <div className="text-base font-black text-rose-600">-{score.deducted}đ</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-bold text-emerald-600 uppercase">Điểm cộng</div>
-                      <div className="text-base font-black text-emerald-600">+{score.bonus}đ</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-bold text-blue-600 uppercase">Tổng điểm</div>
-                      <div className="text-base font-black text-blue-700">{score.total}đ</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                      Lịch sử vi phạm nề nếp ({currentWeekRange.rangeLabel})
-                    </h4>
-                    {score.violations.length === 0 ? (
-                      <div className="text-center py-6 text-xs text-emerald-600 font-bold bg-emerald-50 rounded-2xl">
-                        Không có lỗi vi phạm nào ({currentWeekRange.rangeLabel})!
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {score.violations.map((v) => (
-                          <div
-                            key={v.id}
-                            className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs flex items-start justify-between gap-3"
-                          >
-                            <div>
-                              <div className="font-bold text-rose-950 flex items-center gap-2">
-                                <span className="px-1.5 py-0.5 rounded-md bg-rose-200 text-rose-900 text-[10px] font-black">
-                                  Điều {v.ruleNumber}
-                                </span>
-                                <span>{v.violationText}</span>
-                              </div>
-                              {v.note && (
-                                <div className="text-[11px] text-slate-600 mt-1">
-                                  <strong>Ghi chú:</strong> {v.note}
-                                </div>
-                              )}
-                              <div className="text-[10px] text-slate-400 mt-1">
-                                Ngày: {v.date} • Người ghi nhận: {v.recordedBy}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-black text-rose-600 text-sm">
-                                -{v.pointsDeducted}đ
-                              </span>
-                              {role === 'teacher' && (
-                                <>
-                                  <button
-                                    onClick={() => handleStartEditViolation(v)}
-                                    className="p-1 rounded-lg hover:bg-rose-200 text-rose-700 transition-colors"
-                                    title="Chỉnh sửa lỗi vi phạm này"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => deleteDisciplineEntry(v.id)}
-                                    className="p-1 rounded-lg hover:bg-rose-200 text-rose-600 transition-colors"
-                                    title="Xóa lỗi vi phạm này"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                      Khen thưởng & Điểm cộng ({currentWeekRange.rangeLabel})
-                    </h4>
-                    {score.bonuses.length === 0 ? (
-                      <div className="text-center py-4 text-xs text-slate-400 bg-slate-50 rounded-2xl">
-                        Chưa có lượt cộng điểm khen thưởng nào ({currentWeekRange.rangeLabel})
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {score.bonuses.map((b) => (
-                          <div
-                            key={b.id}
-                            className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs flex items-start justify-between gap-3"
-                          >
-                            <div>
-                              <div className="font-bold text-emerald-950 flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>{b.reason}</span>
-                              </div>
-                              <div className="text-[10px] text-slate-400 mt-1">
-                                Ngày: {b.date} • Người ghi nhận: {b.recordedBy}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-black text-emerald-600 text-sm">
-                                +{b.pointsAdded}đ
-                              </span>
-                              {role === 'teacher' && (
-                                <>
-                                  <button
-                                    onClick={() => handleStartEditBonus(b)}
-                                    className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-700 transition-colors"
-                                    title="Chỉnh sửa điểm cộng này"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => deleteBonusPointEntry(b.id)}
-                                    className="p-1 rounded-lg hover:bg-emerald-200 text-emerald-600 transition-colors"
-                                    title="Xóa lượt cộng điểm này"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               );
             })()}
@@ -2154,8 +2383,8 @@ export const DisciplineView: React.FC = () => {
                                   {v.note}
                                 </div>
                               )}
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                Ngày {v.date} • {v.recordedBy}
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                📅 {formatDateWithWeekdayVN(v.date)} • {v.recordedBy}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
@@ -2191,8 +2420,8 @@ export const DisciplineView: React.FC = () => {
                                 <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>{b.reason}</span>
                               </div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                Ngày {b.date} • {b.recordedBy}
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                📅 {formatDateWithWeekdayVN(b.date)} • {b.recordedBy}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">

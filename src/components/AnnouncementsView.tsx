@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Announcement } from '../types';
+import { formatDateTimeVN } from '../utils/timeUtils';
 import {
   compressImageFileToDataUrl,
   compressMultipleImageFiles,
@@ -595,10 +596,10 @@ export const AnnouncementsView: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <span className="text-xs text-slate-400 font-medium block">{ann.createdAt}</span>
+                    <span className="text-xs text-slate-400 font-medium block">{formatDateTimeVN(ann.createdAt)}</span>
                     {ann.updatedAt && (
                       <span className="text-[10px] text-blue-600 font-semibold block">
-                        (Đã sửa {ann.updatedAt})
+                        (Đã sửa {formatDateTimeVN(ann.updatedAt)})
                       </span>
                     )}
                   </div>
