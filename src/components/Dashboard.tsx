@@ -30,6 +30,7 @@ import {
   FileJson,
 } from 'lucide-react';
 import { getCadreRoleBadge } from './StudentManagement';
+import { MondayWeeklyReportCard } from './MondayWeeklyReportCard';
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
@@ -43,6 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     currentStudent,
     currentDateAttendance,
     announcements,
+    evaluations,
     happyPosts,
     timetable,
     dutySchedule,
@@ -54,6 +56,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     getWeeklyEmulationSummary,
     supplementaryAttendanceList,
   } = useApp();
+
+  const childEvaluations = React.useMemo(() => {
+    if (!currentStudent) return [];
+    return (evaluations || []).filter((e) => e.studentId === currentStudent.id).slice(0, 3);
+  }, [evaluations, currentStudent]);
 
   const currentWeekRange = getWeekRangeByIndex(currentWeek);
   const weeklySummary = getWeeklyEmulationSummary(currentWeek);
@@ -315,32 +322,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         </div>
       </div>
 
+      {/* Báo cáo nhanh tuần trước vào Thứ Hai đầu tuần (Chỉ dành riêng cho GVCN) */}
+      <MondayWeeklyReportCard setActiveTab={setActiveTab} />
+
       {/* 4 Stat Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Sĩ số */}
-        <div
-          onClick={() => {
-            if (role === 'teacher') setActiveTab('students');
-          }}
-          className={`bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs transition-all ${
-            role === 'teacher' ? 'hover:shadow-md cursor-pointer group' : ''
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Tổng số học sinh</span>
-            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
-              <Users className="w-5 h-5" />
+        {/* Card 1: Sĩ số (GVCN & HS) / Thông tin con (Phụ huynh) */}
+        {role === 'parent' ? (
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-200 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Học sinh đang theo dõi</span>
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+                <User className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-base sm:text-lg font-extrabold text-slate-900 truncate">
+              {currentStudent?.name || 'Đang tải...'}
+            </div>
+            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+              <span className="font-semibold text-blue-700">{currentStudent?.code}</span>
+              <span>•</span>
+              <span className="font-semibold text-slate-700">Tổ {currentStudent?.group}</span>
+              <span>•</span>
+              <span className="text-emerald-700 font-semibold">RL: {currentStudent?.currentConduct || 'Tốt'}</span>
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{totalStudents}</div>
-          <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-            <span className="font-medium text-blue-700">{maleCount} Nam</span>
-            <span>•</span>
-            <span className="font-medium text-pink-600">{femaleCount} Nữ</span>
-            <span>•</span>
-            <span>4 Tổ</span>
+        ) : (
+          <div
+            onClick={() => {
+              if (role === 'teacher') setActiveTab('students');
+            }}
+            className={`bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs transition-all ${
+              role === 'teacher' ? 'hover:shadow-md cursor-pointer group' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Tổng số học sinh</span>
+              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+                <Users className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">{totalStudents}</div>
+            <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+              <span className="font-medium text-blue-700">{maleCount} Nam</span>
+              <span>•</span>
+              <span className="font-medium text-pink-600">{femaleCount} Nữ</span>
+              <span>•</span>
+              <span>4 Tổ</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Card 2: Chuyên cần */}
         <div
@@ -621,14 +652,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                   </div>
 
                   <div className="space-y-1.5 text-xs text-slate-600">
+                    {role !== 'parent' && (
+                      <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                        <span>ĐTB thi đua lớp / Tổ dẫn đầu:</span>
+                        <strong className="text-indigo-700 font-black">
+                          {weeklySummary.classAvgScore}đ • Tổ {weeklySummary.groupRankings[0]?.group} ({weeklySummary.groupRankings[0]?.avgScore}đ)
+                        </strong>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                      <span>ĐTB thi đua lớp / Tổ dẫn đầu:</span>
-                      <strong className="text-indigo-700 font-black">
-                        {weeklySummary.classAvgScore}đ • Tổ {weeklySummary.groupRankings[0]?.group} ({weeklySummary.groupRankings[0]?.avgScore}đ)
-                      </strong>
-                    </div>
-                    <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                      <span>Điểm của em ({currentStudent?.name}):</span>
+                      <span>{role === 'parent' ? `Điểm thi đua của con (${currentStudent?.name}):` : `Điểm của em (${currentStudent?.name}):`}</span>
                       <strong className="text-amber-700 font-black">
                         {currentStudent ? getStudentWeeklyScore(currentStudent.id, currentWeek).total : 100} / 100đ ({currentStudent ? getStudentWeeklyScore(currentStudent.id, currentWeek).classification : 'Xuất sắc'})
                       </strong>
@@ -641,7 +674,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 onClick={() => setActiveTab('discipline')}
                 className="mt-4 w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs"
               >
-                Xem bảng tổng kết thi đua tuần <ArrowRight className="w-3.5 h-3.5" />
+                {role === 'parent' ? 'Xem phiếu thi đua của con' : 'Xem bảng tổng kết thi đua tuần'} <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -904,38 +937,87 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             </div>
           )}
 
-          {/* Biểu đồ chuyên cần theo 4 Tổ */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <h3 className="text-sm font-bold text-slate-800">Tỷ lệ chuyên cần theo 4 Tổ</h3>
-            </div>
+          {/* Biểu đồ chuyên cần theo 4 Tổ (GVCN & HS) / Nhận xét mới nhất từ Thầy Hòa (Phụ huynh) */}
+          {role !== 'parent' ? (
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-800">Tỷ lệ chuyên cần theo 4 Tổ</h3>
+              </div>
 
-            <div className="mt-4 space-y-3">
-              {groupStats.map((gs) => (
-                <div key={gs.group}>
-                  <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
-                    <span className="font-bold text-slate-900">Tổ {gs.group} ({gs.count} học sinh)</span>
-                    <span className="text-emerald-700 font-extrabold">{gs.rate}%</span>
+              <div className="mt-4 space-y-3">
+                {groupStats.map((gs) => (
+                  <div key={gs.group}>
+                    <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                      <span className="font-bold text-slate-900">Tổ {gs.group} ({gs.count} học sinh)</span>
+                      <span className="text-emerald-700 font-extrabold">{gs.rate}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className={`h-2.5 rounded-full ${
+                          gs.group === 1
+                            ? 'bg-blue-600'
+                            : gs.group === 2
+                            ? 'bg-indigo-600'
+                            : gs.group === 3
+                            ? 'bg-emerald-600'
+                            : 'bg-amber-600'
+                        }`}
+                        style={{ width: `${gs.rate}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className={`h-2.5 rounded-full ${
-                        gs.group === 1
-                          ? 'bg-blue-600'
-                          : gs.group === 2
-                          ? 'bg-indigo-600'
-                          : gs.group === 3
-                          ? 'bg-emerald-600'
-                          : 'bg-amber-600'
-                      }`}
-                      style={{ width: `${gs.rate}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-emerald-600" />
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Nhận xét của {teacherDisplayName}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setActiveTab('evaluations')}
+                  className="text-xs text-emerald-700 font-bold hover:underline"
+                >
+                  Xem tất cả
+                </button>
+              </div>
+
+              {childEvaluations.length > 0 ? (
+                <div className="mt-3.5 space-y-3">
+                  {childEvaluations.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-extrabold text-emerald-800">{ev.periodLabel || ev.period}</span>
+                        <span className="text-slate-400">{ev.createdAt}</span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">
+                        {ev.parentNote || ev.teacherNote || ev.academic}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-500 text-center">
+                  Chưa có phiếu nhận xét riêng mới nhất cho em <strong>{currentStudent?.name}</strong>.
+                </div>
+              )}
+
+              <button
+                onClick={() => setActiveTab('evaluations')}
+                className="mt-4 w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1"
+              >
+                Xem sổ liên lạc & nhận xét của con <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Quick Góc Hạnh Phúc Widget (Chỉ hiển thị cho GVCN & Học sinh) */}
           {role !== 'parent' && (

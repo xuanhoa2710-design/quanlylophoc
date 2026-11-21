@@ -20,11 +20,12 @@ import { StudentProfileView } from './components/StudentProfileView';
 import { TeacherPasswordModal } from './components/TeacherPasswordModal';
 import { DataJsonModal } from './components/DataJsonModal';
 import { AccessGuard } from './components/AccessGuard';
+import { ParentAccessGuard } from './components/ParentAccessGuard';
 import { School } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const { role, isTeacherAuthenticated, appConfig, viewDeviceMode, uiDensity } = useApp();
+  const { role, isTeacherAuthenticated, verifiedParentStudentId, appConfig, viewDeviceMode, uiDensity } = useApp();
 
   useEffect(() => {
     if (
@@ -69,6 +70,10 @@ const AppContent: React.FC = () => {
 
         {/* Main Content Body with Role Access Guards */}
         <main className={mainPaddingClass}>
+          {role === 'parent' && !verifiedParentStudentId ? (
+            <ParentAccessGuard />
+          ) : (
+            <>
           {activeTab === 'overview' && <Dashboard setActiveTab={setActiveTab} />}
 
         {/* Quản lý học sinh: Chỉ GVCN được phép truy cập */}
@@ -189,6 +194,8 @@ const AppContent: React.FC = () => {
             <StudentAITutorView />
           )
         )}
+            </>
+          )}
       </main>
 
         {/* Footer */}

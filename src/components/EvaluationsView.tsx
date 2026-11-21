@@ -281,12 +281,34 @@ export const EvaluationsView: React.FC = () => {
       });
 
       const cleanedAiText = sanitizeLegacyTeacherText(aiText || fallbackStudentNote);
-      setTeacherNoteText(cleanedAiText);
+
+      // Extract dedicated Student Note & Parent Note if AI returned numbered sections
+      const studentSectionMatch = cleanedAiText.match(
+        /(?:3\.\s*)?(?:💌\s*)?(?:Lời nhắn|Nhận xét của Thầy)[^\n]*?:?\s*([\s\S]*?)(?=(?:4\.\s*|🤝\s*Thông điệp|$))/i
+      );
+      const parentSectionMatch = cleanedAiText.match(
+        /(?:4\.\s*)?(?:🤝\s*)?(?:Thông điệp[^\n]*?Phụ huynh[^\n]*?):?\s*([\s\S]*)$/i
+      );
+
+      const extractedStudentNote = studentSectionMatch?.[1]?.trim();
+      const extractedParentNote = parentSectionMatch?.[1]?.trim();
+
+      setTeacherNoteText(
+        sanitizeLegacyTeacherText(
+          extractedStudentNote && extractedStudentNote.length > 25
+            ? extractedStudentNote
+            : cleanedAiText
+        )
+      );
       setAcademicText(
-        `Tiếp thu bài tốt (ĐTB ${stu.currentGpa ?? 8.2}đ), tự giác ôn luyện tổ hợp môn thi tốt nghiệp ${stu.examSubject1 || 'Vật lý'} và ${stu.examSubject2 || 'Hóa học'}.`
+        sanitizeLegacyTeacherText(
+          `Tiếp thu bài tốt (ĐTB ${stu.currentGpa ?? 8.2}đ), tự giác ôn luyện tổ hợp môn thi tốt nghiệp ${stu.examSubject1 || 'Vật lý'} và ${stu.examSubject2 || 'Hóa học'}.`
+        )
       );
       setAwarenessText(
-        `Chấp hành tốt nội quy nề nếp lớp 12A7, chuyên cần đạt ${stu.attendanceStats?.rate ?? 100}%, điểm thi đua đạt ${weeklyInfo.total}/100đ.`
+        sanitizeLegacyTeacherText(
+          `Chấp hành tốt nội quy nề nếp lớp 12A7, chuyên cần đạt ${stu.attendanceStats?.rate ?? 100}%, điểm thi đua đạt ${weeklyInfo.total}/100đ.`
+        )
       );
       setSkillsText('Làm việc nhóm, vận dụng công thức và tư duy giải đề tiến bộ.');
       setAttitudeText('Lễ phép với thầy cô, hòa nhã với bạn bè, tích cực trong hoạt động tập thể.');
@@ -295,7 +317,11 @@ export const EvaluationsView: React.FC = () => {
         stu.weaknesses || 'Cần phân bổ thời gian hợp lý và rèn tốc độ làm đề trắc nghiệm.'
       );
       setParentNoteText(
-        `Kính gửi Quý Phụ huynh (${stu.primaryParentName || 'Gia đình'}) em ${stu.name}, Thầy Trương Xuân Hòa (GVCN 12A7) trân trọng thông báo: Trong kỳ ${periodLabel}, em đạt ${weeklyInfo.total}/100 điểm thi đua, tỷ lệ chuyên cần ${stu.attendanceStats?.rate ?? 100}% và duy trì ĐTB ${stu.currentGpa ?? 8.2}đ. Thầy rất mong gia đình tiếp tục đồng hành, động viên và nhắc nhở em giữ sức khỏe để ôn thi Tốt nghiệp THPT & Đại học 2027 đạt kết quả cao nhất.`
+        sanitizeLegacyTeacherText(
+          extractedParentNote && extractedParentNote.length > 25
+            ? extractedParentNote
+            : `Kính gửi Quý Phụ huynh (${stu.primaryParentName || 'Gia đình'}) em ${stu.name}, Thầy Trương Xuân Hòa (GVCN 12A7) trân trọng thông báo: Trong kỳ ${periodLabel}, em đạt ${weeklyInfo.total}/100 điểm thi đua, tỷ lệ chuyên cần ${stu.attendanceStats?.rate ?? 100}% và duy trì ĐTB ${stu.currentGpa ?? 8.2}đ. Thầy rất mong gia đình tiếp tục đồng hành, động viên và nhắc nhở em giữ sức khỏe để ôn thi Tốt nghiệp THPT & Đại học 2027 đạt kết quả cao nhất.`
+        )
       );
     } catch (e) {
       console.error(e);

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { buildComprehensiveTutorAnswer } from './src/utils/tutorKnowledgeBase';
+import { sanitizeTeacherPronouns } from './src/utils/teacherSanitizer';
 
 dotenv.config();
 
@@ -130,19 +131,12 @@ Hãy trình bày rõ ràng gồm:
 3. 💌 Lời nhắn tâm huyết của Thầy Trương Xuân Hòa gửi em ${studentName || 'học sinh'} (xưng Thầy - em)
 4. 🤝 Thông điệp của Thầy Trương Xuân Hòa gửi Quý Phụ huynh ${parentName ? `(${parentName})` : ''} (xưng Thầy - Quý Phụ huynh)`;
 
-  const generated = await generateGeminiText(prompt);
+  const teacherSystemInstruction =
+    'Bạn là NAM giáo viên chủ nhiệm lớp 12A7 tên Thầy Trương Xuân Hòa (dạy môn Hóa học, trường THPT Vĩnh Lộc B). QUY TẮC BẮT BUỘC: Luôn xưng "Thầy" hoặc "Thầy Hòa" (tuyệt đối KHÔNG BAO GIỜ xưng "Cô" hay "Cô giáo").';
+
+  const generated = await generateGeminiText(prompt, teacherSystemInstruction);
   if (generated) {
-    // Sanitize any accidental "cô" self-reference
-    const cleanedText = generated
-      .replace(/\bcô rất kỳ vọng\b/gi, 'thầy rất kỳ vọng')
-      .replace(/\bhỗ trợ cô\b/gi, 'hỗ trợ thầy')
-      .replace(/\bCô ghi nhận\b/g, 'Thầy ghi nhận')
-      .replace(/\bcô ghi nhận\b/gi, 'thầy ghi nhận')
-      .replace(/\bcô tin tưởng\b/gi, 'thầy tin tưởng')
-      .replace(/\bcô tự hào\b/gi, 'thầy tự hào')
-      .replace(/\bcô mong\b/gi, 'thầy mong')
-      .replace(/\bcô chúc\b/gi, 'thầy chúc');
-    return res.json({ text: cleanedText });
+    return res.json({ text: sanitizeTeacherPronouns(generated) });
   }
 
   // Fallback if AI key is unavailable or fails
@@ -151,7 +145,7 @@ Hãy trình bày rõ ràng gồm:
 💌 Lời nhắn của Thầy Trương Xuân Hòa gửi em: Năm lớp 12 là bước ngoặt quan trọng, thầy rất ghi nhận sự nỗ lực của em. Hãy phát huy điểm mạnh (${strengths || 'chăm chỉ, tự giác'}) và khắc phục "${weaknesses || 'rèn tốc độ giải đề'}" để chinh phục mục tiêu "${aspiration || 'Đỗ nguyện vọng 1'}" nhé! Thầy và lớp 12A7 luôn tự hào về em!
 🤝 Thông điệp Thầy Hòa gửi Quý Phụ huynh (${parentName || 'Gia đình'}): Kính gửi Quý Phụ huynh em ${studentName || 'học sinh'}, trên lớp em chấp hành tốt nội quy và học tập tích cực. Thầy Hòa rất mong gia đình tiếp tục đồng hành, động viên và nhắc nhở em giữ gìn sức khỏe, ôn tập đều đặn các môn thi tốt nghiệp tại nhà.`;
 
-  res.json({ text: fallbackComment });
+  res.json({ text: sanitizeTeacherPronouns(fallbackComment) });
 });
 
 // 2. AI Announcement Generator
@@ -166,9 +160,12 @@ app.post('/api/ai/announcement', async (req, res) => {
 
 Yêu cầu: Viết giọng văn trang trọng nhưng gần gũi, nêu rõ thời gian, địa điểm, các việc cần chuẩn bị và lời nhắc nhở đoàn kết.`;
 
-  const generated = await generateGeminiText(prompt);
+  const generated = await generateGeminiText(
+    prompt,
+    'Bạn là NAM giáo viên chủ nhiệm Thầy Trương Xuân Hòa. Tuyệt đối xưng "Thầy", không bao giờ xưng "Cô".'
+  );
   if (generated) {
-    return res.json({ text: generated });
+    return res.json({ text: sanitizeTeacherPronouns(generated) });
   }
 
   const fallback = `📢 **THÔNG BÁO LỚP 12A7 - THPT VĨNH LỘC B**
@@ -202,9 +199,12 @@ Hãy đưa ra bản phân tích chuyên sâu gồm:
 3. Dự báo nguy cơ học sinh sa sút và nhóm cần bồi dưỡng cấp tốc.
 4. Kế hoạch hành động cụ thể cho GVCN Thầy Trương Xuân Hòa (đôi bạn cùng tiến, chia tổ học tập, trao đổi với gia đình, tâm lý học đường).`;
 
-  const generated = await generateGeminiText(prompt);
+  const generated = await generateGeminiText(
+    prompt,
+    'Bạn là cố vấn giáo dục hỗ trợ GVCN NAM Thầy Trương Xuân Hòa. Tuyệt đối gọi GVCN là "Thầy", không bao giờ dùng "Cô".'
+  );
   if (generated) {
-    return res.json({ text: generated });
+    return res.json({ text: sanitizeTeacherPronouns(generated) });
   }
 
   const fallback = `📊 **BÁO CÁO PHÂN TÍCH TÌNH HÌNH HỌC TẬP & DỰ BÁO LỚP 12A7**
@@ -238,9 +238,12 @@ Hãy soạn một bức thư trao đổi hoặc thông báo nhận xét thân t�
 - Người gửi: Thầy Trương Xuân Hòa - GVCN 12A7, Trường THPT Vĩnh Lộc B.
 Hãy viết thư văn minh, tôn trọng, chân thành, thể hiện sự đồng hành vì tương lai của học sinh.`;
 
-  const generated = await generateGeminiText(prompt);
+  const generated = await generateGeminiText(
+    prompt,
+    'Bạn là NAM giáo viên chủ nhiệm Thầy Trương Xuân Hòa. Tuyệt đối xưng "Thầy", không bao giờ xưng "Cô".'
+  );
   if (generated) {
-    return res.json({ text: generated });
+    return res.json({ text: sanitizeTeacherPronouns(generated) });
   }
 
   const fallback = `Kính gửi: ${parentName || 'Quý Phụ huynh'} em ${studentName || 'học sinh'},
@@ -1419,6 +1422,93 @@ app.get('/api/media/videos/:filename', (req, res) => {
   } catch (err) {
     console.error('Stream video error:', err);
     res.status(500).send('Error streaming video');
+  }
+});
+
+// 7c. Multi-Image Upload & Serving API (For Happy Corner, Announcements & Avatars)
+const IMAGES_UPLOAD_DIR = path.resolve(__dirname, 'public/uploads/images');
+try {
+  fs.mkdirSync(IMAGES_UPLOAD_DIR, { recursive: true });
+} catch (err) {
+  console.warn('Could not create images upload dir:', err);
+}
+
+const inferImageMimeType = (fileName = '', fallbackMime = 'image/jpeg'): string => {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (fallbackMime && fallbackMime.startsWith('image/')) return fallbackMime;
+  return 'image/jpeg';
+};
+
+const inferImageExtension = (fileName = '', mimeType = ''): string => {
+  const lowerMime = mimeType.toLowerCase();
+  if (lowerMime.includes('png')) return '.png';
+  if (lowerMime.includes('webp')) return '.webp';
+  if (lowerMime.includes('gif')) return '.gif';
+  if (lowerMime.includes('jpeg') || lowerMime.includes('jpg')) return '.jpg';
+  const extMatch = fileName.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)$/);
+  if (extMatch) return extMatch[1] === 'jpeg' ? '.jpg' : `.${extMatch[1]}`;
+  return '.jpg';
+};
+
+app.post('/api/media/upload-image', (req, res) => {
+  try {
+    const { fileName, mimeType, base64Data } = req.body || {};
+    if (!base64Data || typeof base64Data !== 'string') {
+      return res.status(400).json({ error: 'Thiếu dữ liệu hình ảnh tải lên.' });
+    }
+
+    const mimeMatch = base64Data.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/);
+    const detectedMime = mimeMatch?.[1] || mimeType || 'image/jpeg';
+    const stripped = base64Data.replace(/^data:[^;]+;base64,/, '');
+    const buffer = Buffer.from(stripped, 'base64');
+
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: 'File hình ảnh rỗng hoặc không hợp lệ.' });
+    }
+
+    const ext = inferImageExtension(fileName, detectedMime);
+    const safeId = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const filePath = path.join(IMAGES_UPLOAD_DIR, safeId);
+
+    fs.writeFileSync(filePath, buffer);
+
+    return res.json({
+      success: true,
+      url: `/api/media/images/${safeId}`,
+      fileName: safeId,
+      mimeType: inferImageMimeType(safeId, detectedMime),
+      size: buffer.length,
+    });
+  } catch (err: any) {
+    console.error('Upload image error:', err);
+    return res.status(500).json({
+      error: err?.message || 'Lỗi máy chủ khi lưu hình ảnh.',
+    });
+  }
+});
+
+app.get('/api/media/images/:filename', (req, res) => {
+  try {
+    const safeName = path.basename(req.params.filename || '');
+    const filePath = path.join(IMAGES_UPLOAD_DIR, safeName);
+    if (!safeName || !fs.existsSync(filePath)) {
+      return res.status(404).send('Image not found');
+    }
+
+    const stat = fs.statSync(filePath);
+    const contentType = inferImageMimeType(safeName);
+    res.writeHead(200, {
+      'Content-Length': stat.size,
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000',
+    });
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error('Serve image error:', err);
+    res.status(500).send('Error serving image');
   }
 });
 

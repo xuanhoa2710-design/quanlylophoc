@@ -695,7 +695,11 @@ export const AttendanceView: React.FC = () => {
           ) : (
             <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold shrink-0">
               <ShieldAlert className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Chế độ Chỉ xem chuyên cần cá nhân • Học sinh & cả lớp không có quyền chỉnh sửa</span>
+              <span>
+                {role === 'parent'
+                  ? `Chế độ Phụ huynh • Chỉ xem chuyên cần của con (${currentStudent?.name || ''})`
+                  : 'Chế độ Chỉ xem chuyên cần cá nhân • Học sinh & cả lớp không có quyền chỉnh sửa'}
+              </span>
             </div>
           )}
         </div>
@@ -1203,7 +1207,11 @@ export const AttendanceView: React.FC = () => {
           }`}
         >
           <FileText className="w-4 h-4" />{' '}
-          {role === 'teacher' ? 'Sổ Điểm danh bổ sung' : 'Lịch sử Điểm danh bổ sung của em'}
+          {role === 'teacher'
+            ? 'Sổ Điểm danh bổ sung'
+            : role === 'parent'
+            ? 'Lịch sử Điểm danh bổ sung của con'
+            : 'Lịch sử Điểm danh bổ sung của em'}
           <span className="px-2 py-0.5 rounded-md text-[11px] font-black bg-amber-100 text-amber-800">
             {visibleSupplementaryBase.length}
           </span>

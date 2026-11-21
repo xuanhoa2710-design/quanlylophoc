@@ -39,6 +39,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
     requestTeacherAccess,
     activeStudentId,
     setActiveStudentId,
+    verifiedParentStudentId,
+    logoutParent,
     students,
     currentStudent,
     recentAlerts,
@@ -109,12 +111,13 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
       }
     } else {
       setRole(targetRole);
+      setShowStudentPicker(false);
       setIsJsonModalOpen(false);
       if (activeTab === 'students' || activeTab === 'ai_assistant') {
         setActiveTab('overview');
       } else if (
         targetRole === 'parent' &&
-        ['happy_corner', 'student_ai', 'duty_schedule', 'profile'].includes(activeTab)
+        ['happy_corner', 'student_ai', 'duty_schedule', 'profile', 'grades', 'leaderboard'].includes(activeTab)
       ) {
         setActiveTab('overview');
       }
@@ -375,57 +378,96 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
               )}
             </div>
 
-            {/* Desktop Student Selector (Hidden on small mobile, shown in Row 2 on mobile) */}
+            {/* Desktop Student Selector (Parents are strictly locked to their verified child — no 50-student picker) */}
             {(role === 'student' ||
-              role === 'parent' ||
+              (role === 'parent' && !!verifiedParentStudentId && !!currentStudent) ||
               (role === 'teacher' && isTeacherAuthenticated)) && (
               <div className="hidden md:flex items-center gap-1.5">
-                <div className="relative">
-                  <button
-                    onClick={() => setShowStudentPicker(!showStudentPicker)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all text-xs font-semibold text-slate-700 max-w-[240px] truncate shadow-2xs"
-                    title="Chọn học sinh để xem thông tin chi tiết hoặc Reset mật khẩu"
-                  >
-                    <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-blue-300 shrink-0 bg-blue-100 flex items-center justify-center">
-                      {currentStudent?.avatar ? (
-                        <img
-                          src={currentStudent.avatar}
-                          alt={currentStudent.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-blue-700 font-bold text-[10px]">
-                          {currentStudent?.stt}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-left truncate">
-                      <div className="truncate font-bold text-slate-800 flex items-center gap-1">
-                        <span className="truncate">
-                          {role === 'teacher'
-                            ? `HS: ${currentStudent?.name}`
-                            : role === 'student'
-                            ? currentStudent?.name
-                            : `PH: ${currentStudent?.name}`}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate flex items-center gap-1">
-                        <span>
-                          {currentStudent?.code} • Tổ {currentStudent?.group}
-                        </span>
-                        {currentStudent?.pinCode && (
-                          <span className="text-purple-600 font-bold flex items-center gap-0.5">
-                            <Lock className="w-2.5 h-2.5" />
-                            {role === 'teacher' && isTeacherAuthenticated && (
-                              <span>({currentStudent.pinCode})</span>
-                            )}
+                {role === 'parent' ? (
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-orange-200 bg-orange-50/90 text-xs font-semibold text-orange-950 max-w-[230px] truncate shadow-2xs"
+                      title="Phụ huynh chỉ được xem thông tin của duy nhất học sinh này"
+                    >
+                      <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-orange-400 shrink-0 bg-orange-100 flex items-center justify-center">
+                        {currentStudent?.avatar ? (
+                          <img
+                            src={currentStudent.avatar}
+                            alt={currentStudent.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-orange-700 font-bold text-[10px]">
+                            {currentStudent?.stt}
                           </span>
                         )}
                       </div>
+                      <div className="text-left truncate">
+                        <div className="truncate font-bold text-orange-950 flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-orange-600 shrink-0" />
+                          <span className="truncate">PH: {currentStudent?.name}</span>
+                        </div>
+                        <div className="text-[10px] text-orange-700 truncate">
+                          {currentStudent?.code} • Tổ {currentStudent?.group}
+                        </div>
+                      </div>
                     </div>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={logoutParent}
+                      title="Thoát / Đổi tài khoản Phụ huynh khác"
+                      className="px-2.5 py-1.5 rounded-xl border border-orange-200 bg-white hover:bg-orange-50 text-orange-700 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span className="hidden xl:inline">Đổi PH</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowStudentPicker(!showStudentPicker)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all text-xs font-semibold text-slate-700 max-w-[240px] truncate shadow-2xs"
+                      title="Chọn học sinh để xem thông tin chi tiết hoặc Reset mật khẩu"
+                    >
+                      <div className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-blue-300 shrink-0 bg-blue-100 flex items-center justify-center">
+                        {currentStudent?.avatar ? (
+                          <img
+                            src={currentStudent.avatar}
+                            alt={currentStudent.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-blue-700 font-bold text-[10px]">
+                            {currentStudent?.stt}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-left truncate">
+                        <div className="truncate font-bold text-slate-800 flex items-center gap-1">
+                          <span className="truncate">
+                            {role === 'teacher'
+                              ? `HS: ${currentStudent?.name}`
+                              : currentStudent?.name}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 truncate flex items-center gap-1">
+                          <span>
+                            {currentStudent?.code} • Tổ {currentStudent?.group}
+                          </span>
+                          {currentStudent?.pinCode && (
+                            <span className="text-purple-600 font-bold flex items-center gap-0.5">
+                              <Lock className="w-2.5 h-2.5" />
+                              {role === 'teacher' && isTeacherAuthenticated && (
+                                <span>({currentStudent.pinCode})</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    </button>
+                  </div>
+                )}
 
                 {role === 'student' && (
                   <button
@@ -519,34 +561,62 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
 
         {/* Mobile Row 2: Compact Student Selector & Quick Actions Bar (Only on < md screens) */}
         {(role === 'student' ||
-          role === 'parent' ||
+          (role === 'parent' && !!verifiedParentStudentId && !!currentStudent) ||
           (role === 'teacher' && isTeacherAuthenticated)) && (
           <div className="flex md:hidden items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
-            <button
-              onClick={() => setShowStudentPicker(!showStudentPicker)}
-              className="flex-1 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 min-w-0"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <img
-                  src={currentStudent?.avatar}
-                  alt={currentStudent?.name}
-                  className="w-6 h-6 rounded-full object-cover ring-1 ring-blue-300 shrink-0"
-                />
-                <div className="truncate text-left">
-                  <span className="font-bold text-slate-900">
-                    {role === 'teacher'
-                      ? `HS: ${currentStudent?.name}`
-                      : role === 'student'
-                      ? currentStudent?.name
-                      : `PH: ${currentStudent?.name}`}
-                  </span>
-                  <span className="text-[10px] text-slate-500 ml-1.5">
-                    (Tổ {currentStudent?.group})
-                  </span>
+            {role === 'parent' ? (
+              <>
+                <div className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-orange-200 bg-orange-50/90 text-xs font-semibold text-orange-950 min-w-0">
+                  <img
+                    src={currentStudent?.avatar}
+                    alt={currentStudent?.name}
+                    className="w-6 h-6 rounded-full object-cover ring-1 ring-orange-400 shrink-0"
+                  />
+                  <div className="truncate text-left flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-orange-600 shrink-0" />
+                    <span className="font-bold text-orange-950 truncate">
+                      PH: {currentStudent?.name}
+                    </span>
+                    <span className="text-[10px] text-orange-700 shrink-0">
+                      (Tổ {currentStudent?.group})
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            </button>
+                <button
+                  type="button"
+                  onClick={logoutParent}
+                  className="px-2.5 py-1.5 rounded-xl border border-orange-200 bg-white text-orange-700 text-[11px] font-bold flex items-center gap-1 shrink-0"
+                  title="Đổi tài khoản Phụ huynh"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Đổi PH</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowStudentPicker(!showStudentPicker)}
+                className="flex-1 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 min-w-0"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <img
+                    src={currentStudent?.avatar}
+                    alt={currentStudent?.name}
+                    className="w-6 h-6 rounded-full object-cover ring-1 ring-blue-300 shrink-0"
+                  />
+                  <div className="truncate text-left">
+                    <span className="font-bold text-slate-900">
+                      {role === 'teacher'
+                        ? `HS: ${currentStudent?.name}`
+                        : currentStudent?.name}
+                    </span>
+                    <span className="text-[10px] text-slate-500 ml-1.5">
+                      (Tổ {currentStudent?.group})
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              </button>
+            )}
 
             <div className="flex items-center gap-1 shrink-0">
               {role === 'student' && (
@@ -598,8 +668,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
         )}
       </div>
 
-      {/* Student Picker Modal / Dropdown (Works cleanly on both Mobile & Desktop) */}
-      {showStudentPicker && (
+      {/* Student Picker Modal / Dropdown (Disabled for Parent role — PH only views their own child) */}
+      {showStudentPicker && role !== 'parent' && (
         <div className="fixed inset-0 z-50 flex items-start justify-center sm:justify-end p-3 sm:p-4 bg-black/40 sm:bg-transparent backdrop-blur-2xs sm:backdrop-blur-none">
           <div className="w-full max-w-sm sm:w-80 mt-14 sm:mt-12 sm:mr-4 rounded-2xl bg-white p-3.5 shadow-2xl ring-1 ring-black/10">
             <div className="text-xs font-bold text-slate-800 pb-2.5 border-b border-slate-100 flex items-center justify-between">

@@ -100,18 +100,56 @@ export const saveClassroomSection = async (
 ): Promise<number> => {
   const now = Date.now();
   const cleanPayload = sanitizePayloadForFirestore(payload);
-  const secRef = doc(db, 'classrooms', CLASSROOM_DOC_ID, 'sections', sectionId);
-  await setDoc(
-    secRef,
-    {
-      sectionId,
-      payload: cleanPayload,
-      updatedAt: now,
-      updatedByRole: role || 'teacher',
-      className: appConfig?.className || '12A7',
-      clientId: CLIENT_INSTANCE_ID,
-    },
-    { merge: true }
-  );
-  return now;
+  let resolvedTs = now;
+
+  // 1. Persist to backend Shared State API (disk + instant SSE sync across all devices, up to 50MB)
+  try {
+    const res = await fetch('/api/shared-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sectionId,
+        payload: cleanPayload,
+        updatedByRole: role || 'student',
+        clientId: CLIENT_INSTANCE_ID,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.updatedAt === 'number') {
+        resolvedTs = data.updatedAt;
+      }
+    }
+  } catch (err) {
+    console.warn(`Shared state server sync warning (${sectionId}):`, err);
+  }
+
+  // 2. Also sync to Cloud Firestore (guarding against Firestore's 1 MiB document size limit)
+  try {
+    const payloadBytes = new Blob([JSON.stringify(cleanPayload)]).size;
+    if (payloadBytes < 920 * 1024) {
+      const secRef = doc(db, 'classrooms', CLASSROOM_DOC_ID, 'sections', sectionId);
+      await setDoc(
+        secRef,
+        {
+          sectionId,
+          payload: cleanPayload,
+          updatedAt: resolvedTs,
+          updatedByRole: role || 'teacher',
+          className: appConfig?.className || '12A7',
+          clientId: CLIENT_INSTANCE_ID,
+        },
+        { merge: true }
+      );
+    } else {
+      console.warn(
+        `Firestore payload for section "${sectionId}" is ${(payloadBytes / 1024).toFixed(0)}KB (>920KB limit); persisted on server shared-state.`
+      );
+    }
+  } catch (err) {
+    console.warn(`Firestore sync warning (${sectionId}):`, err);
+  }
+
+  return resolvedTs;
 };
+

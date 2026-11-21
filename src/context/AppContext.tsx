@@ -26,6 +26,7 @@ import {
   getVietnamTimeStr,
   getVietnamDateVN,
 } from '../utils/timeUtils';
+import { sanitizeTeacherPronouns } from '../utils/teacherSanitizer';
 
 export {
   getWeekRangeByIndex,
@@ -46,29 +47,7 @@ export const formatTeacherDisplayName = (rawName?: string): string => {
 };
 
 export const sanitizeLegacyTeacherText = (rawText?: string): string => {
-  if (!rawText || typeof rawText !== 'string') return '';
-  return rawText
-    .replace(/Cô Tạ Thị Tình\s*\(GVCN\)/gi, 'Thầy Trương Xuân Hòa (GVCN)')
-    .replace(/\bCô Tạ Thị Tình\b/gi, 'Thầy Trương Xuân Hòa (GVCN)')
-    .replace(/\bCô Tình\b/gi, 'Thầy Trương Xuân Hòa')
-    .replace(/gửi cô chủ nhiệm/gi, 'gửi thầy chủ nhiệm')
-    .replace(/cô rất kỳ vọng/gi, 'thầy rất kỳ vọng')
-    .replace(/hỗ trợ cô quản lý/gi, 'hỗ trợ thầy quản lý')
-    .replace(/hỗ trợ cô\b/gi, 'hỗ trợ thầy')
-    .replace(/\bCô ghi nhận/g, 'Thầy ghi nhận')
-    .replace(/\bcô ghi nhận/g, 'thầy ghi nhận')
-    .replace(/những ly trà sữa cô mời/gi, 'những lời động viên của thầy')
-    .replace(/để cô tự hào/gi, 'để thầy tự hào')
-    .replace(/hạnh phúc lớn nhất của cô/gi, 'niềm tự hào lớn nhất của thầy')
-    .replace(/cả lớp và cô rất nhiều/gi, 'cả lớp và thầy rất nhiều')
-    .replace(/\bcô tin tưởng/gi, 'thầy tin tưởng')
-    .replace(/\bCô tin tưởng/g, 'Thầy tin tưởng')
-    .replace(/\bcô rất tự hào/gi, 'thầy rất tự hào')
-    .replace(/\bCô rất tự hào/g, 'Thầy rất tự hào')
-    .replace(/\bcô mong rằng/gi, 'thầy mong rằng')
-    .replace(/\bCô mong rằng/g, 'Thầy mong rằng')
-    .replace(/\bcô chúc em/gi, 'thầy chúc em')
-    .replace(/\bCô chúc em/g, 'Thầy chúc em');
+  return sanitizeTeacherPronouns(rawText);
 };
 import {
   Student,
@@ -278,6 +257,14 @@ interface AppContextType {
   activeStudentId: string;
   setActiveStudentId: (id: string) => void;
   currentStudent: Student | undefined;
+
+  // Parent strict child isolation (PH học sinh chỉ xem được duy nhất học sinh đó)
+  verifiedParentStudentId: string | null;
+  verifyParentAccess: (
+    identifier: string,
+    studentNameHint?: string
+  ) => { success: boolean; error?: string; student?: Student };
+  logoutParent: () => void;
   
   // Students
   students: Student[];
@@ -663,6 +650,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return safeGetLocal(STORAGE_KEYS.ACTIVE_STUDENT) || 'hs-27'; // Default Huỳnh Thị Ái Ly
   });
 
+  // Strict Parent Verification: PH học sinh chỉ được xem duy nhất 1 học sinh đã xác minh
+  const [verifiedParentStudentId, setVerifiedParentStudentId] = useState<string | null>(() => {
+    const saved = safeGetLocal('a7_verified_parent_student_id_v1');
+    return saved && saved.trim().length > 0 ? saved.trim() : null;
+  });
+
   const authenticateTeacher = (password: string): boolean => {
     if ((password || '').trim() === TEACHER_PASSWORD) {
       setIsTeacherAuthenticated(true);
@@ -704,9 +697,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setRoleState(newRole);
     safeSetLocal(STORAGE_KEYS.ROLE, newRole);
+    if (newRole === 'parent' && verifiedParentStudentId) {
+      setActiveStudentIdState(verifiedParentStudentId);
+      safeSetLocal(STORAGE_KEYS.ACTIVE_STUDENT, verifiedParentStudentId);
+    }
   };
 
   const setActiveStudentId = (id: string) => {
+    // Parents cannot switch to other students — strictly locked to their verified child
+    if (role === 'parent' && verifiedParentStudentId && id !== verifiedParentStudentId) {
+      return;
+    }
     setActiveStudentIdState(id);
     safeSetLocal(STORAGE_KEYS.ACTIVE_STUDENT, id);
   };
@@ -744,8 +745,106 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
   }, [students]);
 
-  // Current student object
-  const currentStudent = students.find((s) => s.id === activeStudentId) || students[0];
+  const normalizePhoneDigits = (raw?: string) => (raw || '').replace(/\D/g, '');
+  const normalizeVietnameseLookup = (raw?: string) =>
+    (raw || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/\s+/g, ' ');
+
+  const verifyParentAccess = (
+    identifier: string,
+    studentNameHint?: string
+  ): { success: boolean; error?: string; student?: Student } => {
+    const raw = (identifier || '').trim();
+    if (!raw) {
+      return {
+        success: false,
+        error: 'Vui lòng nhập Số điện thoại Phụ huynh hoặc Mã số học sinh (VD: 12A7-01).',
+      };
+    }
+
+    const digits = normalizePhoneDigits(raw);
+    const upperCode = raw.toUpperCase().replace(/\s+/g, '');
+    const hintNorm = normalizeVietnameseLookup(studentNameHint);
+
+    // 1. Exact student code match (e.g., 12A7-01, 12A7-27)
+    let matched = students.find(
+      (s) =>
+        s.code.toUpperCase() === upperCode ||
+        s.id.toUpperCase() === upperCode
+    );
+
+    // 2. Full parent phone number match (primary / father / mother)
+    if (!matched && digits.length >= 8) {
+      matched = students.find((s) => {
+        const phones = [
+          normalizePhoneDigits(s.primaryParentPhone),
+          normalizePhoneDigits(s.parentFatherPhone),
+          normalizePhoneDigits(s.parentMotherPhone),
+        ].filter(Boolean);
+        return phones.some((p) => p === digits || p.endsWith(digits));
+      });
+    }
+
+    // 3. Name hint + last 4 digits of parent phone or birthday (DD/MM/YYYY)
+    if (!matched && hintNorm.length >= 2) {
+      const nameCandidates = students.filter((s) =>
+        normalizeVietnameseLookup(s.name).includes(hintNorm)
+      );
+      if (nameCandidates.length > 0) {
+        matched = nameCandidates.find((s) => {
+          const phones = [
+            normalizePhoneDigits(s.primaryParentPhone),
+            normalizePhoneDigits(s.parentFatherPhone),
+            normalizePhoneDigits(s.parentMotherPhone),
+          ].filter(Boolean);
+          const phoneLast4Match = digits.length >= 4 && phones.some((p) => p.endsWith(digits));
+          const birthdayMatch =
+            s.birthday && normalizePhoneDigits(s.birthday) === digits && digits.length >= 6;
+          return phoneLast4Match || birthdayMatch;
+        });
+      }
+    }
+
+    if (!matched) {
+      return {
+        success: false,
+        error:
+          'Không tìm thấy học sinh khớp với SĐT Phụ huynh hoặc Mã học sinh vừa nhập. Vui lòng kiểm tra lại hoặc liên hệ Thầy Trương Xuân Hòa (GVCN).',
+      };
+    }
+
+    setVerifiedParentStudentId(matched.id);
+    safeSetLocal('a7_verified_parent_student_id_v1', matched.id);
+    setActiveStudentIdState(matched.id);
+    safeSetLocal(STORAGE_KEYS.ACTIVE_STUDENT, matched.id);
+    return { success: true, student: matched };
+  };
+
+  const logoutParent = () => {
+    setVerifiedParentStudentId(null);
+    safeRemoveLocal('a7_verified_parent_student_id_v1');
+  };
+
+  // Keep parent strictly locked to their verified child
+  useEffect(() => {
+    if (role === 'parent' && verifiedParentStudentId && activeStudentId !== verifiedParentStudentId) {
+      setActiveStudentIdState(verifiedParentStudentId);
+      safeSetLocal(STORAGE_KEYS.ACTIVE_STUDENT, verifiedParentStudentId);
+    }
+  }, [role, verifiedParentStudentId, activeStudentId]);
+
+  // Current student object (strictly locked to verifiedParentStudentId when role === 'parent')
+  const effectiveStudentId =
+    role === 'parent' ? verifiedParentStudentId || '' : activeStudentId;
+  const currentStudent =
+    role === 'parent'
+      ? students.find((s) => s.id === effectiveStudentId)
+      : students.find((s) => s.id === activeStudentId) || students[0];
 
   // Attendance by dates (Strictly Monday - Friday, theo giờ Việt Nam GMT+7)
   const rawTodayStr = getVietnamDateIso();
@@ -2131,6 +2230,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nowDateTime = getVietnamDateTimeStr();
     const newEval: EvaluationComment = {
       ...evalData,
+      academic: sanitizeLegacyTeacherText(evalData.academic),
+      awareness: sanitizeLegacyTeacherText(evalData.awareness),
+      skills: sanitizeLegacyTeacherText(evalData.skills),
+      attitude: sanitizeLegacyTeacherText(evalData.attitude),
+      strengths: sanitizeLegacyTeacherText(evalData.strengths),
+      improvements: sanitizeLegacyTeacherText(evalData.improvements),
       teacherNote: sanitizeLegacyTeacherText(evalData.teacherNote),
       parentNote: sanitizeLegacyTeacherText(evalData.parentNote),
       sentToParent: evalData.sentToParent !== undefined ? evalData.sentToParent : true,
@@ -2145,6 +2250,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateEvaluation = (updated: EvaluationComment) => {
     const cleaned: EvaluationComment = {
       ...updated,
+      academic: sanitizeLegacyTeacherText(updated.academic),
+      awareness: sanitizeLegacyTeacherText(updated.awareness),
+      skills: sanitizeLegacyTeacherText(updated.skills),
+      attitude: sanitizeLegacyTeacherText(updated.attitude),
+      strengths: sanitizeLegacyTeacherText(updated.strengths),
+      improvements: sanitizeLegacyTeacherText(updated.improvements),
       teacherNote: sanitizeLegacyTeacherText(updated.teacherNote),
       parentNote: sanitizeLegacyTeacherText(updated.parentNote),
       updatedAt: getVietnamDateTimeStr(),
@@ -3929,9 +4040,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isPasswordModalOpen,
         setIsPasswordModalOpen,
         requestTeacherAccess,
-        activeStudentId,
+        activeStudentId: effectiveStudentId || activeStudentId,
         setActiveStudentId,
         currentStudent,
+        verifiedParentStudentId,
+        verifyParentAccess,
+        logoutParent,
         students,
         addStudent,
         updateStudent,

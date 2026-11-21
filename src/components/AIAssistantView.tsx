@@ -116,10 +116,10 @@ Trân trọng,
           audience: annAudience,
           keyPoints: annKeyPoints,
         },
-        clientPrompt: `Bạn là thầy Trương Xuân Hòa, GVCN lớp 12A7 THPT Vĩnh Lộc B. Hãy soạn thông báo chuyên nghiệp, ấm áp: Tiêu đề "${annTitle}", Thể loại "${annType}", Đối tượng "${annAudience}", Nội dung chính:\n${annKeyPoints}`,
+        clientPrompt: `Bạn là Thầy Trương Xuân Hòa (Nam giáo viên), GVCN lớp 12A7 THPT Vĩnh Lộc B. Tuyệt đối xưng "Thầy" (không xưng "Cô"). Hãy soạn thông báo chuyên nghiệp, ấm áp: Tiêu đề "${annTitle}", Thể loại "${annType}", Đối tượng "${annAudience}", Nội dung chính:\n${annKeyPoints}`,
         fallbackText: fallbackAnn,
       });
-      setAiResult(text);
+      setAiResult(sanitizeLegacyTeacherText(text));
     } catch (e) {
       console.error(e);
       setAiResult('Lỗi kết nối AI, vui lòng thử lại.');

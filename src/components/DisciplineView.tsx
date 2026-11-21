@@ -616,7 +616,9 @@ export const DisciplineView: React.FC = () => {
         </div>
       )}
 
-      {/* Overview Stat Cards */}
+      {/* Overview Stat Cards (Hidden for Parent — PH only views their own child) */}
+      {role !== 'parent' && (
+      <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -748,6 +750,8 @@ export const DisciplineView: React.FC = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* For Student / Parent View: Individual Student Weekly Card */}
       {(role === 'student' || role === 'parent') && currentStudent && (
@@ -921,7 +925,9 @@ export const DisciplineView: React.FC = () => {
         </div>
       )}
 
-      {/* Control Actions & Filter Bar */}
+      {/* Control Actions, Filter Bar & Main 50-Student Class Emulation List (Hidden for Parent — PH only views their own child) */}
+      {role !== 'parent' && (
+      <>
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Search Input */}
@@ -1333,6 +1339,8 @@ export const DisciplineView: React.FC = () => {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* MODAL 1: GHI NHẬN LỖI VI PHẠM (Dành cho GVCN / Cán sự) */}
       {showAddViolationModal && (

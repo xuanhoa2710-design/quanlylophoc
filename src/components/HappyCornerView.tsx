@@ -70,10 +70,12 @@ export const HappyCornerView: React.FC = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [customImageUrlInput, setCustomImageUrlInput] = useState('');
   const [isUploadingCreateImg, setIsUploadingCreateImg] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [videoUrls, setVideoUrls] = useState<string[]>([]);
   const [customVideoUrlInput, setCustomVideoUrlInput] = useState('');
   const [isUploadingCreateVideo, setIsUploadingCreateVideo] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [postSavedToast, setPostSavedToast] = useState<string | null>(null);
   const createFileInputRef = useRef<HTMLInputElement>(null);
   const createVideoInputRef = useRef<HTMLInputElement>(null);
 
@@ -152,17 +154,37 @@ export const HappyCornerView: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setUploadError(null);
+    const totalSelected = files.length;
+    setImageUploadProgress({ done: 0, total: totalSelected });
 
     try {
       if (mode === 'create') {
         setIsUploadingCreateImg(true);
-        const compressedList = await compressMultipleImageFiles(files, 1080, 0.78);
-        setImageUrls((prev) => [...prev, ...compressedList].slice(0, 12));
+        const uploadedList = await compressMultipleImageFiles(
+          files,
+          1280,
+          0.8,
+          (done, total) => setImageUploadProgress({ done, total })
+        );
+        if (uploadedList.length === 0) {
+          setUploadError('Không thể đọc hoặc lưu ảnh đã chọn. Vui lòng thử lại.');
+        } else {
+          setImageUrls((prev) => [...prev, ...uploadedList].slice(0, 12));
+        }
         setIsUploadingCreateImg(false);
       } else {
         setIsUploadingEditImg(true);
-        const compressedList = await compressMultipleImageFiles(files, 1080, 0.78);
-        setEditImageUrls((prev) => [...prev, ...compressedList].slice(0, 12));
+        const uploadedList = await compressMultipleImageFiles(
+          files,
+          1280,
+          0.8,
+          (done, total) => setImageUploadProgress({ done, total })
+        );
+        if (uploadedList.length === 0) {
+          setUploadError('Không thể đọc hoặc lưu ảnh đã chọn. Vui lòng thử lại.');
+        } else {
+          setEditImageUrls((prev) => [...prev, ...uploadedList].slice(0, 12));
+        }
         setIsUploadingEditImg(false);
       }
     } catch (err: any) {
@@ -170,6 +192,7 @@ export const HappyCornerView: React.FC = () => {
       setIsUploadingCreateImg(false);
       setIsUploadingEditImg(false);
     } finally {
+      setImageUploadProgress(null);
       e.target.value = '';
     }
   };
@@ -244,6 +267,12 @@ export const HappyCornerView: React.FC = () => {
     setCustomVideoUrlInput('');
     setUploadError(null);
     setShowAddModal(false);
+    setPostSavedToast(
+      finalCreateImages.length > 0
+        ? `Đã đăng bài và lưu thành công ${finalCreateImages.length} ảnh lên hệ thống Góc Hạnh Phúc!`
+        : 'Đã đăng bài lên Góc Hạnh Phúc 12A7 thành công!'
+    );
+    setTimeout(() => setPostSavedToast(null), 4500);
   };
 
   const handleOpenEditPost = (post: HappyPost) => {
@@ -283,6 +312,12 @@ export const HappyCornerView: React.FC = () => {
     });
 
     setEditingPost(null);
+    setPostSavedToast(
+      finalEditImages.length > 0
+        ? `Đã cập nhật bài viết và lưu thành công ${finalEditImages.length} ảnh trên hệ thống!`
+        : 'Đã cập nhật bài viết Góc Hạnh Phúc thành công!'
+    );
+    setTimeout(() => setPostSavedToast(null), 4500);
   };
 
   const handleConfirmDeletePost = (id: string) => {
@@ -375,6 +410,24 @@ export const HappyCornerView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Confirmation Banner when a post / multiple images are saved */}
+      {postSavedToast && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{postSavedToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPostSavedToast(null)}
+            className="p-1 rounded-lg hover:bg-emerald-100 text-emerald-700 transition-colors cursor-pointer"
+            aria-label="Đóng thông báo"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Automatic Monthly Birthday Celebration Card */}
       <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 rounded-2xl border border-amber-200/80 p-4 sm:p-5 shadow-xs space-y-4">
@@ -888,8 +941,10 @@ export const HappyCornerView: React.FC = () => {
                     <Upload className="w-4 h-4 shrink-0" />
                     <span>
                       {isUploadingCreateImg
-                        ? 'Đang xử lý ảnh...'
-                        : '+ Chọn 1 hoặc nhiều ảnh từ Máy / ĐT'}
+                        ? imageUploadProgress
+                          ? `Đang lưu ảnh ${imageUploadProgress.done}/${imageUploadProgress.total}...`
+                          : 'Đang tải & lưu ảnh...'
+                        : '+ Chọn 1 hoặc nhiều ảnh (Tối đa 12 ảnh)'}
                     </span>
                   </button>
 
@@ -1176,7 +1231,11 @@ export const HappyCornerView: React.FC = () => {
                   >
                     <Upload className="w-4 h-4 shrink-0" />
                     <span>
-                      {isUploadingEditImg ? 'Đang tải ảnh...' : '+ Thêm nhiều ảnh từ Máy / ĐT'}
+                      {isUploadingEditImg
+                        ? imageUploadProgress
+                          ? `Đang lưu ảnh ${imageUploadProgress.done}/${imageUploadProgress.total}...`
+                          : 'Đang tải & lưu ảnh...'
+                        : '+ Thêm nhiều ảnh (Tối đa 12 ảnh)'}
                     </span>
                   </button>
 

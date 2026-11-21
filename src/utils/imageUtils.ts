@@ -106,26 +106,74 @@ export function parseStudentBirthday(birthdayStr?: string): { day: number; month
 }
 
 /**
- * Compress multiple image files in parallel while keeping total payload light for Firestore & SSE sync
+ * Compress an image file on the client and upload it to the backend media server
+ * (/api/media/upload-image), returning a lightweight persistent URL (/api/media/images/...).
+ * Falls back to a compact base64 data URL if the upload API is unavailable (e.g. static build).
+ */
+export async function uploadImageFileToServer(
+  file: File,
+  maxDimension: number = 1280,
+  quality: number = 0.8
+): Promise<string> {
+  const compressedDataUrl = await compressImageFileToDataUrl(file, maxDimension, quality);
+
+  try {
+    const response = await fetch('/api/media/upload-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name || 'photo.jpg',
+        mimeType: 'image/jpeg',
+        base64Data: compressedDataUrl,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && typeof data.url === 'string' && data.url.trim().length > 0) {
+        return data.url;
+      }
+    }
+  } catch (err) {
+    console.warn('Upload image to server failed, falling back to compact inline image:', err);
+  }
+
+  // Fallback for static/offline environments: re-compress compactly so localStorage & Firestore stay safe
+  try {
+    return await compressImageFileToDataUrl(file, 640, 0.56);
+  } catch {
+    return compressedDataUrl;
+  }
+}
+
+/**
+ * Compress and upload multiple image files sequentially to /api/media/upload-image
+ * so multi-photo posts in Happy Corner & Announcements stay lightweight (~40 bytes per image URL)
+ * and persist reliably across reloads, Firestore, and all devices.
  */
 export async function compressMultipleImageFiles(
   files: FileList | File[],
-  maxDimension: number = 900,
-  quality: number = 0.72
+  maxDimension: number = 1280,
+  quality: number = 0.8,
+  onProgress?: (completed: number, total: number) => void
 ): Promise<string[]> {
   const fileArray = Array.from(files || []);
   if (fileArray.length === 0) return [];
-  // Adjust dimension slightly if uploading many photos at once so Firestore doc stays well under 1MB
-  const adjustedDim = fileArray.length > 4 ? Math.min(maxDimension, 780) : maxDimension;
-  const adjustedQuality = fileArray.length > 4 ? Math.min(quality, 0.68) : quality;
 
   const results: string[] = [];
-  for (const file of fileArray) {
+  for (let i = 0; i < fileArray.length; i++) {
+    const file = fileArray[i];
     try {
-      const dataUrl = await compressImageFileToDataUrl(file, adjustedDim, adjustedQuality);
-      if (dataUrl) results.push(dataUrl);
+      const urlOrDataUrl = await uploadImageFileToServer(file, maxDimension, quality);
+      if (urlOrDataUrl) {
+        results.push(urlOrDataUrl);
+      }
     } catch (err) {
-      console.warn('Error compressing image file:', err);
+      console.warn('Error uploading/compressing image file:', err);
+    } finally {
+      if (onProgress) {
+        onProgress(i + 1, fileArray.length);
+      }
     }
   }
   return results;
