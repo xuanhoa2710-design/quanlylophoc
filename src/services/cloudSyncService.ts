@@ -1,5 +1,6 @@
-import { doc, setDoc, getDoc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase';
+import { offloadInlineImagesInActivitiesPayload } from './cloudMediaService';
 
 export type ClassroomSectionId =
   | 'config'
@@ -27,6 +28,21 @@ export const ALL_SECTION_IDS: ClassroomSectionId[] = [
 export const CLIENT_INSTANCE_ID = `client_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 const CLASSROOM_DOC_ID = 'lop_12A7';
+
+export interface SaveSectionResult {
+  updatedAt: number;
+  firestoreSaved: boolean;
+  serverSaved: boolean;
+  cleanedPayload: Record<string, any>;
+  error?: string;
+}
+
+export interface RemoteSectionSnapshot {
+  sectionId: ClassroomSectionId;
+  payload: Record<string, any>;
+  updatedAt?: number;
+  clientId?: string;
+}
 
 export const sanitizePayloadForFirestore = (payload: any): any => {
   try {
@@ -59,8 +75,38 @@ export const ensureMasterClassroomDoc = async (meta: {
   }
 };
 
+export const fetchAllClassroomSectionsFromFirestore = async (): Promise<
+  Record<string, RemoteSectionSnapshot>
+> => {
+  const result: Record<string, RemoteSectionSnapshot> = {};
+  try {
+    const colRef = collection(db, 'classrooms', CLASSROOM_DOC_ID, 'sections');
+    const snapshot = await getDocs(colRef);
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const secId = docSnap.id as ClassroomSectionId;
+      if (data && data.payload && ALL_SECTION_IDS.includes(secId)) {
+        result[secId] = {
+          sectionId: secId,
+          payload: data.payload,
+          updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : undefined,
+          clientId: typeof data.clientId === 'string' ? data.clientId : undefined,
+        };
+      }
+    });
+  } catch (err) {
+    console.warn('fetchAllClassroomSectionsFromFirestore warning:', err);
+  }
+  return result;
+};
+
 export const subscribeToClassroomSections = (
-  onSectionUpdate: (sectionId: ClassroomSectionId, payload: Record<string, any>) => void,
+  onSectionUpdate: (
+    sectionId: ClassroomSectionId,
+    payload: Record<string, any>,
+    updatedAt?: number,
+    clientId?: string
+  ) => void,
   onStatusChange?: (status: 'synced' | 'syncing' | 'offline' | 'error') => void
 ): (() => void) => {
   try {
@@ -73,7 +119,12 @@ export const subscribeToClassroomSections = (
             const data = change.doc.data();
             const secId = change.doc.id as ClassroomSectionId;
             if (data && data.payload && ALL_SECTION_IDS.includes(secId)) {
-              onSectionUpdate(secId, data.payload);
+              onSectionUpdate(
+                secId,
+                data.payload,
+                typeof data.updatedAt === 'number' ? data.updatedAt : undefined,
+                typeof data.clientId === 'string' ? data.clientId : undefined
+              );
             }
           }
         });
@@ -97,37 +148,35 @@ export const saveClassroomSection = async (
   payload: Record<string, any>,
   role?: string,
   appConfig?: any
-): Promise<number> => {
+): Promise<SaveSectionResult> => {
   const now = Date.now();
-  const cleanPayload = sanitizePayloadForFirestore(payload);
+  let cleanPayload = sanitizePayloadForFirestore(payload);
   let resolvedTs = now;
+  let firestoreSaved = false;
+  let serverSaved = false;
+  let lastError: string | undefined;
 
-  // 1. Persist to backend Shared State API (disk + instant SSE sync across all devices, up to 50MB)
-  try {
-    const res = await fetch('/api/shared-state', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sectionId,
-        payload: cleanPayload,
-        updatedByRole: role || 'student',
-        clientId: CLIENT_INSTANCE_ID,
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && typeof data.updatedAt === 'number') {
-        resolvedTs = data.updatedAt;
+  // Automatically offload any large inline data:image/* in activities to permanent Firestore media docs
+  // so `activities` NEVER approaches Firestore's 1 MiB document size limit.
+  if (sectionId === 'activities') {
+    try {
+      const payloadStr = JSON.stringify(cleanPayload);
+      if (payloadStr.includes('data:image/') && payloadStr.length > 150 * 1024) {
+        const { payload: slimmed, offloadedCount } =
+          await offloadInlineImagesInActivitiesPayload(cleanPayload);
+        if (offloadedCount > 0) {
+          cleanPayload = sanitizePayloadForFirestore(slimmed);
+        }
       }
+    } catch (err) {
+      console.warn('Auto-offload inline images warning:', err);
     }
-  } catch (err) {
-    console.warn(`Shared state server sync warning (${sectionId}):`, err);
   }
 
-  // 2. Also sync to Cloud Firestore (guarding against Firestore's 1 MiB document size limit)
+  // 1. PRIMARY PERSISTENCE: Save to Cloud Firestore (permanent across container restarts & all devices)
   try {
     const payloadBytes = new Blob([JSON.stringify(cleanPayload)]).size;
-    if (payloadBytes < 920 * 1024) {
+    if (payloadBytes < 950 * 1024) {
       const secRef = doc(db, 'classrooms', CLASSROOM_DOC_ID, 'sections', sectionId);
       await setDoc(
         secRef,
@@ -141,15 +190,44 @@ export const saveClassroomSection = async (
         },
         { merge: true }
       );
+      firestoreSaved = true;
     } else {
-      console.warn(
-        `Firestore payload for section "${sectionId}" is ${(payloadBytes / 1024).toFixed(0)}KB (>920KB limit); persisted on server shared-state.`
-      );
+      lastError = `Dữ liệu mục "${sectionId}" vượt quá giới hạn 1MB của Firestore (${(payloadBytes / 1024).toFixed(0)}KB).`;
+      console.warn(lastError);
     }
-  } catch (err) {
+  } catch (err: any) {
+    lastError = err?.message || 'Lỗi lưu dữ liệu lên Cloud Firestore.';
     console.warn(`Firestore sync warning (${sectionId}):`, err);
   }
 
-  return resolvedTs;
-};
+  // 2. SECONDARY REAL-TIME PUSH: Persist to backend Shared State API (instant SSE push)
+  try {
+    const res = await fetch('/api/shared-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sectionId,
+        payload: cleanPayload,
+        updatedByRole: role || 'student',
+        clientId: CLIENT_INSTANCE_ID,
+      }),
+    });
+    if (res.ok) {
+      serverSaved = true;
+      const data = await res.json();
+      if (data && typeof data.updatedAt === 'number' && data.updatedAt > resolvedTs) {
+        resolvedTs = data.updatedAt;
+      }
+    }
+  } catch (err) {
+    console.warn(`Shared state server sync warning (${sectionId}):`, err);
+  }
 
+  return {
+    updatedAt: resolvedTs,
+    firestoreSaved,
+    serverSaved,
+    cleanedPayload: cleanPayload,
+    error: firestoreSaved ? undefined : lastError,
+  };
+};

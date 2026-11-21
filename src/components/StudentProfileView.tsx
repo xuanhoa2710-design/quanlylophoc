@@ -528,7 +528,7 @@ export const StudentProfileView: React.FC = () => {
                           <div className="text-[10px] text-slate-600">{v.note}</div>
                         )}
                         <div className="text-[10px] text-slate-400">
-                          Tuần {getWeekRangeFromDate(v.date).shortRangeLabel} • {formatDateVN(v.date)}
+                          {getWeekRangeFromDate(v.date).rangeLabel} • {formatDateVN(v.date)}
                         </div>
                       </div>
                     ))}

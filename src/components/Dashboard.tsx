@@ -643,7 +643,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                         <span>Tự động tổng kết sau Thứ 6</span>
                       </div>
                       <div className="text-[11px] text-amber-700 mt-0.5">
-                        {currentWeekRange.rangeLabel} (Thứ 2 ➔ Thứ 6)
+                        {currentWeekRange.rangeLabel}
                       </div>
                     </div>
                     <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-black text-[10px] shrink-0">

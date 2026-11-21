@@ -1,7 +1,9 @@
+import { uploadImageToCloudMedia } from '../services/cloudMediaService';
+
 /**
  * Utility for client-side image compression and resizing so photos uploaded
- * from computers or phones (camera/gallery) stay lightweight (~40KB-80KB)
- * and sync reliably across devices via Firestore and shared state.
+ * from computers or phones (camera/gallery) stay lightweight (~50KB-140KB)
+ * and persist permanently in Cloud Firestore across reloads and all devices.
  */
 export async function compressImageFileToDataUrl(
   file: File,
@@ -106,17 +108,29 @@ export function parseStudentBirthday(birthdayStr?: string): { day: number; month
 }
 
 /**
- * Compress an image file on the client and upload it to the backend media server
- * (/api/media/upload-image), returning a lightweight persistent URL (/api/media/images/...).
- * Falls back to a compact base64 data URL if the upload API is unavailable (e.g. static build).
+ * Compress an image file on the client and upload it permanently to Cloud Firestore
+ * (`classrooms/lop_12A7/media/{id}`), returning a lightweight permanent reference
+ * (`fsmedia://{id}`). Falls back to `/api/media/upload-image` or compact inline base64
+ * only if Firestore is unreachable.
  */
 export async function uploadImageFileToServer(
   file: File,
-  maxDimension: number = 1280,
-  quality: number = 0.8
+  maxDimension: number = 960,
+  quality: number = 0.72
 ): Promise<string> {
   const compressedDataUrl = await compressImageFileToDataUrl(file, maxDimension, quality);
 
+  // 1. Primary: Permanent Cloud Firestore media document (survives all reloads & container restarts)
+  try {
+    const cloudRefUrl = await uploadImageToCloudMedia(compressedDataUrl, file.name || 'photo.jpg');
+    if (cloudRefUrl) {
+      return cloudRefUrl;
+    }
+  } catch (err) {
+    console.warn('Cloud Firestore media upload failed, trying server fallback:', err);
+  }
+
+  // 2. Secondary fallback: Server media upload
   try {
     const response = await fetch('/api/media/upload-image', {
       method: 'POST',
@@ -138,18 +152,18 @@ export async function uploadImageFileToServer(
     console.warn('Upload image to server failed, falling back to compact inline image:', err);
   }
 
-  // Fallback for static/offline environments: re-compress compactly so localStorage & Firestore stay safe
+  // 3. Offline fallback: compact inline data URL
   try {
-    return await compressImageFileToDataUrl(file, 640, 0.56);
+    return await compressImageFileToDataUrl(file, 520, 0.5);
   } catch {
     return compressedDataUrl;
   }
 }
 
 /**
- * Compress and upload multiple image files sequentially to /api/media/upload-image
- * so multi-photo posts in Happy Corner & Announcements stay lightweight (~40 bytes per image URL)
- * and persist reliably across reloads, Firestore, and all devices.
+ * Compress and upload multiple image files sequentially to permanent Cloud Firestore media
+ * so multi-photo posts in Happy Corner & Announcements stay lightweight (~32 bytes per image ref)
+ * and persist permanently across reloads, devices, and server restarts.
  */
 export async function compressMultipleImageFiles(
   files: FileList | File[],

@@ -7,6 +7,7 @@ import {
   CLIENT_INSTANCE_ID,
   sanitizePayloadForFirestore,
   ensureMasterClassroomDoc,
+  fetchAllClassroomSectionsFromFirestore,
   subscribeToClassroomSections,
   saveClassroomSection,
 } from '../services/cloudSyncService';
@@ -374,9 +375,14 @@ interface AppContextType {
 
   // Happy Post (GVCN có thể thêm, sửa, xóa bài viết và xóa comment)
   happyPosts: HappyPost[];
-  addHappyPost: (post: Omit<HappyPost, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'comments'>) => void;
-  updateHappyPost: (id: string, updatedData: Partial<HappyPost>) => void;
-  deleteHappyPost: (id: string) => void;
+  addHappyPost: (
+    post: Omit<HappyPost, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'comments'>
+  ) => Promise<{ savedToCloud: boolean; error?: string }>;
+  updateHappyPost: (
+    id: string,
+    updatedData: Partial<HappyPost>
+  ) => Promise<{ savedToCloud: boolean; error?: string }>;
+  deleteHappyPost: (id: string) => Promise<void>;
   deletePostComment: (postId: string, commentId: string) => void;
   toggleLikePost: (postId: string, userId: string) => void;
   addPostComment: (postId: string, author: string, text: string) => void;
@@ -2343,7 +2349,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ann-${Date.now()}`,
       createdAt: getVietnamDateTimeStr(),
     };
-    setAnnouncements((prev) => [newAnn, ...prev]);
+    const nextAnnouncements = [newAnn, ...announcements];
+    setAnnouncements(nextAnnouncements);
+    safeSetLocal(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(nextAnnouncements));
+    void flushActivitiesSectionNow({ announcements: nextAnnouncements });
   };
 
   const deleteAnnouncement = (id: string) => {
@@ -2351,7 +2360,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Permission denied: Only GVCN and Ban cán sự lớp can delete announcements.');
       return;
     }
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    const nextAnnouncements = announcements.filter((a) => a.id !== id);
+    setAnnouncements(nextAnnouncements);
+    safeSetLocal(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(nextAnnouncements));
+    void flushActivitiesSectionNow({ announcements: nextAnnouncements });
   };
 
   const updateAnnouncement = (id: string, updatedData: Partial<Announcement>) => {
@@ -2359,17 +2371,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Permission denied: Only GVCN and Ban cán sự lớp can edit announcements.');
       return;
     }
-    setAnnouncements((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              ...updatedData,
-              updatedAt: getVietnamDateTimeStr(),
-            }
-          : a
-      )
+    const nextAnnouncements = announcements.map((a) =>
+      a.id === id
+        ? {
+            ...a,
+            ...updatedData,
+            updatedAt: getVietnamDateTimeStr(),
+          }
+        : a
     );
+    setAnnouncements(nextAnnouncements);
+    safeSetLocal(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(nextAnnouncements));
+    void flushActivitiesSectionNow({ announcements: nextAnnouncements });
   };
 
   // Chat messages
@@ -2466,7 +2479,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     safeSetLocal(STORAGE_KEYS.HAPPY_POSTS, JSON.stringify(happyPosts));
   }, [happyPosts]);
 
-  const addHappyPost = (postData: Omit<HappyPost, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'comments'>) => {
+  const addHappyPost = async (
+    postData: Omit<HappyPost, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'comments'>
+  ): Promise<{ savedToCloud: boolean; error?: string }> => {
     const newPost: HappyPost = {
       ...postData,
       id: `post-${Date.now()}`,
@@ -2475,7 +2490,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       comments: [],
       createdAt: getVietnamDateTimeStr(),
     };
-    setHappyPosts((prev) => [newPost, ...prev]);
+    const nextPosts = [newPost, ...happyPosts];
+    setHappyPosts(nextPosts);
+    safeSetLocal(STORAGE_KEYS.HAPPY_POSTS, JSON.stringify(nextPosts));
+    return flushActivitiesSectionNow({ happyPosts: nextPosts });
   };
 
   const toggleLikePost = (postId: string, userId: string) => {
@@ -2517,22 +2535,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const updateHappyPost = (id: string, updatedData: Partial<HappyPost>) => {
-    setHappyPosts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              ...updatedData,
-              updatedAt: getVietnamDateTimeStr(),
-            }
-          : p
-      )
+  const updateHappyPost = async (
+    id: string,
+    updatedData: Partial<HappyPost>
+  ): Promise<{ savedToCloud: boolean; error?: string }> => {
+    const nextPosts = happyPosts.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            ...updatedData,
+            updatedAt: getVietnamDateTimeStr(),
+          }
+        : p
     );
+    setHappyPosts(nextPosts);
+    safeSetLocal(STORAGE_KEYS.HAPPY_POSTS, JSON.stringify(nextPosts));
+    return flushActivitiesSectionNow({ happyPosts: nextPosts });
   };
 
-  const deleteHappyPost = (id: string) => {
-    setHappyPosts((prev) => prev.filter((p) => p.id !== id));
+  const deleteHappyPost = async (id: string): Promise<void> => {
+    const nextPosts = happyPosts.filter((p) => p.id !== id);
+    setHappyPosts(nextPosts);
+    safeSetLocal(STORAGE_KEYS.HAPPY_POSTS, JSON.stringify(nextPosts));
+    await flushActivitiesSectionNow({ happyPosts: nextPosts });
   };
 
   const deletePostComment = (postId: string, commentId: string) => {
@@ -3549,8 +3574,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isFirebaseAuthReady, setIsFirebaseAuthReady] = useState<boolean>(false);
 
   const lastSyncedJsonRef = useRef<Record<string, string>>({});
+  const lastAppliedTimestampRef = useRef<Record<string, number>>((() => {
+    try {
+      const raw = safeGetLocal('a7_section_ts_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return {};
+  })());
   const isInitialRemoteLoadedRef = useRef<boolean>(false);
   const lastServerTimestampRef = useRef<number>(0);
+
+  const recordSectionTimestamp = useCallback((secId: ClassroomSectionId, ts: number) => {
+    if (typeof ts !== 'number' || ts <= 0) return;
+    const prev = lastAppliedTimestampRef.current[secId] || 0;
+    if (ts >= prev) {
+      lastAppliedTimestampRef.current[secId] = ts;
+      try {
+        safeSetLocal('a7_section_ts_v1', JSON.stringify(lastAppliedTimestampRef.current));
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   const buildSectionPayload = useCallback(
     (sectionId: ClassroomSectionId): Record<string, any> => {
@@ -3613,6 +3663,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]
   );
 
+  // Immediately flush critical `activities` updates (Happy Posts / Announcements) to Cloud Firestore + Server
+  // without waiting for debounce or initial-load flags so closing/reopening the app NEVER loses posts.
+  const flushActivitiesSectionNow = useCallback(
+    async (overrides: {
+      happyPosts?: HappyPost[];
+      announcements?: Announcement[];
+    }): Promise<{ savedToCloud: boolean; error?: string }> => {
+      const nextPayload = {
+        evaluations,
+        announcements: overrides.announcements ?? announcements,
+        happyPosts: overrides.happyPosts ?? happyPosts,
+        assignments,
+        messages,
+        appointments,
+      };
+      const cleanJson = JSON.stringify(sanitizePayloadForFirestore(nextPayload));
+      lastSyncedJsonRef.current['activities'] = cleanJson;
+      const optimisticTs = Date.now();
+      recordSectionTimestamp('activities', optimisticTs);
+      setCloudSyncStatus('syncing');
+
+      try {
+        const res = await saveClassroomSection('activities', nextPayload, role, appConfig);
+        recordSectionTimestamp('activities', res.updatedAt);
+        if (res.updatedAt > lastServerTimestampRef.current) {
+          lastServerTimestampRef.current = res.updatedAt;
+        }
+        // If legacy inline base64 images were auto-offloaded to Firestore media, sync cleaned refs into local state
+        const slimJson = JSON.stringify(sanitizePayloadForFirestore(res.cleanedPayload));
+        lastSyncedJsonRef.current['activities'] = slimJson;
+        if (slimJson !== cleanJson && Array.isArray(res.cleanedPayload?.happyPosts)) {
+          setHappyPosts(res.cleanedPayload.happyPosts);
+          safeSetLocal(STORAGE_KEYS.HAPPY_POSTS, JSON.stringify(res.cleanedPayload.happyPosts));
+        }
+        if (slimJson !== cleanJson && Array.isArray(res.cleanedPayload?.announcements)) {
+          setAnnouncements(res.cleanedPayload.announcements);
+          safeSetLocal(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(res.cleanedPayload.announcements));
+        }
+        setLastSyncedAt(getVietnamTimeStr());
+        setCloudSyncStatus(res.firestoreSaved || res.serverSaved ? 'synced' : 'error');
+        return {
+          savedToCloud: res.firestoreSaved || res.serverSaved,
+          error: res.error,
+        };
+      } catch (err: any) {
+        console.warn('Immediate activities cloud flush error:', err);
+        setCloudSyncStatus('error');
+        return {
+          savedToCloud: false,
+          error: err?.message || 'Không thể lưu dữ liệu lên đám mây.',
+        };
+      }
+    },
+    [
+      evaluations,
+      announcements,
+      happyPosts,
+      assignments,
+      messages,
+      appointments,
+      role,
+      appConfig,
+      recordSectionTimestamp,
+    ]
+  );
+
   // Initialize baseline hashes on first render so opening the app doesn't overwrite remote data before fetching
   if (Object.keys(lastSyncedJsonRef.current).length === 0) {
     for (const secId of ALL_SECTION_IDS) {
@@ -3623,12 +3739,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   const applyRemoteSection = useCallback(
-    (sectionId: ClassroomSectionId, rawPayload: Record<string, any>) => {
+    (
+      sectionId: ClassroomSectionId,
+      rawPayload: Record<string, any>,
+      remoteUpdatedAt?: number,
+      remoteClientId?: string
+    ) => {
       if (!rawPayload || typeof rawPayload !== 'object') return;
+      if (remoteClientId && remoteClientId === CLIENT_INSTANCE_ID) {
+        return; // Ignore our own echo
+      }
+
+      const currentAppliedTs = lastAppliedTimestampRef.current[sectionId] || 0;
+      if (
+        typeof remoteUpdatedAt === 'number' &&
+        remoteUpdatedAt > 0 &&
+        currentAppliedTs > 0 &&
+        remoteUpdatedAt < currentAppliedTs
+      ) {
+        return; // Never let a stale remote snapshot overwrite newer local/cloud state
+      }
 
       const incomingJson = JSON.stringify(sanitizePayloadForFirestore(rawPayload));
       if (lastSyncedJsonRef.current[sectionId] === incomingJson) {
+        if (typeof remoteUpdatedAt === 'number' && remoteUpdatedAt > 0) {
+          recordSectionTimestamp(sectionId, remoteUpdatedAt);
+        }
         return; // Already up to date
+      }
+
+      if (typeof remoteUpdatedAt === 'number' && remoteUpdatedAt > 0) {
+        recordSectionTimestamp(sectionId, remoteUpdatedAt);
       }
 
       if (sectionId === 'config') {
@@ -3795,7 +3936,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLastSyncedAt(getVietnamTimeStr());
       setCloudSyncStatus('synced');
     },
-    [normalizeTimetablePeriodTimes, realCalendarWeek, sanitizeAttendanceDaysMap, todayStr, buildFreshWeeklyDutySchedule]
+    [
+      normalizeTimetablePeriodTimes,
+      realCalendarWeek,
+      sanitizeAttendanceDaysMap,
+      todayStr,
+      buildFreshWeeklyDutySchedule,
+      recordSectionTimestamp,
+    ]
   );
 
   const syncAllToCloudNow = useCallback(async () => {
@@ -3805,9 +3953,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const payload = buildSectionPayload(secId);
         const cleanJson = JSON.stringify(sanitizePayloadForFirestore(payload));
         lastSyncedJsonRef.current[secId] = cleanJson;
-        const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
-        if (serverTs > lastServerTimestampRef.current) {
-          lastServerTimestampRef.current = serverTs;
+        const result = await saveClassroomSection(secId, payload, role, appConfig);
+        recordSectionTimestamp(secId, result.updatedAt);
+        if (result.updatedAt > lastServerTimestampRef.current) {
+          lastServerTimestampRef.current = result.updatedAt;
         }
       }
       setLastSyncedAt(getVietnamTimeStr());
@@ -3816,7 +3965,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Manual cloud sync error:', err);
       setCloudSyncStatus('error');
     }
-  }, [buildSectionPayload, role, appConfig]);
+  }, [buildSectionPayload, role, appConfig, recordSectionTimestamp]);
 
   // 1. Track Firebase Auth state
   useEffect(() => {
@@ -3843,17 +3992,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubAuth();
   }, [appConfig.className, appConfig.schoolName, appConfig.teacherName]);
 
-  // 2. Attach Firestore real-time listeners for all roles (GVCN, Học sinh, Phụ huynh)
+  // 2. Hydrate from permanent Cloud Firestore FIRST + attach real-time listener for all roles (GVCN, HS, PH)
   useEffect(() => {
+    let mounted = true;
+
+    fetchAllClassroomSectionsFromFirestore().then((remoteSections) => {
+      if (!mounted) return;
+      for (const secSnap of Object.values(remoteSections)) {
+        applyRemoteSection(
+          secSnap.sectionId,
+          secSnap.payload,
+          secSnap.updatedAt,
+          secSnap.clientId
+        );
+      }
+      isInitialRemoteLoadedRef.current = true;
+    });
+
     const unsubFirestore = subscribeToClassroomSections(
-      (sectionId, payload) => {
-        applyRemoteSection(sectionId, payload);
+      (sectionId, payload, updatedAt, clientId) => {
+        applyRemoteSection(sectionId, payload, updatedAt, clientId);
+        isInitialRemoteLoadedRef.current = true;
       },
       (status) => {
         setCloudSyncStatus(status);
       }
     );
-    return () => unsubFirestore();
+    return () => {
+      mounted = false;
+      unsubFirestore();
+    };
   }, [applyRemoteSection]);
 
   // 3. Real-time Server-Sent Events (SSE) + Polling & Visibility Refresh so ALL devices (GV, HS, PH) stay 100% in sync immediately
@@ -3869,9 +4037,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       for (const secId of keys) {
         const secObj = sectionsMap[secId];
         if (secObj && secObj.payload) {
-          if (secObj.clientId !== CLIENT_INSTANCE_ID) {
-            applyRemoteSection(secId, secObj.payload);
-          }
+          applyRemoteSection(secId, secObj.payload, secObj.updatedAt, secObj.clientId);
         }
       }
     };
@@ -3890,33 +4056,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const sectionKeys = Object.keys(data.sections) as ClassroomSectionId[];
           if (sectionKeys.length > 0) {
             applyIncomingSectionsMap(data.sections, data.updatedAt);
-            // If initial load and some sections are missing on server, seed the missing sections only
-            if (isInitial) {
-              for (const secId of ALL_SECTION_IDS) {
-                if (!data.sections[secId]) {
-                  const payload = buildSectionPayload(secId);
-                  const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
-                  if (serverTs > lastServerTimestampRef.current) {
-                    lastServerTimestampRef.current = serverTs;
-                  }
-                }
-              }
-            }
-          } else if (isInitial) {
-            // Seed server state on initial boot if server has no sections yet
-            for (const secId of ALL_SECTION_IDS) {
-              const payload = buildSectionPayload(secId);
-              const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
-              if (serverTs > lastServerTimestampRef.current) {
-                lastServerTimestampRef.current = serverTs;
-              }
-            }
           }
         }
         if (isInitial) {
           isInitialRemoteLoadedRef.current = true;
         }
-      } catch (err) {
+      } catch {
         if (isInitial) {
           isInitialRemoteLoadedRef.current = true;
         }
@@ -3943,23 +4088,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               if (typeof msg.updatedAt === 'number' && msg.updatedAt > lastServerTimestampRef.current) {
                 lastServerTimestampRef.current = msg.updatedAt;
               }
-              if (msg.clientId !== CLIENT_INSTANCE_ID) {
-                applyRemoteSection(msg.sectionId as ClassroomSectionId, msg.payload);
-              }
+              applyRemoteSection(
+                msg.sectionId as ClassroomSectionId,
+                msg.payload,
+                msg.updatedAt,
+                msg.clientId
+              );
             }
-          } catch (e) {
+          } catch {
             // Ignore malformed SSE message
           }
         };
-      } catch (e) {
+      } catch {
         // Fallback to polling
       }
     }
 
-    // Fast polling fallback (every 2 seconds) + focus/visibility listener for mobile browsers
+    // Fast polling fallback (every 3 seconds) + focus/visibility listener for mobile browsers
     const intervalId = window.setInterval(() => {
       fetchServerSharedState(false);
-    }, 2000);
+    }, 3000);
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === 'visible') {
@@ -3980,7 +4128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [applyRemoteSection]);
 
-  // 4. Automatically push any modified section to Server Shared State & Cloud Firestore
+  // 4. Automatically push any modified section to Cloud Firestore & Server Shared State
   useEffect(() => {
     if (!isInitialRemoteLoadedRef.current) return;
 
@@ -3990,14 +4138,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const currentJson = JSON.stringify(sanitizePayloadForFirestore(payload));
         if (lastSyncedJsonRef.current[secId] !== currentJson) {
           lastSyncedJsonRef.current[secId] = currentJson;
+          const optimisticTs = Date.now();
+          recordSectionTimestamp(secId, optimisticTs);
           setCloudSyncStatus('syncing');
           try {
-            const serverTs = await saveClassroomSection(secId, payload, role, appConfig);
-            if (serverTs > lastServerTimestampRef.current) {
-              lastServerTimestampRef.current = serverTs;
+            const result = await saveClassroomSection(secId, payload, role, appConfig);
+            recordSectionTimestamp(secId, result.updatedAt);
+            if (result.updatedAt > lastServerTimestampRef.current) {
+              lastServerTimestampRef.current = result.updatedAt;
             }
+            const slimJson = JSON.stringify(sanitizePayloadForFirestore(result.cleanedPayload));
+            lastSyncedJsonRef.current[secId] = slimJson;
             setLastSyncedAt(getVietnamTimeStr());
-            setCloudSyncStatus('synced');
+            setCloudSyncStatus(result.firestoreSaved || result.serverSaved ? 'synced' : 'error');
           } catch (err) {
             console.warn(`Error syncing section ${secId}:`, err);
             setCloudSyncStatus('error');
@@ -4008,7 +4161,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const timer = window.setTimeout(pushChangedSections, 180);
     return () => window.clearTimeout(timer);
-  }, [buildSectionPayload, role, appConfig]);
+  }, [buildSectionPayload, role, appConfig, recordSectionTimestamp]);
 
   const loginWithGoogleCloud = async () => {
     try {

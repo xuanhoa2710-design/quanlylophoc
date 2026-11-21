@@ -66,7 +66,7 @@ export const EvaluationsView: React.FC = () => {
   const [targetStudentId, setTargetStudentId] = useState<string>(students?.[0]?.id || '');
   const [periodType, setPeriodType] = useState<EvaluationComment['period']>('Tuần');
   const [periodLabel, setPeriodLabel] = useState<string>(
-    `Tuần ${currentWeek} (${currentWeekRange.shortRangeLabel})`
+    currentWeekRange.rangeLabel
   );
   const [academicText, setAcademicText] = useState('');
   const [awarenessText, setAwarenessText] = useState('');
@@ -110,7 +110,7 @@ export const EvaluationsView: React.FC = () => {
     setEditingEval(null);
     setTargetStudentId(stuId);
     setPeriodType('Tuần');
-    setPeriodLabel(`Tuần ${currentWeek} (${currentWeekRange.shortRangeLabel})`);
+    setPeriodLabel(currentWeekRange.rangeLabel);
     setAcademicText(
       stu
         ? `Duy trì điểm trung bình ${stu.currentGpa ?? 8.2}đ, nắm vững kiến thức trọng tâm và định hướng ôn thi ${stu.examSubject1 || 'Vật lý'} - ${stu.examSubject2 || 'Hóa học'} rõ ràng.`
@@ -134,7 +134,7 @@ export const EvaluationsView: React.FC = () => {
     );
     setParentNoteText(
       stu
-        ? `Kính gửi Quý Phụ huynh (${stu.primaryParentName || 'Gia đình'}) em ${stu.name}, Thầy Trương Xuân Hòa (GVCN 12A7) xin thông báo: Trong ${`Tuần ${currentWeek} (${currentWeekRange.shortRangeLabel})`}, em đạt ${weeklyInfo.total}/100 điểm thi đua, chuyên cần ${stu.attendanceStats?.rate ?? 100}% và học tập nghiêm túc trên lớp. Mong gia đình tiếp tục đồng hành cùng thầy động viên, nhắc nhở em giữ gìn sức khỏe và ôn luyện đều đặn tại nhà.`
+        ? `Kính gửi Quý Phụ huynh (${stu.primaryParentName || 'Gia đình'}) em ${stu.name}, Thầy Trương Xuân Hòa (GVCN 12A7) xin thông báo: Trong ${currentWeekRange.rangeLabel}, em đạt ${weeklyInfo.total}/100 điểm thi đua, chuyên cần ${stu.attendanceStats?.rate ?? 100}% và học tập nghiêm túc trên lớp. Mong gia đình tiếp tục đồng hành cùng thầy động viên, nhắc nhở em giữ gìn sức khỏe và ôn luyện đều đặn tại nhà.`
         : ''
     );
     setSendImmediatelyToParent(true);
@@ -350,7 +350,7 @@ export const EvaluationsView: React.FC = () => {
         studentId: stu.id,
         studentName: stu.name,
         period: periodType,
-        periodLabel: periodLabel.trim() || `Tuần ${currentWeek}`,
+        periodLabel: periodLabel.trim() || currentWeekRange.rangeLabel,
         academic: academicText.trim() || 'Học tập chăm chỉ, hoàn thành tốt nhiệm vụ.',
         awareness: awarenessText.trim() || 'Ý thức kỷ luật tốt, đi học đúng giờ.',
         skills: skillsText.trim() || 'Kỹ năng làm bài trắc nghiệm và tự học tốt.',
@@ -377,7 +377,7 @@ export const EvaluationsView: React.FC = () => {
         studentId: stu.id,
         studentName: stu.name,
         period: periodType,
-        periodLabel: periodLabel.trim() || `Tuần ${currentWeek}`,
+        periodLabel: periodLabel.trim() || currentWeekRange.rangeLabel,
         academic: academicText.trim() || 'Học tập chăm chỉ, hoàn thành tốt nhiệm vụ.',
         awareness: awarenessText.trim() || 'Ý thức kỷ luật tốt, đi học đúng giờ.',
         skills: skillsText.trim() || 'Kỹ năng làm bài trắc nghiệm và tự học tốt.',
@@ -595,8 +595,8 @@ Thầy Trương Xuân Hòa - GVCN Lớp 12A7`;
             </div>
             <div className="bg-white/10 rounded-xl px-3.5 py-2.5 border border-white/10">
               <div className="text-[11px] text-purple-200">Tuần thi đua hiện tại</div>
-              <div className="text-sm font-black text-white truncate">
-                Tuần {currentWeek} ({currentWeekRange.shortRangeLabel})
+              <div className="text-xs sm:text-sm font-black text-white truncate">
+                {currentWeekRange.rangeLabel}
               </div>
             </div>
           </div>
@@ -1090,7 +1090,7 @@ Thầy Trương Xuân Hòa - GVCN Lớp 12A7`;
                       const nextType = e.target.value as EvaluationComment['period'];
                       setPeriodType(nextType);
                       if (nextType === 'Tuần') {
-                        setPeriodLabel(`Tuần ${currentWeek} (${currentWeekRange.shortRangeLabel})`);
+                        setPeriodLabel(currentWeekRange.rangeLabel);
                       } else if (nextType === 'Tháng') {
                         setPeriodLabel('Tháng 10/2026');
                       } else {
@@ -1143,7 +1143,7 @@ Thầy Trương Xuân Hòa - GVCN Lớp 12A7`;
                     required
                     value={periodLabel}
                     onChange={(e) => setPeriodLabel(e.target.value)}
-                    placeholder="VD: Tuần 6 (26/10 - 30/10) hoặc Tháng 10/2026"
+                    placeholder="VD: Tuần từ Thứ 2 (26/10) đến hết Thứ 6 (30/10)"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold"
                   />
                 </div>

@@ -9,6 +9,7 @@ import {
   getEmbedVideoInfo,
   parseStudentBirthday,
 } from '../utils/imageUtils';
+import { CloudImage } from './CloudImage';
 import {
   Heart,
   Cake,
@@ -76,6 +77,7 @@ export const HappyCornerView: React.FC = () => {
   const [isUploadingCreateVideo, setIsUploadingCreateVideo] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [postSavedToast, setPostSavedToast] = useState<string | null>(null);
+  const [isSavingPost, setIsSavingPost] = useState(false);
   const createFileInputRef = useRef<HTMLInputElement>(null);
   const createVideoInputRef = useRef<HTMLInputElement>(null);
 
@@ -162,8 +164,8 @@ export const HappyCornerView: React.FC = () => {
         setIsUploadingCreateImg(true);
         const uploadedList = await compressMultipleImageFiles(
           files,
-          1280,
-          0.8,
+          960,
+          0.72,
           (done, total) => setImageUploadProgress({ done, total })
         );
         if (uploadedList.length === 0) {
@@ -176,8 +178,8 @@ export const HappyCornerView: React.FC = () => {
         setIsUploadingEditImg(true);
         const uploadedList = await compressMultipleImageFiles(
           files,
-          1280,
-          0.8,
+          960,
+          0.72,
           (done, total) => setImageUploadProgress({ done, total })
         );
         if (uploadedList.length === 0) {
@@ -226,9 +228,9 @@ export const HappyCornerView: React.FC = () => {
     }
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !content.trim() || isSavingPost) return;
 
     const authorName =
       role === 'teacher'
@@ -247,32 +249,46 @@ export const HappyCornerView: React.FC = () => {
       finalCreateVideos.push(customVideoUrlInput.trim());
     }
 
-    addHappyPost({
-      category,
-      title,
-      content,
-      authorName,
-      authorRole: role,
-      imageUrl: finalCreateImages[0] || undefined,
-      imageUrls: finalCreateImages.length > 0 ? finalCreateImages : undefined,
-      videoUrl: finalCreateVideos[0] || undefined,
-      videoUrls: finalCreateVideos.length > 0 ? finalCreateVideos : undefined,
-    });
-
-    setTitle('');
-    setContent('');
-    setImageUrls([]);
-    setCustomImageUrlInput('');
-    setVideoUrls([]);
-    setCustomVideoUrlInput('');
+    setIsSavingPost(true);
     setUploadError(null);
-    setShowAddModal(false);
-    setPostSavedToast(
-      finalCreateImages.length > 0
-        ? `Đã đăng bài và lưu thành công ${finalCreateImages.length} ảnh lên hệ thống Góc Hạnh Phúc!`
-        : 'Đã đăng bài lên Góc Hạnh Phúc 12A7 thành công!'
-    );
-    setTimeout(() => setPostSavedToast(null), 4500);
+    try {
+      const saveResult = await addHappyPost({
+        category,
+        title,
+        content,
+        authorName,
+        authorRole: role,
+        imageUrl: finalCreateImages[0] || undefined,
+        imageUrls: finalCreateImages.length > 0 ? finalCreateImages : undefined,
+        videoUrl: finalCreateVideos[0] || undefined,
+        videoUrls: finalCreateVideos.length > 0 ? finalCreateVideos : undefined,
+      });
+
+      if (!saveResult.savedToCloud) {
+        setUploadError(
+          saveResult.error ||
+            'Lưu tạm trên máy thành công nhưng chưa đồng bộ được lên đám mây. Vui lòng kiểm tra kết nối mạng và thử lại.'
+        );
+        return;
+      }
+
+      setTitle('');
+      setContent('');
+      setImageUrls([]);
+      setCustomImageUrlInput('');
+      setVideoUrls([]);
+      setCustomVideoUrlInput('');
+      setUploadError(null);
+      setShowAddModal(false);
+      setPostSavedToast(
+        finalCreateImages.length > 0
+          ? `Đã đăng bài và lưu vĩnh viễn ${finalCreateImages.length} ảnh lên đám mây Góc Hạnh Phúc!`
+          : 'Đã đăng bài và lưu vĩnh viễn lên Góc Hạnh Phúc 12A7!'
+      );
+      setTimeout(() => setPostSavedToast(null), 5000);
+    } finally {
+      setIsSavingPost(false);
+    }
   };
 
   const handleOpenEditPost = (post: HappyPost) => {
@@ -287,9 +303,9 @@ export const HappyCornerView: React.FC = () => {
     setUploadError(null);
   };
 
-  const handleSaveEditPost = (e: React.FormEvent) => {
+  const handleSaveEditPost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPost || !editTitle.trim() || !editContent.trim()) return;
+    if (!editingPost || !editTitle.trim() || !editContent.trim() || isSavingPost) return;
 
     const finalEditImages = [...editImageUrls];
     if (editCustomImageUrlInput.trim()) {
@@ -301,23 +317,37 @@ export const HappyCornerView: React.FC = () => {
       finalEditVideos.push(editCustomVideoUrlInput.trim());
     }
 
-    updateHappyPost(editingPost.id, {
-      category: editCategory,
-      title: editTitle.trim(),
-      content: editContent.trim(),
-      imageUrl: finalEditImages[0] || undefined,
-      imageUrls: finalEditImages.length > 0 ? finalEditImages : undefined,
-      videoUrl: finalEditVideos[0] || undefined,
-      videoUrls: finalEditVideos.length > 0 ? finalEditVideos : undefined,
-    });
+    setIsSavingPost(true);
+    setUploadError(null);
+    try {
+      const saveResult = await updateHappyPost(editingPost.id, {
+        category: editCategory,
+        title: editTitle.trim(),
+        content: editContent.trim(),
+        imageUrl: finalEditImages[0] || undefined,
+        imageUrls: finalEditImages.length > 0 ? finalEditImages : undefined,
+        videoUrl: finalEditVideos[0] || undefined,
+        videoUrls: finalEditVideos.length > 0 ? finalEditVideos : undefined,
+      });
 
-    setEditingPost(null);
-    setPostSavedToast(
-      finalEditImages.length > 0
-        ? `Đã cập nhật bài viết và lưu thành công ${finalEditImages.length} ảnh trên hệ thống!`
-        : 'Đã cập nhật bài viết Góc Hạnh Phúc thành công!'
-    );
-    setTimeout(() => setPostSavedToast(null), 4500);
+      if (!saveResult.savedToCloud) {
+        setUploadError(
+          saveResult.error ||
+            'Chưa đồng bộ được bài viết lên đám mây. Vui lòng kiểm tra kết nối mạng và nhấn Lưu lại.'
+        );
+        return;
+      }
+
+      setEditingPost(null);
+      setPostSavedToast(
+        finalEditImages.length > 0
+          ? `Đã cập nhật bài viết và lưu vĩnh viễn ${finalEditImages.length} ảnh lên đám mây!`
+          : 'Đã cập nhật bài viết Góc Hạnh Phúc lên đám mây thành công!'
+      );
+      setTimeout(() => setPostSavedToast(null), 5000);
+    } finally {
+      setIsSavingPost(false);
+    }
   };
 
   const handleConfirmDeletePost = (id: string) => {
@@ -620,7 +650,7 @@ export const HappyCornerView: React.FC = () => {
                               }
                               className="relative w-full h-full overflow-hidden cursor-pointer group"
                             >
-                              <img
+                              <CloudImage
                                 src={imgSrc}
                                 alt={`${post.title} - ảnh ${imgIdx + 1}`}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -982,7 +1012,7 @@ export const HappyCornerView: React.FC = () => {
                         key={idx}
                         className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-28"
                       >
-                        <img
+                        <CloudImage
                           src={url}
                           alt={`Xem trước ảnh ${idx + 1}`}
                           className="w-full h-full object-cover"
@@ -1123,10 +1153,10 @@ export const HappyCornerView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploadingCreateImg || isUploadingCreateVideo}
-                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                  disabled={isUploadingCreateImg || isUploadingCreateVideo || isSavingPost}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
                 >
-                  Đăng lên Góc Hạnh Phúc
+                  {isSavingPost ? 'Đang lưu lên đám mây...' : 'Đăng lên Góc Hạnh Phúc'}
                 </button>
               </div>
             </form>
@@ -1269,7 +1299,7 @@ export const HappyCornerView: React.FC = () => {
                         key={idx}
                         className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 h-28"
                       >
-                        <img
+                        <CloudImage
                           src={url}
                           alt={`Xem trước ảnh ${idx + 1}`}
                           className="w-full h-full object-cover"
@@ -1406,10 +1436,10 @@ export const HappyCornerView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploadingEditImg || isUploadingEditVideo}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all"
+                  disabled={isUploadingEditImg || isUploadingEditVideo || isSavingPost}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-md transition-all"
                 >
-                  Lưu thay đổi
+                  {isSavingPost ? 'Đang lưu lên đám mây...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
@@ -1461,7 +1491,7 @@ export const HappyCornerView: React.FC = () => {
                 </button>
               )}
 
-              <img
+              <CloudImage
                 src={lightboxState.images[lightboxState.currentIndex]}
                 alt="Ảnh phóng to"
                 className="max-h-[76vh] max-w-full object-contain rounded-2xl shadow-2xl"
@@ -1502,7 +1532,7 @@ export const HappyCornerView: React.FC = () => {
                         : 'border-white/20 opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={thumb} alt="" className="w-full h-full object-cover" />
+                    <CloudImage src={thumb} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

@@ -677,7 +677,7 @@ export const DisciplineView: React.FC = () => {
                 {weeklySummary.statusLabel}
               </span>
               <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-800 text-xs font-bold border border-indigo-200">
-                {currentWeekRange.rangeLabel} (Thứ 2 ➔ Thứ 6)
+                {currentWeekRange.rangeLabel}
               </span>
             </div>
             <h2 className="text-base sm:text-xl font-black text-slate-900 mt-2 flex items-center gap-2">
@@ -903,7 +903,7 @@ export const DisciplineView: React.FC = () => {
                             <div className="font-bold text-rose-900 flex items-center gap-1.5 flex-wrap">
                               <span>📅 {formatDateWithWeekdayVN(v.date)}</span>
                               <span className="px-1.5 py-0.2 rounded bg-white border border-rose-200 text-[10px] text-rose-700 font-bold">
-                                Tuần {getWeekRangeFromDate(v.date).shortRangeLabel}
+                                {getWeekRangeFromDate(v.date).rangeLabel}
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-700 font-medium mt-0.5 truncate">

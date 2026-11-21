@@ -8,6 +8,7 @@ import {
   uploadMultipleVideoFiles,
   getEmbedVideoInfo,
 } from '../utils/imageUtils';
+import { CloudImage } from './CloudImage';
 import {
   Bell,
   Plus,
@@ -673,7 +674,7 @@ export const AnnouncementsView: React.FC = () => {
                           }
                           className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-2xs cursor-pointer"
                         >
-                          <img
+                          <CloudImage
                             src={imgSrc}
                             alt={`${ann.title} - ảnh ${imgIdx + 1}`}
                             className={`w-full object-cover bg-slate-50 group-hover:scale-103 transition-transform duration-300 ${
@@ -1018,7 +1019,7 @@ export const AnnouncementsView: React.FC = () => {
                         key={idx}
                         className="relative rounded-xl overflow-hidden border border-slate-200 bg-white h-28 group"
                       >
-                        <img
+                        <CloudImage
                           src={url}
                           alt={`Ảnh thông báo ${idx + 1}`}
                           className="w-full h-full object-cover"
@@ -1362,7 +1363,7 @@ export const AnnouncementsView: React.FC = () => {
                         key={idx}
                         className="relative rounded-xl overflow-hidden border border-slate-200 bg-white h-28"
                       >
-                        <img
+                        <CloudImage
                           src={url}
                           alt={`Xem trước ảnh ${idx + 1}`}
                           className="w-full h-full object-cover"
@@ -1565,7 +1566,7 @@ export const AnnouncementsView: React.FC = () => {
                 </button>
               )}
 
-              <img
+              <CloudImage
                 src={lightboxState.images[lightboxState.currentIndex]}
                 alt="Ảnh phóng to"
                 className="max-h-[76vh] max-w-full object-contain rounded-2xl shadow-2xl"
@@ -1606,7 +1607,7 @@ export const AnnouncementsView: React.FC = () => {
                         : 'border-white/20 opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={thumb} alt="" className="w-full h-full object-cover" />
+                    <CloudImage src={thumb} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

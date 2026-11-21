@@ -54,7 +54,8 @@ export const getWeekRangeByIndex = (weekIndex: number): SchoolWeekRange => {
   const mondayShort = formatShortDayMonth(monday);
   const fridayShort = formatShortDayMonth(friday);
   const fridayFull = `${fridayShort}/${friday.getFullYear()}`;
-  const rangeLabel = `Từ ngày ${mondayShort} đến ${fridayShort}`;
+  const rangeLabel = `Tuần từ Thứ 2 (${mondayShort}) đến hết Thứ 6 (${fridayShort})`;
+  const shortRangeLabel = `Từ Thứ 2 (${mondayShort}) đến hết Thứ 6 (${fridayShort})`;
 
   return {
     weekIndex: safeWeek,
@@ -66,9 +67,9 @@ export const getWeekRangeByIndex = (weekIndex: number): SchoolWeekRange => {
     fridayShort,
     fridayFull,
     rangeLabel,
-    shortRangeLabel: rangeLabel,
-    fullRangeLabel: `Từ ngày ${mondayShort} đến ${fridayFull}`,
-    weekdayRangeLabel: `Thứ 2 (${mondayShort}) ➔ Thứ 6 (${fridayShort})`,
+    shortRangeLabel,
+    fullRangeLabel: `Tuần từ Thứ 2 (${mondayShort}) đến hết Thứ 6 (${fridayFull})`,
+    weekdayRangeLabel: `Tuần từ Thứ 2 (${mondayShort}) đến hết Thứ 6 (${fridayShort})`,
   };
 };
 

@@ -243,12 +243,12 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
       `📋 BÁO CÁO NHANH TUẦN TRƯỚC — LỚP 12A7 (THPT VĨNH LỘC B)`
     );
     lines.push(
-      `📅 Phạm vi: Tuần ${reportWeek} (${weekRange.rangeLabel}) • Lập sáng Thứ Hai (${getVietnamDateVN()})`
+      `📅 Phạm vi: ${weekRange.rangeLabel} • Lập sáng Thứ Hai (${getVietnamDateVN()})`
     );
     lines.push(`👨‍🏫 GVCN: Thầy Trương Xuân Hòa`);
     lines.push('');
 
-    lines.push(`1. CHUYÊN CẦN TUẦN ${reportWeek}:`);
+    lines.push(`1. CHUYÊN CẦN (${weekRange.shortRangeLabel}):`);
     lines.push(
       `- Tỷ lệ chuyên cần tuần: ${attendanceReport.weeklyAttendanceRate}% (Sĩ số: ${students.length} HS)`
     );
@@ -266,7 +266,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
     }
     lines.push('');
 
-    lines.push(`2. THI ĐUA & NỀ NẾP TUẦN ${reportWeek} (Đầu tuần 100đ/HS):`);
+    lines.push(`2. THI ĐUA & NỀ NẾP (${weekRange.shortRangeLabel} • Đầu tuần 100đ/HS):`);
     lines.push(
       `- ĐTB thi đua lớp: ${emulationSummary.classAvgScore}/100đ | Giữ trọn 100đ: ${emulationSummary.perfectCount}/${students.length} HS`
     );
@@ -332,7 +332,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Bao_cao_nhanh_Tuan_${reportWeek}_12A7.txt`;
+    a.download = `Bao_cao_nhanh_${weekRange.mondayDate}_den_${weekRange.fridayDate}_12A7.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -341,7 +341,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
 
   const handlePublishToAnnouncements = () => {
     addAnnouncement({
-      title: `Báo cáo nhanh tổng kết Tuần ${reportWeek} (${weekRange.shortRangeLabel}) — Đầu tuần Thứ Hai`,
+      title: `Báo cáo nhanh tổng kết ${weekRange.rangeLabel} — Đầu tuần Thứ Hai`,
       content: buildPlainTextReport(),
       author: 'Thầy Trương Xuân Hòa (GVCN)',
       role: 'Giáo viên Chủ nhiệm 12A7',
@@ -349,7 +349,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
       isPinned: true,
     });
     setPublishedToast(
-      `Đã đăng Báo cáo nhanh Tuần ${reportWeek} lên mục Thông báo lớp 12A7!`
+      `Đã đăng Báo cáo nhanh (${weekRange.rangeLabel}) lên mục Thông báo lớp 12A7!`
     );
     setTimeout(() => setPublishedToast(null), 4000);
   };
@@ -380,7 +380,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
                     : 'Báo cáo nhanh Thứ Hai đầu tuần (GVCN)'}
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-white/15 text-blue-100 text-[11px] font-bold">
-                  Tuần {reportWeek}: {weekRange.rangeLabel}
+                  {weekRange.rangeLabel}
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-extrabold text-white mt-1">
@@ -415,7 +415,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
                     value={w.weekIndex}
                     className="text-slate-900 font-bold"
                   >
-                    Tuần {w.weekIndex} ({w.shortRangeLabel})
+                    {w.rangeLabel}
                     {w.weekIndex === defaultReportWeek ? ' • Tuần trước' : ''}
                   </option>
                 ))}
@@ -511,7 +511,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
             <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold">
               <Calendar className="w-4 h-4 text-indigo-600" />
               <span>
-                Dữ liệu tổng hợp tự động cho <strong>Tuần {reportWeek} ({weekRange.rangeLabel})</strong>
+                Dữ liệu tổng hợp tự động cho <strong>{weekRange.rangeLabel}</strong>
               </span>
             </div>
 
@@ -560,7 +560,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
                   <CalendarCheck className="w-4 h-4 text-emerald-600" />
-                  1. Chuyên cần & Ngày nghỉ/trễ Tuần {reportWeek}
+                  1. Chuyên cần & Ngày nghỉ/trễ ({weekRange.shortRangeLabel})
                 </h3>
                 <button
                   type="button"
@@ -596,7 +596,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
                 <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
-                    Xuất sắc! Tuần {reportWeek} không ghi nhận học sinh nghỉ học hoặc đi trễ.
+                    Xuất sắc! {weekRange.rangeLabel} không ghi nhận học sinh nghỉ học hoặc đi trễ.
                   </span>
                 </div>
               ) : (
@@ -645,7 +645,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
                   <Scale className="w-4 h-4 text-amber-600" />
-                  2. Thi đua 4 Tổ & Vi phạm Tuần {reportWeek}
+                  2. Thi đua 4 Tổ & Vi phạm ({weekRange.shortRangeLabel})
                 </h3>
                 <button
                   type="button"
@@ -685,7 +685,7 @@ export const MondayWeeklyReportCard: React.FC<MondayWeeklyReportCardProps> = ({
                 <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
                   <Award className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
-                    Tuần {reportWeek} tập thể 12A7 giữ nề nếp tốt, 100% học sinh đạt trọn 100 điểm!
+                    {weekRange.rangeLabel}: tập thể 12A7 giữ nề nếp tốt, 100% học sinh đạt trọn 100 điểm!
                   </span>
                 </div>
               ) : (
